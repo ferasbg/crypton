@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "crypton"
+version = "1.0.0"
+description = "formal verification for privacy-preserving deep convolutional neural networks"
+repository = "https://github.com/ferasbg/crypton"
+license = "Apache-2.0"
+authors = [
+    "Feras Baig <ferasbaig@gmail.com>"
+]
+
+maintainers = [
+    "Feras Baig <ferasbaig@gmail.com>"
+]
+
+readme = "README.md"
+documentation = "https://github.com/ferasbg/crypton"
+
+classifiers = [
+	'Operating System :: OS Independent',
+	'Development Status :: 4 - Beta',
+]
+
+[tool.poetry.dependencies]
+python = "^3.8.0"
+numpy = "^1.18.2"
+scipy = "^1.4.1"
+keras = "^2.4.3"
+tensorflow = "^2.4.0"
+torch = "^1.7.1"
+dotmap = "^1.3.13"
+metric-temporal-logic = "^0.1.5"
+matplotlib = "^3.2.1"
+easydict = "^1.9"
+joblib = "^0.14.1"
+dill = "^0.3.1"
+future = "^0.18.2"
+pandas = "^1.0.3"
+scikit-learn = "^0.22.2"
+pygame = "^2.0.0.dev6"
+kmodes = "^0.10.2"
+scenic = "^2.0.0b1"
+discrete-signals = "^0.8.2"
+requests = "^2.13.0"
+syft = "^0.3.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
