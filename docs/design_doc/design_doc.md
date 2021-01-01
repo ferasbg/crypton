@@ -1,3 +1,0 @@
-# Crypton Design Doc
-
-
