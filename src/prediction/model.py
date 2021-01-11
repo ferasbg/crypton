@@ -4,9 +4,6 @@ import os
 import numpy as np
 import random
 import time
-from tqdm import tqdm
-from collections import deque
-
 
 from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import Dense, Embedding, Reshape
@@ -16,10 +13,14 @@ import torch
 from torch import nn
 import torchvision.models as models
 
-class Model(nn.Module):
-    def __init__(self, classes=19):
+from PIL import Image
+from torchvision import transforms
+
+class Prediction(models.VGG):
+    def __init__(self, model='vgg16', requires_grad=True, remove_fc=True, show_params=False):
         # recursive inheritance
-        super(Model, self).__init__()
+        super(Prediction, self).__init__()
+        
 
     def build_model(self):
         # call torch network constructor
@@ -27,5 +28,4 @@ class Model(nn.Module):
 
 
 if __name__ == '__main__':
-    model = Model()
-    model.summary()
+    model = Prediction()
