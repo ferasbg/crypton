@@ -6,5 +6,8 @@ Compute signal temporal logic specification for runtime verification of deep con
 - T2: design and implement an STL monitor trace for specification for verifying robustness of semantic image segmentation model
 - T3: Compute probabilistic guarantees of adversarial robustness and cryptographic scheme
 
-
+## Major Components
+- System Description Formalism S
+- Property Specification Formalism, describing sets of acceptable behaviors, those that satisfy the formula ϕ
+- Verification Methodology: check whether all behaviors of S tracked via `src.Monitor` satisfy ϕ, via boolean satisfiability for singular behaviors, and given numeric bound propagation given probability distribution of a set of behaviors
 
