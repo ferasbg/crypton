@@ -26,7 +26,6 @@ class Prediction(models.VGG):
         # recursive inheritance
         super(Prediction, self).__init__()
 
-
     def build_model(self):
         # call torch network constructor
         network = self.models.vgg16(pretrained=True)
