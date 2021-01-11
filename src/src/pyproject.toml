@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "src"
+version = "0.1.0"
+description = "formal verification for privacy-preserving deep convolutional neural networks"
+authors = ["Feras Baig <ferasbaig@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+numpy = "^1.18"
+scipy = "^1.4"
+keras = "^2.4"
+tensorflow = "^2.4"
+torch = "^1.7"
+pyspark = "^3.0"
+cmake = "3.18"
+Gpy = "1.9"
+clang = "^11.0"
+sentry = "^20.12"
+dotmap = "^1.3"
+crypten = "0.1"
+metric-temporal-logic = "^0.1"
+matplotlib = "^3.2"
+easydict = "^1.9"
+joblib = "^0.14"
+dill = "^0.3"
+future = "^0.18"
+pandas = "^1.0"
+scikit-learn = "^0.22"
+pygame = "^2.0"
+kmodes = "^0.10"
+scenic = "^2.0"
+discrete-signals = "^0.8"
+requests = "^2.13"
+syft = "^0.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
