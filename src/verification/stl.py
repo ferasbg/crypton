@@ -15,7 +15,6 @@ class STLSpecification(nn.Module):
     # function set_1: safety properties of network
     # functiuon set_2: liveness properties of network: number of activated neurons surpasses certain threshold, all layers compute and update tensor matrices correctly to update model during training, model computes IBP to guarantee adversarial robustness crosses defined threshold, concurrency with various classes computes in proper sequential order, model layers are encrypted with SMPC scheme, robust against adversarial examples
 
-    def __init__(self):
-        self._state_size = 0
+    pass
 
 
