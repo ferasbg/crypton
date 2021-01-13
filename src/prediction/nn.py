@@ -1,34 +1,79 @@
-import keras
+import logging
 import os
-
-import numpy as np
 import random
 import time
 
+import keras
+import numpy as np
+import torch
+import torchvision.models as models
+from PIL import Image
 from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import Dense, Embedding, Reshape
 from tensorflow.keras.optimizers import Adam
-
-import torch
 from torch import nn
-import torchvision.models as models
-
-from PIL import Image
 from torchvision import transforms
-
-import logging
 
 # configure to DEBUG state for logging level, format log records (data, time, and message)
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 
+
+
 class Prediction(models.VGG):
-    def __init__(self, model='vgg16', requires_grad=True, remove_fc=True, show_params=False):
-        # recursive inheritance
+    """
+    reference: src.prediction.Prediction
+    args:  
+        models.VGG (type: Object): store the VGG-16 DCNN for semantic image segmentation
+    methods: Prediction.build_model(), Prediction.preprocess(), Prediction.train(), Prediction.compile_model()
+    """
+    
+    def __init__(self, model='vgg16'):
         super(Prediction, self).__init__()
 
+
+    def preprocess(self):
+        """
+        name: Prediction.preprocess
+        args:
+            params to perform data preprocessing of training data (segment masks, remove features of inputs)
+        usage:    
+
+        """
+        pass
+
+    def train(self):
+        """
+        name: src.Prediction.train()
+        args:
+            - arg 1 (type: ): description
+            - arg 2 (type: ): description
+        usage: description
+
+        """
+
     def build_model(self):
-        # call torch network constructor
-        network = self.models.vgg16(pretrained=True)
+        """
+        name: src.Prediction.build_model()
+        args:
+            - arg 1 (type: ): description
+            - arg 2 (type: ): description
+        usage: description
+
+        """
+        network = models.vgg16(pretrained=True)
+        network.train()
+        
+ 
+    def compile_model(self):
+        """
+        name: src.Prediction.compile_model()
+        args:
+            - arg 1 (type: ): description
+            - arg 2 (type: ): description
+        usage: description
+
+        """
+        pass
 
 
 if __name__ == '__main__':

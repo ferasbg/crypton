@@ -2,12 +2,13 @@
 
 import os
 import re
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch import torch.nn as nn
 from torch.autograd import Variable
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def batch_norm():
@@ -44,3 +45,4 @@ def save_model(model):
 
 def load_model(model, PATH):
     model = torch.load(PATH)
+
