@@ -1,5 +1,11 @@
 # `src.analytics`
-Store analytics and statistical metrics for `crypton.prediction`, `crypton.verification`, `crypton.adversarial`, `crypton.crypto`. Store metadata for every component involved (ex: tracking algorithm output & performance, tracking instance metadata, tracking formal specifications & violations). Some operations will be asynchronous and synchronous. Important to understand statistical significance to indicate performance, system reliability/dependability.
+Store analytics and statistical metrics for `crypton.prediction`, `crypton.verification`, `crypton.adversarial`, `crypton.crypto`. Store metadata for every component involved (ex: tracking algorithm output & performance, tracking instance metadata, tracking formal specifications & violations). Some operations will be asynchronous and synchronous. Important to understand statistical significance to indicate performance, system reliability/dependability. During runtime, `src.analytics` will compute statistical significance given data processed from `src.monitor`.
+
+
+## Class Components
+- `src.analytics.main`: compute statistical metrics
+- `src.analytics.analytics_utils`: store logic to compute statistical metrics, whereas `src.analytics.main` will act as router to client
+
 
 
 ## Hardware Metadata

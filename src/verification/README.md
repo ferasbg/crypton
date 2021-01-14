@@ -1,4 +1,12 @@
-# crypton.Verification
+# `src.verification`
+
+## Class Components
+- `src.verification.specification`: store safety and liveness properties and specification schema and routes to connect with `src.monitor` and `src.prediction.nn`
+- `src.verification.stl`: signal temporal logic code that processes data streams (e.g. signals) in runtime given no ds deadlocks, NP-complete state space
+- `src.verification.ibp`: compute verification of adversarial robustness given adversarial protocols and nodes in `src.adversarial` and network layers in `src.prediction.nn`
+
+
+
 Compute signal temporal logic specification for runtime verification of deep convolutional network structure, based on parameters and requirements with input bound propagation
 ## Tasks
 - T0: Implement interval bound propagation for verifying adversarial robustness properties of DNN
