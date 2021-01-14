@@ -1,8 +1,17 @@
-# `src.Deploy`
+# `src.deploy`
 - Store utilities and configurations for running cloud instance. 
 - Additionally will be responsible for storing sequential compute set for all classes and functions. 
 - Will act as the class that will have end-to-end finite sequence of compute.
 
+
+`src.deploy` acts as the main system runner e.g. development client. 
+
+## Class Components
+- `src.deploy.main`: store sequential runtime computations
+- `src.deploy.deploy_utils`: store utilities to connect with all input functions from server nodes (e.g. `src.verification`, `src.prediction`, `src.crypto`, `src.adversarial`)
+- `src.deploy.secure_nn`: link functions from `src.crypto` and `src.prediction.nn` to build privacy-preserving DCNN
+- `src.deploy.specification_auth`: use industry-standard signature to authenticate specification computed on neural network at runtime
+- `src.deploy.secure_verification`: link sub-class from `src.deploy.secure_nn` and `src.verification.specification`
 
 
 ## Components
