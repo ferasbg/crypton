@@ -21,12 +21,12 @@ logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=loggin
 
 class Prediction(models.VGG):
     """
-    reference: src.prediction.Prediction
-    args:  
+    reference: src.prediction.nn.Prediction
+    args:
         models.VGG (type: Object): store the VGG-16 DCNN for semantic image segmentation
     methods: Prediction.build_model(), Prediction.preprocess(), Prediction.train(), Prediction.compile_model()
     """
-    
+
     def __init__(self, model='vgg16'):
         super(Prediction, self).__init__()
 
@@ -36,7 +36,7 @@ class Prediction(models.VGG):
         name: Prediction.preprocess
         args:
             params to perform data preprocessing of training data (segment masks, remove features of inputs)
-        usage:    
+        usage:
 
         """
         pass
@@ -50,6 +50,8 @@ class Prediction(models.VGG):
         usage: description
 
         """
+        pass
+
 
     def build_model(self):
         """
@@ -62,8 +64,8 @@ class Prediction(models.VGG):
         """
         network = models.vgg16(pretrained=True)
         network.train()
-        
- 
+
+
     def compile_model(self):
         """
         name: src.Prediction.compile_model()
@@ -74,6 +76,9 @@ class Prediction(models.VGG):
 
         """
         pass
+
+    def evaluate(self, network):
+        network.eval()
 
 
 if __name__ == '__main__':
