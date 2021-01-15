@@ -31,16 +31,6 @@ class Prediction(models.VGG):
         super(Prediction, self).__init__()
 
 
-    def preprocess(self):
-        """
-        name: Prediction.preprocess
-        args:
-            params to perform data preprocessing of training data (segment masks, remove features of inputs)
-        usage:
-
-        """
-        pass
-
     def train(self):
         """
         name: src.Prediction.train()
