@@ -7,11 +7,14 @@ The purpose of this work is to build a system that implements signal temporal lo
 
 
 ## System Components
-- `crypton.src.Prediction`: Store the deep convolutional neural network for semantic image segmentation.
-- `crypton.src.Verification`: Store neural network formal specification & verification algorithms, such as signal-temporal logic (STL).
-- `crypton.src.Adversarial`: Store algorithms for automated input rectification, interval bound propagation, to compute adversarial robustness.
-- `crypton.src.Crypto`: Store components to setup the SMPC scheme for the DCNN.
-- `crypton.src.Analytics`: Compute statistical significance of all components of crypton.
+- `crypton.src.prediction`: Store the deep convolutional neural network for semantic image segmentation.
+- `crypton.src.verification`: Store neural network formal specification & verification algorithms, such as signal-temporal logic (STL).
+- `crypton.src.adversarial`: Store algorithms for automated input rectification, interval bound propagation, to compute adversarial robustness.
+- `crypton.src.crypto`: Store components to setup the SMPC scheme for the DCNN.
+- `crypton.src.analytics`: Compute statistical significance of all components of crypton.
+- `crypton.src.monitor`: data processor to send to `crypton.src.analytics`
+- `crypton.src.deploy`: runner object to run instance to compute sequential computation  (formal specifications on encrypted DCNN)
 
 
-
+## System Workflow
+Compute formal specifications to certify the safety and robustness of the privacy-preserving deep convolutional neural network for semantic image segmentation that is trained through distributed workers that compute on shared secrets, more specifically the specified `.train()` sequential computation. 

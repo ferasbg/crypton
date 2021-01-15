@@ -1,8 +1,6 @@
 import logging
 # import crypto, prediction.nn
 from src.verification.stl import STLSpecification
-1
-
 
 class Specification(STLSpecification):
     """
