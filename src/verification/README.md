@@ -21,5 +21,5 @@ Compute signal temporal logic specification for runtime verification of deep con
 
 
 ## Notes
-To summarize, the temporal signals are specific variables of the neural network (either its layers or specific scalar values in the matrices of the weights and nodes/neurons of the network, need to figure this out). And for bound propagation, what is the inputs we are dealing with and what is the desired or optimal state to measure/compute the metrics for the bounds?
+To summarize, the temporal signals are specific variables of the neural network (either its layers or specific scalar values in the matrices of the weights and nodes/neurons of the network (stored in tensors), need to figure this out). And for bound propagation, what is the inputs we are dealing with and what is the desired or optimal state to measure/compute the metrics for the bounds?
 
