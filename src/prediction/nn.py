@@ -29,10 +29,13 @@ class Prediction(models.VGG):
         - self.image_size = [224,224]
         - self.mask_size
         - self.stride
-        - self.receptive_field
-        - self.channels = [224,224,3]
+        - self.input_channels = 3
+        - self.middle_channels = self.input_channels / 2
+        - self.output_channels
+        - self.kernel_size = 3
+        - self.stride = []
+        - self.padding = []
         - self.feature_map
-        - self.kernel
         - self.time_step
         - self.num_training
         - self.num_validation

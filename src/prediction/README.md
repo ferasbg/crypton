@@ -10,3 +10,5 @@ The core deep convolutional neural network for semantic image segmentation.
 
 ## Other Notes
 - Feature map is a representation of the mapping that corresponds to the tensor transformation in Hilbert Space. The map itself is not a representation of the signal but rather the representation of the transformation, the kernel and its learned parameters in their current state. Setup endpoints to track metrics for each timestep, for each updated state of the variables corresponding to the learning of the network.
+- The kernel is a matrix that acts a factor for matrix multiplication with input channel, which is a matrix computed from a receptive field, to which there is a set of receptive fields or submatrices that make up a Tensor. The dimensions also define the rank of the representation.
+

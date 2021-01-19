@@ -1,4 +1,6 @@
 # `src.verification`
+Compute finite-state abstractions for symbolic formal verification and specification of deep convolutional neural network with input bound propagation and signal temporal logic
+
 
 ## Class Components
 - `src.verification.specification`: store safety and liveness properties and specification schema and routes to connect with `src.monitor` and `src.prediction.nn`
@@ -7,7 +9,6 @@
 
 
 
-Compute signal temporal logic specification for runtime verification of deep convolutional network structure, based on parameters and requirements with input bound propagation
 ## Tasks
 - T0: Implement interval bound propagation for verifying adversarial robustness properties of DNN
 - T1: compute a differentiable upper bound on the violation of the specification to verify
