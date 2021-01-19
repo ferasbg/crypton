@@ -14,9 +14,9 @@ import torch
 def preprocess_frames(self):
     """
         description: pre-process input data for network
-        args (@param): 
+        args (@param):
         returns (@return): (type: Object)
-    """ 
+    """
     pass
 
 
@@ -28,6 +28,13 @@ def normalize():
 
 def denormalize():
     pass
+
+# setup directory
+def check_mkdir(dir_name):
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+
+
 
 
 def save_model(model):

@@ -27,4 +27,5 @@ Compute signal temporal logic specification for runtime verification of deep con
 - Precedance properties specify events that are certain to occur before their proceeding events, to formalize the process of sequential execution
 - In the specification, there will be a variation of the usage of the properties themselves.
 - Predicates are parameterized propositions, for some input set S of constraints / conditions, there is N set of events that occur. Simply just attributes that are semantically the class attributes or member variables respective of a node that computes n functions, and mathematically indicative of the current state of the system, for its signals indicate the edges between nodes that compute n computations/functions, for which the temporal signals signify the state of a machine or program during it's execution with respect to time.
-- 
+- Important to consider the specific methods within temporal logic given the mapping and structure of the problem in terms of verifying the model components and internals. 
+- LTL is a modal logic with temporal modalities for describing the possibly infinite behavior of a reactive system

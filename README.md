@@ -8,7 +8,7 @@ The purpose of this work is to build a system that implements signal temporal lo
 
 ## System Components
 - `crypton.src.prediction`: Store the deep convolutional neural network for semantic image segmentation.
-- `crypton.src.verification`: Store neural network formal specification & verification algorithms, such as signal-temporal logic (STL).
+- `crypton.src.verification`: Store neural network formal specification & verification algorithms via temporal logic specifications.
 - `crypton.src.adversarial`: Store algorithms for automated input rectification, interval bound propagation, to compute adversarial robustness.
 - `crypton.src.crypto`: Store components to setup the SMPC scheme for the DCNN.
 - `crypton.src.analytics`: Compute statistical significance of all components of crypton.

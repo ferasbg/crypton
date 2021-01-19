@@ -14,8 +14,7 @@ from tensorflow.keras.optimizers import Adam
 from torch import nn
 from torchvision import transforms
 
-# configure to DEBUG state for logging level, format log records (data, time, and message)
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+#logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 
 
 
@@ -24,8 +23,22 @@ class Prediction(models.VGG):
     reference: src.prediction.nn.Prediction
     args:
         models.VGG (type: Object): store the VGG-16 DCNN for semantic image segmentation
-    methods: Prediction.build_model(), Prediction.preprocess(), Prediction.train(), Prediction.compile_model()
-    """
+    params:
+        - self.batch_size
+        - self.num_classes
+        - self.image_size = [224,224]
+        - self.mask_size
+        - self.stride
+        - self.receptive_field
+        - self.channels = [224,224,3]
+        - self.feature_map
+        - self.kernel
+        - self.time_step
+        - self.num_training
+        - self.num_validation
+        - self.train_generator
+        - self.validation_generator
+"""
 
     def __init__(self, model='vgg16'):
         super(Prediction, self).__init__()
@@ -72,4 +85,4 @@ class Prediction(models.VGG):
 
 
 if __name__ == '__main__':
-    model = Prediction()
+    Prediction()
