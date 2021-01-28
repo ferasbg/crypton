@@ -13,31 +13,40 @@ from network import Network
 import torch.nn.functional as F
 import warnings
 
-def transformInput(self):
-    data_transform = transforms.Compose([
-        transforms.RandomSizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
 
-    cityscapes_dataset = datasets.ImageFolder(root='../../../data/train', transform=data_transform)
-    dataset_loader = torch.utils.data.DataLoader(cityscapes_dataset, batch_size=4, shuffle=True, num_workers=4)
-    print(dataset_loader)
+class DataSet(data.Dataset):
+    def __init__(self, transform=transforms.toTensor()):
+        self.transform = transform
+
+    def __getitem__(self, idx):
+        img_tensor = self.transform(img)
+        return (img_tensor, label)
 
 
 
 
+    def transformInput(self):
+        data_transform = transforms.Compose([
+            transforms.RandomSizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225])
+        ])
 
-def inputToTensor(self):
-        """
-        Convert input frames into Tensor object.
+        cityscapes_dataset = datasets.ImageFolder(root='../../../data/train', transform=data_transform)
+        dataset_loader = torch.utils.data.DataLoader(cityscapes_dataset, batch_size=4, shuffle=True, num_workers=4)
+        print(dataset_loader)
 
 
-        """
+    def inputToTensor(self):
+            """
+            Convert input frames into Tensor object.
 
-        pass
+
+            """
+
+            pass
 
 
 def load_model():
