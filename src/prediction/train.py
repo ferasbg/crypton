@@ -15,18 +15,16 @@ from torch import nn
 from torchvision import transforms
 
 
-from network import Network
+from prediction.network import Network
 import helpers
+from prediction.helpers import load_model
 
 
 class Train(Network):
     """
-    Verifiably Robust Training And Dev(Train)/Validation(Test) for Decrypted Network. Sub-class instance of `nn.Module` and `prediction.network.Network`
-    Args:
-        - 
-        -
-        -
-        -
+    Verifiably Robust Training And Dev(Train)/Validation(Test) for `Public` Neural Network. Compute nominal training and variant of verifiable computations with specifications during model training as well. 
+    
+    Args: None
 
     Raises:
         -
@@ -48,22 +46,48 @@ class Train(Network):
     """
 
     def __init__(self):
-        super(Network, self).__init__()
+        super().__init__()
         self.model = load_model()
         self.epochs = 1000
         self.batch_size = 64 # maybe 128
-        self.learning_rate = .003
+        self.learning_rate = 1e-4
+        # iou
+        self.mean_iou = 0
+        self.true_positive_pixels = 0
+        self.false_positive_pixels = 0
+        self.false_negative_pixels = 0
+        self.misclassified_pixels = 0
+        self.frequency_weighted_iou = 0
+
+
+        # acc
+        self.mean_acc = 0
+        self.pixelwise_acc = 0
+
+        # perturbation
+        self.gaussian_noise_factor = 0.10
+        self.perturbation_factor = 0.05
 
 
 
-    def train(self):
-        network = models.vgg16(pretrained=True)
-        network.train()
+    def forward(self, input_tensor):
+            """Forward pass of DCNN with input_tensor which stores the image"""
+            
+            pass
+
+    def evaluate(self):
+        """Compute segmentation metrics."""
+        pass
+
+    def freeze_feature_layers(self):
+        for param in self.model.parameters():
+            param.requires_grad = False
 
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     Train()
-    Train.train()
+
+    
 
 
 

@@ -51,6 +51,7 @@ class DataSet(data.Dataset):
 
 def load_model():
     model = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16', pretrained=True)
+    return model
 
 
 def check_layers(model):
@@ -78,4 +79,6 @@ def check_mkdir(dir_name):
         os.mkdir(dir_name)
 
 
-
+def save_model(model):
+    # save as model state dict
+    pass

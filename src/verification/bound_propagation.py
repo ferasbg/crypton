@@ -6,9 +6,9 @@ class BoundPropagation():
     """
     Define and compute interval bound propagation to define constraints for trace properties to compute violations of the trace properties for t \epsilon H for H = {safety, robustness, liveness}. Make formal guarantees with upper and lower bounds that maintain reliability of the network's behavior (optimization technique), formalizing it into constraint satisfaction problem.
     Args:
-        - self.upperBound
-        - self.lowerBound
-        - self.state_size
+        - self.state_size: symbolic abstraction store
+        - self.upper_bound: upper bounds for each layer for symbolic interval
+        - self.lower_bound: lower bounds for each layer for symbolic interval analysis, based on state, specification is met / not met
 
     Raises:
 
