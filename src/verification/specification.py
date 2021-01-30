@@ -31,6 +31,8 @@ class Specification():
         self._robustness_properties = RobustnessProperties()
         self._safety_properties = SafetyProperties()
         self._liveness_properties = LivenessProperties()
+        self.verificationState = False # set to True when all trace properties have been checked
+
 
     def main(self):
         pass
