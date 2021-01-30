@@ -21,9 +21,6 @@ class BoundPropagation():
 
     pass
 
-if __name__ == '__main__':
-    IntervalBoundPropagation()
-    # compute given access points to network during training and testing
 
 
 
@@ -40,5 +37,7 @@ class Bounds(BoundPropagation):
 
     pass
 
-
+if __name__ == '__main__':
+    BoundPropagation()
+    Bounds()
 

@@ -114,10 +114,18 @@ class Network(nn.Module):
             nn.Linear(512,10)
         )
 
+        for param in model.parameters():
+            param.requires_grad = False
+
+
+
+
         return model
 
 
     def getSymbolicIntervalBounds(self):
+        """Pass data to BoundedReLU Object"""
+
         pass
 
 
