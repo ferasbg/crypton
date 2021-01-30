@@ -1,4 +1,5 @@
-# 2021 Copyright Feras Baig
+#!/usr/bin/env python3
+# Copyright (c) 2021 Feras Baig
 
 
 class BoundPropagation():

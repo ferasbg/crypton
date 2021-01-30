@@ -24,12 +24,17 @@ import crypten
         - https://crypten.readthedocs.io/en/latest/nn.html
         - https://github.com/facebookresearch/CrypTen/blob/master/examples/mpc_autograd_cnn/mpc_autograd_cnn.py
 
+    Examples:
+        -
+        -
+        -
+
 
 
 """
 
 
-class MPCNet(crypten.nn.Module):
+class MPCNetwork(crypten.nn.Module):
 
     def __init__(self):
         super(MPCNet, self).__init__()
