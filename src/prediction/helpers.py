@@ -12,7 +12,20 @@ from torchvision import transforms, datasets
 import torch.nn.functional as F
 import warnings
 
-def inputToTensor(self, input_image):
+class Dataset():
+    pass
+
+
+
+def inputToTensor():
+        # setup DataLoader for train dataset
+
+        # load input image
+
+        # for each image in the train dataset, apply transformations, and convert input_image to Tensor
+
+        # return void
+
 
         """
         Convert input frames into Tensor object. Apply transformations given variables of input image. Pass 1024x2048 images in terms of 224x224 dimensions. Crop, then take set of 224x224 matrices of input image, then compute on the Tensor that stores the image and its encoded and transformed pixelwise data.

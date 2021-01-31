@@ -6,7 +6,6 @@ import torch
 import argparse
 import h5py
 import json
-import imageio
 
 
 def cross_entropy_loss():
@@ -28,6 +27,7 @@ def adjusted_rand_index(true_mask, pred_mask, name='ari_score'):
 
     """
     pass
+
 
 def intersection_over_union():
     pass

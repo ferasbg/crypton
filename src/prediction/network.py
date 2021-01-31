@@ -33,7 +33,8 @@ class Network(nn.Module):
 
     References:
         - https://arxiv.org/abs/1409.1556
-
+        - https://github.com/pochih/FCN-pytorch/blob/master/python/fcn.py
+        -
 """
 
     def __init__(self, pretrained_network):
@@ -57,7 +58,7 @@ class Network(nn.Module):
         )
         # labels
         self.num_classes = 20
-    
+
 
     def forward(self, input_tensor):
         pass
