@@ -8,45 +8,18 @@ import numpy as np
 import torch
 from PIL import Image, ImageOps
 from torchvision import transforms, datasets
-from network import Network
 
 import torch.nn.functional as F
 import warnings
 
+def inputToTensor(self, input_image):
+        
+        """
+        Convert input frames into Tensor object. Apply transformations given variables of input image. Pass 1024x2048 images in terms of 224x224 dimensions. Crop, then take set of 224x224 matrices of input image, then compute on the Tensor that stores the image and its encoded and transformed pixelwise data.
 
-class DataSet(data.Dataset):
-    def __init__(self, transform=transforms.toTensor()):
-        self.transform = transform
+        """
 
-    def __getitem__(self, idx):
-        img_tensor = self.transform(img)
-        return (img_tensor, label)
-
-
-
-
-    def transformInput(self):
-        data_transform = transforms.Compose([
-            transforms.RandomSizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225])
-        ])
-
-        cityscapes_dataset = datasets.ImageFolder(root='../../../data/train', transform=data_transform)
-        dataset_loader = torch.utils.data.DataLoader(cityscapes_dataset, batch_size=4, shuffle=True, num_workers=4)
-        print(dataset_loader)
-
-
-    def inputToTensor(self):
-            """
-            Convert input frames into Tensor object.
-
-
-            """
-
-            pass
+        pass
 
 
 def load_model():
