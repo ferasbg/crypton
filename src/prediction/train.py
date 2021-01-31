@@ -27,18 +27,13 @@ class Train(Network):
         -
         -
 
-
     Returns:
-        -
         -
         -
 
     References:
         -
         -
-        -
-
-
 
     """
 
