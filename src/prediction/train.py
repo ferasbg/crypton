@@ -8,9 +8,6 @@ import numpy as np
 import torch
 import torchvision.models as models
 from PIL import Image
-from tensorflow.keras import Model, Sequential
-from tensorflow.keras.layers import Dense, Embedding, Reshape
-from tensorflow.keras.optimizers import Adam
 from torch import nn
 from torchvision import transforms
 
@@ -19,10 +16,11 @@ from network import Network
 from helpers import load_model
 
 
+
 class Train(Network):
     """
-    Verifiably Robust Training And Dev(Train)/Validation(Test) for `Public` Neural Network. Compute nominal training and variant of verifiable computations with specifications during model training as well. 
-    
+    Verifiably Robust Training And Dev(Train)/Validation(Test) for `Public` Neural Network. Compute nominal training and variant of verifiable computations with specifications during model training as well.
+
     Args: None
 
     Raises:
@@ -63,6 +61,12 @@ class Train(Network):
         self.shuffle = True
         self.weight_decay = 0.0005
         self.momentum = 0.99
+
+        # dimensions, and metadata for training
+        self.width = 2048
+        self.height = 1024
+        self.criterion = nn.BCEWithLogitsLoss()
+        # self.optimizer, self.schedule
 
         # specification trace variables
         self.reluUpperBound = 0 # upper bounds for each layer for symbolic interval
@@ -107,7 +111,7 @@ if __name__ == '__main__':
     Train().freeze_feature_layers()
     print(Train())
 
-    
+
 
 
 
