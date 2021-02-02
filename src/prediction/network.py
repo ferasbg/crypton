@@ -9,24 +9,19 @@ import argparse
 
 import keras
 import numpy as np
-import torch
-from torch import nn
-import torchvision.models as models
 from PIL import Image
-from torchvision import transforms
-import torch.nn.functional as F
-from torch.autograd import Variable
 import random
+import tensorflow as tf
+from keras.applications.vgg16 import VGG16
 
 
 from helpers import load_model
 
-class Network(nn.Module):
+class Network():
     """
     Args:
         - pretrained_network: weights & architecture of VGG network
     Returns:
-        Network (Type: nn.Module.Sequential)
 
     Raises:
         RaiseError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
@@ -37,27 +32,12 @@ class Network(nn.Module):
         -
 """
 
-    def __init__(self, pretrained_network):
+    def __init__(self):
         super(Network, self).__init__()
-        # network
-        self.model = nn.Sequential(
-            nn.Conv2d(1, 32, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, 4, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 4, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(64*7*7,512),
-            nn.ReLU(),
-            nn.Linear(512,512),
-            nn.ReLU(),
-            nn.Linear(512,10)
-        )
         # labels
         self.num_classes = 20
+        self.model = VGG16()
+
 
 
     def forward(self, input_tensor):
@@ -74,7 +54,5 @@ class Network(nn.Module):
 
 
 if __name__ == '__main__':
-    # weight binaries
-    pretrained_network = load_model()
-    network = Network(pretrained_network)
-    print(network)
+    pass
+
