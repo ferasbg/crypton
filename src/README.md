@@ -1,6 +1,18 @@
 # `crypton.src`
 Crypton's core backend components and engine.
 
+## Algorithms
+- Algorithm 1: De-Encrypted Deep Convolutional Neural Network Training for Semantic Image Segmentation
+- Algorithm 2: Encrypted Deep Convolutional Neural Network Training and Testing
+- Algorithm 3: Design Formal Specifications Via Hyperproperties
+- Algorithm 4: Compute Symbolic Interval Analysis & Reachability Analysis Given Bounded Deep Convolutional Neural Network for Robustness Trace Properties
+- Algorithm 5: Compute Formal Specifications with Verification Techniques for Encrypted & Bounded Deep Convolutional Neural Network for Safety and Adversarial Robustness Verification
+
+
+Note that the formal specifications are a representation of the formal constraints for the required properties of the neural network, and the methods to execute the property checks are done by the means of symbolic interval analysis, reachability analysis, signal temporal logic and property inference / checking, and bound propagation as a means of representing the networkstate and then setting up the verification / constraint-satisfaction problem for the property to be checked.
+
+
+
 ## Class Components
 - `crypton.src.prediction`: store base class for DCNN
 - `crypton.src.analytics`: store stats algorithms to compute metrics

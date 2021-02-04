@@ -1,3 +1,5 @@
-# src.crypton.adversarial
-Successfully segment each input frame, verify against adversarial perturbations, apply automated input rectification, verify adversarial robustness, test formal specifications with continous monitoring of safety properies (distance between neighboring nodes, and attacks to perception network)
+# `src.adversarial`
+adversarial protocol for adversarial robustness
 
+## Requirements
+- Store functions to compute robustness and performance under adversarial perturbations, and use for robustness certification and verification in `src.verification`. The functions will be called given the object which will generate a sub-class with respect to bounds and convex optimization.

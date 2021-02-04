@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 # Copyright (c) 2021 Feras Baig
+import numpy as np
+import matplotlib as plt
+import keras
+import tensorflow as tf
+import os
+import sys
+import random
+import pickle
+
+from prediction.network import Network
+from crypto.mpc_net import MPCNetwork
 
 
 class BoundPropagation():
@@ -17,16 +28,20 @@ class BoundPropagation():
     References:
         - https://github.com/deepmind/interval-bound-propagation/
 
-
     """
 
-    pass
+    def __init__(self, *args, **kwargs):
+        self.epsilon = 0.0003
+        self.upperBound = np.randn(128, 20)
+        self.lowerBound = np.randn(128, 20)
 
 
 
 
 
 
+
+@abstractclass
 class Bounds(BoundPropagation):
     """Compute bounds given ReLU State of Neural Network for Robustness Verification (property inference and checking)"""
     def __init__(self):
@@ -36,7 +51,6 @@ class Bounds(BoundPropagation):
         self.lowerBound = 0
 
 
-    pass
 
 if __name__ == '__main__':
     BoundPropagation()
