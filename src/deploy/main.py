@@ -1,10 +1,15 @@
-from prediction.network import Network
-from crypto.mpc_net import MPCNet
+import os
+import sys
+import tensorflow as tf
+import random
+
+
+from crypto.mpc_net import MPCNetwork
 from specification_auth import Specification_Auth
 
-class Deploy(Network, MPCNet):
+class Deploy():
+
     def __init__(self):
-        self.network = Network()
         self.mpc_network = MPCNet()
         self.specification_auth = Specification_Auth()
 

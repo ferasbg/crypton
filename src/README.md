@@ -15,7 +15,6 @@ Crypton's core backend components and engine.
 
 ## Requirements
 - missing: adversarial protocol implementation and testing strategies; sequential workflow for src.deploy (instance / runner), and the specific symbolic and numeric representation of the safety and robustness properties for the neural network; implementing smpc for an extended neural network
-- finish before January 29th, 2021, with tests, math equations and formulas, workflows and all work, just have in notebook and when the time is neccessary, port to roam and write whitepaper. First focus on building it and getting system working
 - setup access points for every node and its respective arguments necessary for each computation
 
 
