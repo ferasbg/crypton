@@ -11,6 +11,7 @@ Compute finite-state abstractions for symbolic formal verification and specifica
 
 
 ## Requirements
+- access network State --> pass parameters / arguments of network state into each respective function that computes the verification for each trace property (methods and params differ) --> compute if the computed abstraction of the networkState violates the trace property for all trace properties defined in `verification.hyperproperties` and `verification.specification` which stores the state for each neural network property and the functions for the constraints for each trace property.
 - need to figure out what specific trace properties must be written and how they will be evaluated and what inputs / parameters are needed to compute the violation of the hyperproperty for all property types (safety, robustness, liveness), need to link functions to compute on DCNN during training, need to also implement all different scenarios to collect data with regards to encrypted network, decrypted base network, and computation time for verification node, track space and time complexity for verification node and trace properties
 - implement interval bound propagation for verifying robustness properties of DNN
 - compute a differentiable upper and lower bound on the violation of the specification to verify
