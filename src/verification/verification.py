@@ -23,6 +23,11 @@ class Verification():
         self.liveness_properties = LivenessProperties()
 
 
+    @abstractmethod
+    def solve(self):
+        """Use solver to search for counter-examples."""
+        raise NotImplementedError
+
     raise NotImplementedError
 
 
