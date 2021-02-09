@@ -7,6 +7,9 @@ import argparse
 import h5py
 import json
 
+def compute_mi_fgsm(adversarial_sample_size, correct_adversarial_labels):
+    pass
+
 
 def cross_entropy_loss():
     """ Compute Cross-Entropy Loss Given compute_softmax(Model model) """
