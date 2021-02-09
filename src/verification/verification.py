@@ -15,6 +15,7 @@ class Verification():
     """Check each trace property defined in the formal specifications in `verification.specification`. Use solver to process bounded network state abstraction to compute satisfiability for each trace property.
 
     """
+
     def __init__(self):
         """Store the formal specifications and each trace property. Also store the state for the parameters required for each verification technique."""
         self.specification = Specification()
@@ -28,10 +29,15 @@ class Verification():
         """Use solver to search for counter-examples."""
         raise NotImplementedError
 
-    raise NotImplementedError
+    @staticmethod
+    def problem_formulation(self):
+        """Define the state of the required arguments in order to solve the verification problem. Now this will depend on what specific specification we are checking for. Leave as problem_formulation, but then note the specification / property being checked."""
+        raise NotImplementedError
+
 
 
 if __name__ == '__main__':
-    Verification()
-    # sequential workflow of property checking where `src.specification` stores the object state for each trace property whereas verification does the property check
+    # create instance of required network state given specification
+    Verification.problem_formulation()
+    # iterate over each trace property: sequential workflow of property checking where `src.specification` stores the object state for each trace property whereas verification does the property check
 
