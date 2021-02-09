@@ -48,7 +48,11 @@ class Trace():
 
     pass
 
+class CheckTraceData():
+    pass
+
+
+
 if __name__ == '__main__':
     Trace.check_trace()
-
 

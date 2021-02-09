@@ -5,7 +5,7 @@ The core deep convolutional neural network for semantic image segmentation.
 ## Components
 - `src.prediction.network`: network class
 - `src.prediction.train`: train & evaluate network
-
+ - `src.prediction.convert`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
 
 ## Requirements
 - setup class with `nn.Module` and torchvision.models.vgg16 for base network in pytorch, then setup training given segmentation data
