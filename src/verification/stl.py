@@ -1,5 +1,11 @@
 # Copyright 2021 Feras Baig
 
+'''
+
+Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace.
+
+
+'''
 import os
 import time
 import random
@@ -26,6 +32,23 @@ class STLSpecification(Network):
         self.safety = SafetyProperties()
         self.liveness = LivenessProperties()
 
+
+
+class Trace():
+
+    def __init__(self):
+        self.l2norm = 0
+        self.upperBound = 0
+        self.lowerBound = 0
+        self.reachableSets = []
+
+    @staticmethod
+    def check_trace(self):
+        raise NotImplementedError
+
     pass
+
+if __name__ == '__main__':
+    Trace.check_trace()
 
 
