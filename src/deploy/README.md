@@ -8,33 +8,33 @@
 
 ## Algorithm Psuedocode for Core Engine Operation 
 
-'''
-		def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
-			Solver.solve() // iterate over each trace
-			Trace.checkTrace() // check safety  / robustness traces
-			Trace.verifyTraceState() // check trace state before verif	
-			Network.encrypt() // encrypt tf.Graph() e.g. network state space and network layers 
-			Network.train_adversarial() // train network under adv. constraints for adv. metrics 
-			MPCNetwork.checkMPCLayer() // check if all layers are compliant to MPC protocol 
-			if MPCNetwork.checkMPCLayer().security_status == False:
-				MPCNetwork.encryptNetwork(Network.model())
+```
+def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
+	Solver.solve() // iterate over each trace
+	Trace.checkTrace() // check safety  / robustness traces
+	Trace.verifyTraceState() // check trace state before verif	
+	Network.encrypt() // encrypt tf.Graph() e.g. network state space and network layers 
+	Network.train_adversarial() // train network under adv. constraints for adv. metrics 
+	MPCNetwork.checkMPCLayer() // check if all layers are compliant to MPC protocol 
+	if MPCNetwork.checkMPCLayer().security_status == False:
+		MPCNetwork.encryptNetwork(Network.model())
 
-			Network.evaluate_nominal() // get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc, 
-			Network.evaluate_adversarial() // get adversarial robustness metrics
-			Network.evaluate_verification() // get verification metrics for specification trace satisfiability state
-			// compute reachable set
-			Verification.compute_reachable_set(BoundedNetwork.network)
-			Verification.create_symbolic_interval(BoundedNetwork.network)
-			Verification.compute_iterative_interval_refinement(BoundedNetwork.network)
+	Network.evaluate_nominal() // get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc, 
+	Network.evaluate_adversarial() // get adversarial robustness metrics
+	Network.evaluate_verification() // get verification metrics for specification trace satisfiability state
+	// compute reachable set
+	Verification.compute_reachable_set(BoundedNetwork.network)
+	Verification.create_symbolic_interval(BoundedNetwork.network)
+	Verification.compute_iterative_interval_refinement(BoundedNetwork.network)
 
-			for trace, epsilon in SafetyProperties, RobustnessProperties:
-					Network.check_trace()
-					if Network.check_trace() == False:
-						Network.check_trace().getTrace().setVerificationStatus(False)
-			}
+	for trace, epsilon in SafetyProperties, RobustnessProperties:
+			Network.check_trace()
+			if Network.check_trace() == False:
+				Network.check_trace().getTrace().setVerificationStatus(False)
+	}
 
 
-'''
+```
 
 
 ## Class Components
