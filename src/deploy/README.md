@@ -6,6 +6,39 @@
 
 `src.deploy` acts as the main system runner e.g. development client. 
 
+## Workflow
+'''
+def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
+	Solver.solve() // iterate over each trace
+	Trace.checkTrace() // check safety  / robustness traces
+	Trace.verifyTraceState() // check trace state before verif	
+	Network.encrypt() // encrypt tf.Graph() e.g. network state space and network layers 
+	Network.train_adversarial() // train network under adv. constraints for adv. metrics 
+	MPCNetwork.checkMPCLayer() // check if all layers are compliant to MPC protocol 
+	if MPCNetwork.checkMPCLayer().security_status == False:
+		MPCNetwork.encryptNetwork(Network.model())
+	
+	Network.evaluate_nominal() // get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc, 
+	Network.evaluate_adversarial() // get adversarial robustness metrics
+	Network.evaluate_verification() // get verification metrics for specification trace satisfiability state
+	// compute reachable set
+	Verification.compute_reachable_set(BoundedNetwork.network)
+	Verification.create_symbolic_interval(BoundedNetwork.network)
+	Verification.compute_iterative_interval_refinement(BoundedNetwork.network)
+
+	for trace, epsilon in SafetyProperties, RobustnessProperties:
+			Network.check_trace()
+			if Network.check_trace() == False:
+				Network.check_trace().getTrace().setVerificationStatus(False)
+			
+
+
+}
+
+
+'''
+
+
 ## Class Components
 - `src.deploy.main`: store sequential runtime computations
 - `src.deploy.deploy_utils`: store utilities to connect with all input functions from server nodes (e.g. `src.verification`, `src.prediction`, `src.crypto`, `src.adversarial`)
@@ -18,7 +51,7 @@
 - T1: Compute formal specification given safety property p and t and liveness properties, both of which are subsets of trace properties which are subsets of hyperproperties, defined on 3 requirements (cryptographic, adversarial, and the network). Setup `evaluate()` and run all models under privacy-preserving scheme and compute formal specifications on encrypted network to maintain cryptographic properties of system. Compute private inference and semantic image segmentation with deep convolutional neural network and formally prove trace properties of network.
 
 
-## Workflow
+## Checks
 - Initialize the monitor traces, load the encrypted DCNN model
 - Authenticate verification node to traverse network variables and network object state (access from de-crypted endpoints)
 - Run instance of encrypted model node, and execute sequential process of runtime de-cryption and verification through passing retrieved variables of object state and testing against trace policies and checking for violations of specifications (particularly safety, robustness, security policies & properties), and pass logged computed metrics to `src.analytics`
