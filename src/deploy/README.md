@@ -23,10 +23,11 @@ def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 	MPCNetwork.decrypt().evaluate_adversarial() # get adversarial robustness metrics
 	MPCNetwork.decrypt().evaluate_verification() # get verification metrics for specification trace satisfiability state
 	
-    Verification.getSpecificationAuth() # get auth to compute trace specifications with MPCNetwork
-	Verification.decrypt().compute_reachable_set(BoundedNetwork.network) # compute reachable set
-	Verification.decrypt().create_symbolic_interval(BoundedNetwork.network) # create symbolic interval state for BoundedNetwork (abstract interpretation of network execution state)
-	Verification.compute_iterative_interval_refinement(BoundedNetwork.network)
+    Verification.getSpecificationAuth(privateKey, verifierNodeState) # get auth to compute trace specifications with MPCNetwork
+	MPCNetwork.decrypt()
+    Verification.compute_reachable_set(BoundedMPCNetwork) # compute reachable set
+	Verification.decrypt().create_symbolic_interval(BoundedMPCNetwork) # create symbolic interval state for BoundedNetwork (abstract interpretation of network execution state)
+	Verification.compute_iterative_interval_refinement(BoundedMPCNetwork)
 
 	# iterate over each trace specification
 	for trace in SafetyProperties, RobustnessProperties:
