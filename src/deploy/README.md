@@ -17,14 +17,15 @@ def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 	Network.train_adversarial() # train network under adv. constraints for adv. metrics 
 	MPCNetwork.checkMPCLayer() # check if all layers are compliant to MPC protocol 
 	if MPCNetwork.checkMPCLayer().security_status == False:
-		MPCNetwork.encryptNetwork(Network.model())
+		MPCNetwork.encryptNetwork(Network.model()) # MPCNetwork is sub-node of Network 
 
-	Network.evaluate_nominal() # get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc 
-	Network.evaluate_adversarial() # get adversarial robustness metrics
-	Network.evaluate_verification() # get verification metrics for specification trace satisfiability state
+	MPCNetwork.decrypt().evaluate_nominal() # get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc 
+	MPCNetwork.decrypt().evaluate_adversarial() # get adversarial robustness metrics
+	MPCNetwork.decrypt().evaluate_verification() # get verification metrics for specification trace satisfiability state
 	
-	Verification.compute_reachable_set(BoundedNetwork.network) # compute reachable set
-	Verification.create_symbolic_interval(BoundedNetwork.network) # create symbolic interval state for BoundedNetwork (abstract interpretation of network execution state)
+    Verification.getSpecificationAuth() # get auth to compute trace specifications with MPCNetwork
+	Verification.decrypt().compute_reachable_set(BoundedNetwork.network) # compute reachable set
+	Verification.decrypt().create_symbolic_interval(BoundedNetwork.network) # create symbolic interval state for BoundedNetwork (abstract interpretation of network execution state)
 	Verification.compute_iterative_interval_refinement(BoundedNetwork.network)
 
 	# iterate over each trace specification
