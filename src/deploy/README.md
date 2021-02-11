@@ -9,10 +9,10 @@
 ## Algorithm Psuedocode for Core Engine Operation 
 
 ```python
-def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
-	Solver.solve() # iterate over each trace
-	Trace.checkTrace() # check safety  / robustness traces
-	Trace.verifyTraceState() # check trace state before verif	
+def compute_trace(BoundedNetwork.BoundedReLU, lip, epsilon) {
+	Solver.solve() # setup problem formulation for verification for each trace
+	Trace.checkTrace() # check safety  / robustness traces (trace property state)
+	Trace.verifyTraceState() # check trace state before verification	
 	Network.encrypt() # encrypt tf.Graph() e.g. network state space and network layers 
 	Network.train_adversarial() # train network under adv. constraints for adv. metrics 
 	MPCNetwork.checkMPCLayer() # check if all layers are compliant to MPC protocol 
