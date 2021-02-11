@@ -8,7 +8,7 @@
 
 ## Algorithm Psuedocode for Core Engine Operation 
 
-```
+```python
 def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 	Solver.solve() // iterate over each trace
 	Trace.checkTrace() // check safety  / robustness traces
