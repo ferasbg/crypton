@@ -6,7 +6,8 @@
 
 `src.deploy` acts as the main system runner e.g. development client. 
 
-## Workflow
+## Algorithm Psuedocode for Core Engine Operation 
+
 '''
 def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 	Solver.solve() // iterate over each trace
@@ -17,7 +18,7 @@ def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 	MPCNetwork.checkMPCLayer() // check if all layers are compliant to MPC protocol 
 	if MPCNetwork.checkMPCLayer().security_status == False:
 		MPCNetwork.encryptNetwork(Network.model())
-	
+
 	Network.evaluate_nominal() // get nominal metrics e.g. IoU, FWIoU, mean pixelwise label acc, 
 	Network.evaluate_adversarial() // get adversarial robustness metrics
 	Network.evaluate_verification() // get verification metrics for specification trace satisfiability state
@@ -30,10 +31,7 @@ def compute_trace(Network.ReLU,BoundedNetwork.BoundedReLU, lip, epsilon) {
 			Network.check_trace()
 			if Network.check_trace() == False:
 				Network.check_trace().getTrace().setVerificationStatus(False)
-			
-
-
-}
+	}
 
 
 '''
