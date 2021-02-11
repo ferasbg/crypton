@@ -1,5 +1,5 @@
 # `src.verification`
-Compute finite-state abstractions for symbolic formal verification and specification of deep convolutional neural network with input bound propagation and signal temporal logic
+Compute finite-state abstractions for symbolic formal verification and specification of deep convolutional neural network with input bound propagation and signal temporal logic. Convert network state into bounded abstraction / interpretation, and convert the relevant input-output norm relationships (vector of network state variables) into a specification problem and check against the trace property's requirements.
 
 
 ## Components
