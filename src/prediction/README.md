@@ -6,7 +6,6 @@ The core deep convolutional neural network for semantic image segmentation.
 - `src.prediction.network`: network class
 - `src.prediction.train`: train & evaluate network
 - `src.prediction.convert`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
-- `src.prediction.client`: entry point to network
 
 
 ## Requirements
