@@ -2,8 +2,9 @@
 
 '''
 
-Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace.
-
+Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace. 
+Note that this file is meant to store trace property checkers that adhere to constraints of temporal logics, I am simply isolating the verification / checkers themselves e.g. reachability.py, symbolic_interval_analysis.py
+ 
 
 '''
 import os
