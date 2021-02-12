@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
-from torch import nn
-import torchvision
+import keras
+import tensorflow as tf
+import random
+import pickle
 import crypten
 
 
-
-
-class MPCNetwork(crypten.nn.Module):
+class MPCNetwork():
     """
         Deep Convolutional Neural Network With Secure Training and Testing
 
@@ -37,11 +36,27 @@ class MPCNetwork(crypten.nn.Module):
     def __init__(self):
         super(MPCNet, self).__init__()
         # setup vgg given crypten.nn.Module network object, define network layers
+        self.share0 = randrange(.001)
+        self.share1 = randrange(.001)
+        self.secret = {}
+        self.party_1 = {}
+        self.party_2 = {}
 
 
     def main():
-        """entry point to cryptonet node, also run sequential set of computations as runner"""
-        pass
+        """Compute 3-Party MPC Training for MPCNetwork. Append nominal evaluation."""
+        raise NotImplementedError
+
+    def reconstruct(self, share0, share1):
+        """Reconstruct computations, probably iterate as a subset set iterating over the kernels of the input matrix."""
+        return (share0 + share1) % .0001
+
+    def encrypt():
+        raise NotImplementedError
+
+    def decrypt():
+        raise NotImplementedError
+
 
 
 if __name__ = '__main__':

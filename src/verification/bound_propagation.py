@@ -10,12 +10,11 @@ import random
 import pickle
 
 from prediction.network import Network
-from crypto.mpc_net import MPCNetwork
 
 
 class BoundPropagation():
     """
-    Define and compute interval bound propagation to define constraints for trace properties to compute violations of the trace properties for t \epsilon H for H = {safety, robustness, liveness}. Make formal guarantees with upper and lower bounds that maintain reliability of the network's behavior (optimization technique), formalizing it into constraint satisfaction problem.
+    Define and compute bound propagation to define constraints for trace properties to then compute violations of the trace properties for t \epsilon H for H = {safety, robustness, liveness}. Make formal guarantees with upper and lower bounds that maintain reliability of the network's behavior (optimization technique), formalizing it into constraint satisfaction problem.
     Args:
         - self.state_size: symbolic abstraction store
         - self.upper_bound: upper bounds for each layer for symbolic interval
