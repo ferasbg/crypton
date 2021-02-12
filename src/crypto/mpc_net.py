@@ -36,8 +36,8 @@ class MPCNetwork():
     def __init__(self):
         super(MPCNet, self).__init__()
         # setup vgg given crypten.nn.Module network object, define network layers
-        self.share0 = randrange(.001)
-        self.share1 = randrange(.001)
+        self.share0 = random.randrange(.001)
+        self.share1 = random.randrange(.001)
         self.secret = {}
         self.party_1 = {}
         self.party_2 = {}
