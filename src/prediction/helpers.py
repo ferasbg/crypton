@@ -5,15 +5,12 @@ import re
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from PIL import Image, ImageOps
-from torchvision import transforms, datasets
 
-import torch.nn.functional as F
 import warnings
 
 class Dataset():
-    pass
+    raise NotImplementedError
 
 
 
@@ -28,18 +25,15 @@ def inputToTensor():
 
 
         """
-        Convert input frames into Tensor object. Apply transformations given variables of input image. Pass 1024x2048 images in terms of 224x224 dimensions. Crop, then take set of 224x224 matrices of input image, then compute on the Tensor that stores the image and its encoded and transformed pixelwise data.
+        Convert input frames into Tensor object. Apply transformations given variables of input image. raise NotImplementedError 1024x2048 images in terms of 224x224 dimensions. Crop, then take set of 224x224 matrices of input image, then compute on the Tensor that stores the image and its encoded and transformed pixelwise data.
 
         """
 
-        pass
+        raise NotImplementedError
 
 
 
 
-def load_model():
-    model = torch.hub.load('pytorch/vision:v0.6.0', 'vgg16', pretrained=True)
-    return model
 
 
 def check_layers(model):
@@ -69,4 +63,4 @@ def check_mkdir(dir_name):
 
 def save_model(model):
     # save as model state dict
-    pass
+    raise NotImplementedError

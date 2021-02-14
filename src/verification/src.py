@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Copyright (c) 2021 Feras Baig
+
 import os
 import sys
 import pickle
@@ -5,15 +8,18 @@ import random
 import keras
 import tensorflow
 
-
 from verification.specification import Specification
-from verification.hyperproperties import SafetyProperties, RobustnessProperties, LivenessProperties
-
+from hyperproperties import SafetyProperties, RobustnessProperties, LivenessProperties
 
 
 class Verification():
-    """Check each trace property defined in the formal specifications in `verification.specification`. Use solver to process bounded network state abstraction to compute satisfiability for each trace property.
-
+    """
+        Description: Check each trace property defined in the formal specifications in `verification.specification`. Use solver to process bounded network state abstraction to compute satisfiability for each trace property.
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
     """
 
     def __init__(self):
@@ -23,18 +29,34 @@ class Verification():
         self.robustness_properties = RobustnessProperties()
         self.liveness_properties = LivenessProperties()
 
-
-    @abstractmethod
-    def solve(self):
-        """Use solver to search for counter-examples."""
-        raise NotImplementedError
-
     @staticmethod
-    def problem_formulation(self):
+    def problem_formulation():
         """Define the state of the required arguments in order to solve the verification problem. Now this will depend on what specific specification we are checking for. Leave as problem_formulation, but then note the specification / property being checked."""
         raise NotImplementedError
 
 
+class MPCSolver():
+    '''
+        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for MPCNetwork
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+
+class VerifyTrace():
+    '''
+        Description: Given Computed Formal State Representation (e.g. BMC, STL, SymbolicInterval, BoundPropagation), Compute Probabilistic / Boolean Satisfiability Iterating Over All Traces in SafetyTrace, RobustnessTrace 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
 
 if __name__ == '__main__':
     # create instance of required network state given specification

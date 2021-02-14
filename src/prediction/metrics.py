@@ -8,12 +8,12 @@ import h5py
 import json
 
 def compute_mi_fgsm(adversarial_sample_size, correct_adversarial_labels):
-    pass
+    raise NotImplementedError
 
 
 def cross_entropy_loss():
     """ Compute Cross-Entropy Loss Given compute_softmax(Model model) """
-    pass
+    raise NotImplementedError
 
 def adjusted_rand_index(true_mask, pred_mask, name='ari_score'):
     """Compute Adjusted Rand Score (ARI) which is a clustering similarity score.
@@ -29,26 +29,26 @@ def adjusted_rand_index(true_mask, pred_mask, name='ari_score'):
 
 
     """
-    pass
+    raise NotImplementedError
 
 
 def intersection_over_union():
-    pass
+    raise NotImplementedError
 
 def frequency_weighted_iou():
-    pass
+    raise NotImplementedError
 
 def mean_iou():
-    pass
+    raise NotImplementedError
 
 def boundary_f1_score():
-    pass
+    raise NotImplementedError
 
 def global_average_accuracy():
-    pass
+    raise NotImplementedError
 
 def class_average_accuracy():
-    pass
+    raise NotImplementedError
 
 
 def mean_pixel_accuracy(correct_pixels, total_pixels):
@@ -66,7 +66,7 @@ def mean_pixel_accuracy(correct_pixels, total_pixels):
 
 
     """
-    pass
+    raise NotImplementedError
 
 
 def overall_pixel(correct_pixels, total_pixels):
@@ -77,4 +77,4 @@ def overall_pixel(correct_pixels, total_pixels):
 
 def per_class():
     """Get Per-Class (PC) Accuracy for Correctly Labeled Pixels for Each Class, then Average Over Total Classes"""
-    pass
+    raise NotImplementedError

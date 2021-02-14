@@ -20,24 +20,13 @@ from stl import STLSpecification, Trace, CheckTraceData
 
 class HyperProperties():
     """
-    Store hyperproperties to compute specifications in verification node, checking object state against violations of set of trace properties for H = {s, r, l} for s ⊆ H, r ⊆ H, l ⊆ H. Extract succinct input-output characterizations of the network behaviour, and store property inference algorithms for each property type.
-
-    Args:
-        - self.robustness_properties
-        - self.liveness_properties
-        - self.safety_properties
-
-
+    Description: Store hyperproperties to compute specifications in verification node, checking object state against violations of set of trace properties for H = {s, r, l} for s ⊆ H, r ⊆ H, l ⊆ H. Extract succinct input-output characterizations of the network behaviour, and store property inference algorithms for each property type.
+    Args: None
     Raises:
-
-
     Returns:
-
-
     References:
         - https://arxiv.org/pdf/1904.13215.pdf
         - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
-
 
     """
 
@@ -59,7 +48,6 @@ class RobustnessProperties(HyperProperties):
     Global Robustness: One can generalize the previous notion of robustness by universally quantifying over all inputs x, to get the following formula, for a fixed β
         ∀x. ∀δ. ¬ϕ(δ)
 
-
     Args:
         - self.robustness_value = []: store robustness value
         - self.robustness_sensitivity: store robustness sensitivity
@@ -70,11 +58,7 @@ class RobustnessProperties(HyperProperties):
         - self.numPixels = [224, 224]
 
     Raises:
-
-
     Returns:
-
-
     References:
 
 
@@ -103,9 +87,8 @@ class SafetyProperties(HyperProperties):
         - safety trace 2: model is negatively rewarding gaussian noise distribution, a function of the preprocessor for the input image
         - safety trace 3: model is not affected by perturbed pixels given correct label annotation for each pixel, if this is incorrect, then safety is threatened because region of space may be incorrectly classified given individual pixels
         - safety trace 4: the model is violating less than x number of classifications given each pixel given the input frame matrix
-        - safety trace 5:
-        - safety trace 6:
-
+        - safety trace 5: given lp-norm perturbation, the misclassified pixels is under certain threshold p 
+        - safety trace 6: given projected gradient descent attack meant to distort backpropagation process, assert that model updates its convergence to local minima with gradient descent correctly given bounds
 
     """
 
@@ -139,8 +122,6 @@ class LivenessProperties(HyperProperties):
 
     def __init__(self):
         super(LivenessProperties, self).__init__()
-
-
 
 if __name__ == '__main__':
     # instantiate objects that store computations and hyper>trace properties

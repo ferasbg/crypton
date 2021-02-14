@@ -1,28 +1,30 @@
+#!/usr/bin/env python3
+# Copyright 2021 Feras Baig
+
 import os
 import sys
 
-
-import torch
-import torchvision
-
+import keras
+import tensorflow as tf
 
 from prediction.network import Network
 from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
 from bound_propagation import BoundPropagation
 
 class Specification():
-    """Core Formal Specifications for Deep Convolutional Neural Network. Write and aggregate all specifications and sub-nodes in verification node to compute on network during its training and testing
+    """
+        Description: Core Formal Specifications for Deep Convolutional Neural Network. Write and aggregate all specifications and sub-nodes in verification node to compute on network during its training and testing
+        Args:
+            self.bound_propagation = BoundPropagation(): store algorithm for bound propagation
+            self._robustness_properties = RobustnessProperties(): store initialized robustness properties and compute specifications for robustness verification
+            self._safety_properties = SafetyProperties(): : store initialized safety properties and compute specifications for safety verification
+            self._liveness_properties = LivenessProperties(): : store initialized liveness properties and compute specifications for liveness verification
 
+        Returns:
+        Type: Specification ( object that stores metrics for all computations for safety verification, robustness, and liveness properties)
 
-    Args:
-        self.bound_propagation = BoundPropagation(): store algorithm for bound propagation
-        self._robustness_properties = RobustnessProperties(): store initialized robustness properties and compute specifications for robustness verification
-        self._safety_properties = SafetyProperties(): : store initialized safety properties and compute specifications for safety verification
-        self._liveness_properties = LivenessProperties(): : store initialized liveness properties and compute specifications for liveness verification
-
-    Returns:
-       Type: Specification ( object that stores metrics for all computations for safety verification, robustness, and liveness properties)
-
+        Raises:
+        References:
     """
 
     def __init__(self):
@@ -36,6 +38,16 @@ class Specification():
 
     def main(self):
         raise NotImplementedError
+
+
+class CheckTraceData():
+    raise NotImplementedError
+
+class SafetyTrace():
+    raise NotImplementedError
+
+class RobustnessTrace():
+    raise NotImplementedError
 
 
 if __name__ == '__main__':

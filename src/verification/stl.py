@@ -1,11 +1,20 @@
+#!/usr/bin/env python3
 # Copyright 2021 Feras Baig
 
+import os
+import sys
+
+import keras
+import tensorflow as tf
+
+from prediction.network import Network
+from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
+from bound_propagation import BoundPropagation
+
 '''
-
-Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace. 
-Note that this file is meant to store trace property checkers that adhere to constraints of temporal logics, I am simply isolating the verification / checkers themselves e.g. reachability.py, symbolic_interval_analysis.py
- 
-
+Description: 
+    - Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace. 
+    - Note that this file is meant to store trace property checkers that adhere to constraints of temporal logics, I am simply isolating the verification / checkers themselves e.g. reachability.py, symbolic_interval_analysis.py
 '''
 import os
 import time
@@ -16,7 +25,6 @@ from torch import nn
 from prediction.network import Network
 from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
 from bound_propagation import BoundPropagation
-
 
 
 class STLSpecification(Network):
@@ -39,20 +47,54 @@ class Trace():
 
     def __init__(self):
         self.l2norm = 0
-        self.upperBound = 0
-        self.lowerBound = 0
-        self.reachableSets = []
+        self.upperBound = {}
+        self.lowerBound = {}
+        self.reachableSets = {}
 
     @staticmethod
-    def check_trace(self):
+    def check_trace():
         raise NotImplementedError
 
-    pass
 
-class CheckTraceData():
-    pass
+class STLCheckTraceData():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+class STLSafetyTrace():
+    '''
+        Description: Store safety properties that will be checked with bounded model checking. Note that each function of safety trace will be its own safety trace property.
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+class STLRobustnessTrace():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
 
 
+class STLSolver():
+    '''
+    Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds 
+    '''
+    raise NotImplementedError
 
 if __name__ == '__main__':
     Trace.check_trace()

@@ -46,10 +46,9 @@ class ReachabilityAnalysis():
     def parse(self):
         """Parser to retrieve all required variable nodes from network at various timesteps"""
         # Network.getVariable()
-        pass
+        raise NotImplementedError
 
-
-    pass
+    raise NotImplementedError
 
 
 
