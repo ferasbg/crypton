@@ -16,21 +16,28 @@ from keras.applications.vgg16 import VGG16
 
 
 class Network():
-    """
-    Args: None
+    '''
+        Args: None
 
-    Returns: tf.keras.Model
+        Returns: tf.keras.Model
 
-    Raises:
-        RaiseError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
+        Raises:
+            RaiseError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
 
-    References:
-        - https://arxiv.org/abs/1409.1556
-        - https://github.com/pochih/FCN-pytorch/blob/master/python/fcn.py
-        -
-"""
+        References:
+            - https://arxiv.org/abs/1409.1556
+            - https://github.com/pochih/FCN-pytorch/blob/master/python/fcn.py
+    '''
 
     def __init__(self):
+        '''
+            Description:
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         super(Network, self).__init__()
         # labels
         self.num_classes = 20
@@ -81,14 +88,39 @@ class Network():
 
 
     def freeze_feature_layers(self):
+        '''
+            Description:
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         raise NotImplementedError
 
     def forward(self, input_tensor):
+        '''
+            Description:
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         raise NotImplementedError
 
     @property
     def getSymbolicIntervalBounds(self):
-        """Return computed network state and convert to symbolic abstractions + temporal signals for property inference"""
+        
+        '''
+            Description: Return computed network state and convert to symbolic abstractions + temporal signals for property inference
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
+
         raise NotImplementedError
 
     @property
@@ -120,7 +152,6 @@ class Network():
 
 if __name__ == '__main__':
     # initialize tf.Session(sess) to initialize tf computational graph to track state-transition
-    graph = tf.get_default_graph()
-    saver = tf.train.Saver()
+    graph = tf.compat.v1.get_default_graph()
 
 
