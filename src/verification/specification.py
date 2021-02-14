@@ -28,12 +28,14 @@ class Specification():
     """
 
     def __init__(self):
-        # store hyperproperty objects and functions to compute verification algorithms
-        self.bound_propagation = BoundPropagation()
+        # general property definitions
         self._robustness_properties = RobustnessProperties()
         self._safety_properties = SafetyProperties()
         self._liveness_properties = LivenessProperties()
+        # property check state
         self.verificationState = False # set to True when all trace properties have been checked
+        
+
 
 
     def main(self):

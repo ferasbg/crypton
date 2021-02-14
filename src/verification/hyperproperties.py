@@ -72,7 +72,7 @@ class RobustnessProperties(HyperProperties):
         self.misclassified_pixels  = 0 # number of misclassified pixels
         self.correct_pixels = 0 # number of correctly classified pixels
         self.unknown_pixels = 0 # number of unknown pixels without label
-        self.adversarial_pixels: 0 # number of perturbed pixels
+        self.adversarial_pixels: 0 # number of perturbed pixels (not gaussian noise)
         self.numPixels = [224, 224] # image_size
         self.computation_time = 0 # store compute time for robustness verification
 
