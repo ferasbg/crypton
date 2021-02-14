@@ -23,7 +23,14 @@ class Verification():
     """
 
     def __init__(self):
-        """Store the formal specifications and each trace property. Also store the state for the parameters required for each verification technique."""
+        '''
+            Description: Store the formal specifications and each trace property. Also store the state for the parameters required for each verification technique.
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         self.specification = Specification()
         self.safety_properties = SafetyProperties()
         self.robustness_properties = RobustnessProperties()
@@ -31,7 +38,14 @@ class Verification():
 
     @staticmethod
     def problem_formulation():
-        """Define the state of the required arguments in order to solve the verification problem. Now this will depend on what specific specification we are checking for. Leave as problem_formulation, but then note the specification / property being checked."""
+        '''
+            Description: Define the state of the required arguments in order to solve the verification problem. Now this will depend on what specific specification we are checking for. Leave as problem_formulation, but then note the specification / property being checked.
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         raise NotImplementedError
 
 
@@ -63,3 +77,4 @@ if __name__ == '__main__':
     Verification.problem_formulation()
     # iterate over each trace property: sequential workflow of property checking where `src.specification` stores the object state for each trace property whereas verification does the property check
 
+    

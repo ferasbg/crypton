@@ -17,7 +17,7 @@ from keras.applications.vgg16 import VGG16
 from prediction.network import Network
 
 
-class BoundedNetwork():
+class BoundedNetwork(Network):
     '''
     Description: Create a BoundedNetwork for BoundPropagation(BoundedNetwork) for BoundedNetwork is Finite-State State Abstraction
     Args: tf.keras.Model
@@ -30,7 +30,7 @@ class BoundedNetwork():
     raise NotImplementedError
 
 
-class Formulate():
+class Formulate(BoundedNetwork):
     '''
     Description: Mathematical Formulation of L-p Norm Perturbation 
     Args:

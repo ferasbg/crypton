@@ -37,16 +37,48 @@ class Specification():
 
 
     def main(self):
+        '''
+            Description: 
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
         raise NotImplementedError
 
 
 class CheckTraceData():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''  
     raise NotImplementedError
 
 class SafetyTrace():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
     raise NotImplementedError
 
 class RobustnessTrace():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
     raise NotImplementedError
 
 

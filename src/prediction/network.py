@@ -93,22 +93,34 @@ class Network():
 
     @property
     def sendNetworkState(self):
-        """Get network object state, via semantics and numerical representation. Deduce symbolic representation with `src.verification.symbolic_representation` in order to represent the constraints and network state."""
+        '''
+            Description: Get network object state, via semantics and numerical representation. Deduce symbolic representation with `src.verification.symbolic_representation` in order to represent the constraints and network state.
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
+
         raise NotImplementedError
 
-
     def evaluate_nominal(self):
-        """Compute segmentation metrics."""
+
+        '''
+            Description:
+            Args:
+            Returns:
+            Raises:
+            References:
+            Examples:
+        '''
+
         raise NotImplementedError
 
 
 if __name__ == '__main__':
     # initialize tf.Session(sess) to initialize tf computational graph to track state-transition
-    session = tf.Session()
     graph = tf.get_default_graph()
-    with session.graph.as_default():
-        tf.keras.backend.set_session(session)
     saver = tf.train.Saver()
-    sess.run(tf.global_variables_initializer())
 
 

@@ -3,7 +3,7 @@ from prediction.network import Network
 
 class ReachabilityAnalysis():
 
-    """
+    '''
     Compute Reachability Analysis with Symbolic Intervals on Deep Convolutional Neural Network
 
     Args (Properties):
@@ -23,7 +23,7 @@ class ReachabilityAnalysis():
     References:
         - https://arxiv.org/abs/1805.02242
 
-    """
+    '''
     def __init__(self):
         self.reach_point = []
         self.reach_option = []
@@ -32,12 +32,26 @@ class ReachabilityAnalysis():
         self.reach_time = 0
 
     def parse(self):
-        """Parser to retrieve all required variable nodes from network at various timesteps"""
+        
+        '''
+            Description: Parser to retrieve all required variable nodes from network at various timesteps
+
+            Args:
+
+            Returns:
+            
+            Raises:
+            
+            References:
+            
+            Examples:    
+        
+        '''
         # Network.getVariable()
-        pass
+        raise NotImplementedError
 
 
-    pass
+    raise NotImplementedError
 
 
 if __name__ == '__main__':

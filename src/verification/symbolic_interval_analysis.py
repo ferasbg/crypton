@@ -13,29 +13,69 @@ from bound_propagation import BoundPropagation
 from prediction.network_convert import BoundedNetwork 
 
 class PublicSymbolicInterval(BoundedNetwork):
+    '''
+        Description: 
+
+        Args:
+
+        Returns:
+        
+        Raises:
+        
+        References:
+        
+        Examples:    
+        
+    '''
     raise NotImplementedError
 
 class SymbolicIntervalAnalysis(PublicSymbolicInterval):
-    """
-    Compute Symbolic Interval Analysis with differentiable lower and upper bounds of tf.keras.model.ReLU.getLayerState().
+    '''
+        Description: Compute Symbolic Interval Analysis with differentiable lower and upper bounds of tf.keras.model.ReLU.getLayerState().
+        
+        Args:
+            - self.reluState = prediction.network_convert.BoundedNetwork.getLayerState()
+            - self.state_representation
+            - self.bound_propagation
+            - self.upperBound
+            - self.lowerBound
+        
+        Returns:
 
-    Args:
-        - self.reluState = prediction.network_convert.BoundedNetwork.getLayerState()
-        - self.state_representation
-        - self.bound_propagation
-        - self.upperBound
-        - self.lowerBound
+        Raises:
 
-    References:
-        - https://github.com/tcwangshiqi-columbia/symbolic_interval/tree/master/symbolic_interval
-        - https://github.com/tcwangshiqi-columbia/symbolic_interval/blob/a008fbb54d04b3a3005cc3967b858c35a3fcf3dd/symbolic_interval/symbolic_network.py#L29:7
-        - https://github.com/tcwangshiqi-columbia/symbolic_interval/blob/master/test.py
+        References:
+            - https://github.com/tcwangshiqi-columbia/symbolic_interval/tree/master/symbolic_interval
+            - https://github.com/tcwangshiqi-columbia/symbolic_interval/blob/a008fbb54d04b3a3005cc3967b858c35a3fcf3dd/symbolic_interval/symbolic_network.py#L29:7
+            - https://github.com/tcwangshiqi-columbia/symbolic_interval/blob/master/test.py
 
-
-    """
+    '''
 
     raise NotImplementedError
 
+
+class IntervalIterativeRefinement():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+
+class SymbolicIntervalSplitting():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
 
 
 if __name__ == '__main__':
