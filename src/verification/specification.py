@@ -13,7 +13,7 @@ from bound_propagation import BoundPropagation
 
 class Specification():
     """
-        Description: Core Formal Specifications for Deep Convolutional Neural Network. Write and aggregate all specifications and sub-nodes in verification node to compute on network during its training and testing
+        Description: Core Formal Specifications for Deep Convolutional Neural Network. Note that the SafetyProperties, RobustnessProperties, and Hyperproperties are abstract parent classes that store a general-purpose set of property definitions, but the functions of the trace types will define the formal logic and specific trace itself, appended to its inherited property definition. Also, write and aggregate all specifications and sub-nodes in verification node to compute on network during its training and testing
         Args:
             self.bound_propagation = BoundPropagation(): store algorithm for bound propagation
             self._robustness_properties = RobustnessProperties(): store initialized robustness properties and compute specifications for robustness verification
@@ -38,7 +38,7 @@ class Specification():
 
     def main(self):
         '''
-            Description: 
+            Description:
             Args:
             Returns:
             Raises:
@@ -50,18 +50,18 @@ class Specification():
 
 class CheckTraceData():
     '''
-        Description: 
+        Description:
         Args:
         Returns:
         Raises:
         References:
         Examples:
-    '''  
+    '''
     raise NotImplementedError
 
 class SafetyTrace():
     '''
-        Description: 
+        Description:
         Args:
         Returns:
         Raises:
@@ -72,7 +72,7 @@ class SafetyTrace():
 
 class RobustnessTrace():
     '''
-        Description: 
+        Description:
         Args:
         Returns:
         Raises:
