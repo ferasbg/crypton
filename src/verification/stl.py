@@ -43,11 +43,10 @@ class STLSpecification(Network):
     def __init__(self):
         self.robustness = RobustnessProperties()
         self.safety = SafetyProperties()
-        self.liveness = LivenessProperties()
+        self.counterexample_verification = False
 
 
-
-class Trace():
+class STLTrace():
     '''
         Description: 
         Args:
@@ -113,5 +112,5 @@ class STLSolver():
     raise NotImplementedError
 
 if __name__ == '__main__':
-    Trace.check_trace()
+    STLTrace.check_trace()
 
