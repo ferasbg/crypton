@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# Copyright 2021 Feras Baig
 import os
 import pickle
 import random
@@ -9,6 +11,23 @@ import numpy as np
 import tensorflow as tf
 from prediction.network import Network
 
+from verification.hyperproperties import RobustnessProperties, SafetyProperties
+from verification.symbolic_interval_analysis import (
+    IntervalIterativeRefinement, PublicSymbolicInterval,
+    SymbolicIntervalAnalysis, SymbolicIntervalSplitting)
+
+
+class ReachableSet():
+    '''
+    Description:
+    Args:
+    Returns:
+    Raises:
+    References:
+    Examples:
+
+    '''
+    raise NotImplementedError
 
 class ReachabilityAnalysis():
 
@@ -27,7 +46,7 @@ class ReachabilityAnalysis():
         Type: ReachabilityAnalysis
 
     Raises:
-        Error if Any Variable Element in Set of Access Points is NULL
+        NetworkVariableNULLError, ReachableSetTypeDefError
 
     References:
         - https://arxiv.org/abs/1805.02242
@@ -39,30 +58,12 @@ class ReachabilityAnalysis():
         self.reachSet = []
         self.ground_truth = []
         self.reach_time = 0
+        self.inputQuery = []
+
 
     def parse(self):
-        
-        '''
-            Description: Parser to retrieve all required variable nodes from network at various timesteps
-
-            Args:
-
-            Returns:
-            
-            Raises:
-            
-            References:
-            
-            Examples:    
-        
-        '''
-        # Network.getVariable()
         raise NotImplementedError
-
-
-    raise NotImplementedError
 
 
 if __name__ == '__main__':
     ReachabilityAnalysis()
-    # compute given access points to network during training and testing

@@ -8,7 +8,7 @@ import keras
 import tensorflow as tf
 
 from prediction.network import Network
-from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
+from hyperproperties import RobustnessProperties, SafetyProperties
 from bound_propagation import BoundPropagation
 from prediction.network_convert import BoundedNetwork
 
@@ -62,18 +62,6 @@ class IntervalIterativeRefinement():
         Raises:
         References:
         Examples:
-    '''
-    raise NotImplementedError
-
-class ReachableSet():
-    '''
-    Description:
-    Args:
-    Returns:
-    Raises:
-    References:
-    Examples:
-
     '''
     raise NotImplementedError
 
