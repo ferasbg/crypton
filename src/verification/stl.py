@@ -1,30 +1,24 @@
 #!/usr/bin/env python3
 # Copyright 2021 Feras Baig
+'''
+
+Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace. 
+Note that this file is meant to store trace property checkers that adhere to constraints of temporal logics, I am simply isolating the verification / checkers themselves e.g. reachability.py, symbolic_interval_analysis.py
+
+'''
 
 import os
+import random
 import sys
+import time
 
 import keras
 import tensorflow as tf
-
 from prediction.network import Network
-from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties
-from bound_propagation import BoundPropagation
 
-'''
-Description: 
-    - Given defined trace properties in `verification.hyperproperties`, compute and iterate over each trace property and track if the computed (symbolic) state abstraction produces a counter-example of the property trace. 
-    - Note that this file is meant to store trace property checkers that adhere to constraints of temporal logics, I am simply isolating the verification / checkers themselves e.g. reachability.py, symbolic_interval_analysis.py
-'''
-import os
-import time
-import random
-import torch
-from torch import nn
-
-from prediction.network import Network
-from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties
 from bound_propagation import BoundPropagation
+from hyperproperties import RobustnessProperties, SafetyProperties
+from verification.hyperproperties import RobustnessProperties, SafetyProperties
 
 
 class STLSpecification(Network):
@@ -33,7 +27,6 @@ class STLSpecification(Network):
         Args:
             - self.robustness = RobustnessProperties()
             - self.safety = SafetyProperties()
-            - self.liveness = LivenessProperties()
         Returns:
         Raises:
         References:

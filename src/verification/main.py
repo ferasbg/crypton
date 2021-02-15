@@ -2,14 +2,15 @@
 # Copyright (c) 2021 Feras Baig
 
 import os
-import sys
 import pickle
 import random
+import sys
+
 import keras
 import tensorflow
 
+from verification.hyperproperties import RobustnessProperties, SafetyProperties
 from verification.specification import Specification
-from hyperproperties import SafetyProperties, RobustnessProperties
 
 
 class Verification():
