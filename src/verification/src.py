@@ -9,7 +9,7 @@ import keras
 import tensorflow
 
 from verification.specification import Specification
-from hyperproperties import SafetyProperties, RobustnessProperties, LivenessProperties
+from hyperproperties import SafetyProperties, RobustnessProperties
 
 
 class Verification():
@@ -34,7 +34,6 @@ class Verification():
         self.specification = Specification()
         self.safety_properties = SafetyProperties()
         self.robustness_properties = RobustnessProperties()
-        self.liveness_properties = LivenessProperties()
 
     @staticmethod
     def problem_formulation():

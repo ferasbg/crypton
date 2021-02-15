@@ -15,15 +15,19 @@ from keras.applications.vgg16 import VGG16
 
 from prediction.network import Network
 from bound_propagation import BoundPropagation, Bounds
-from stl import STLSpecification, Trace, CheckTraceData
+from stl import STLSpecification, Trace, STLCheckTraceData, STLSafetyTrace, STLRobustnessTrace
 
 
 class HyperProperties():
     '''
         Description: Store hyperproperties to compute specifications in verification node, checking object state against violations of set of trace properties for H = {s, r, l} for s ⊆ H, r ⊆ H, l ⊆ H. Extract succinct input-output characterizations of the network behaviour, and store property inference algorithms for each property type.
+        
         Args: None
-        Raises:
+        
+        Raises: AssertTypeError
+        
         Returns:
+       
         References:
             - https://arxiv.org/pdf/1904.13215.pdf
             - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
@@ -33,8 +37,6 @@ class HyperProperties():
     def __init__(self):
         self._robustness_properties = RobustnessProperties()
         self._safety_properties = SafetyProperties()
-        self._liveness_properties = LivenessProperties()
-
 
 
 class RobustnessProperties(HyperProperties):
@@ -48,6 +50,12 @@ class RobustnessProperties(HyperProperties):
 
             Global Robustness: One can generalize the previous notion of robustness by universally quantifying over all inputs x, to get the following formula, for a fixed β
                 ∀x. ∀δ. ¬ϕ(δ)
+
+            % robustness trace property set τ:
+                - robustness trace 1: given lp-norm perturbation, the misclassified pixels is under certain threshold p 
+                - robustness trace 2: given projected gradient descent attack meant to distort backpropagation process, assert that model updates its convergence to local minima with gradient descent correctly given bounds
+                - robustness trace 3: network is not making misclassifications with respect to L-norm and bound propagation
+
 
         Args:
             - self.robustness_value = []: store robustness value
@@ -74,25 +82,22 @@ class RobustnessProperties(HyperProperties):
         self.unknown_pixels = 0 # number of unknown pixels without label
         self.adversarial_pixels: 0 # number of perturbed pixels (not gaussian noise)
         self.numPixels = [224, 224] # image_size
-        self.computation_time = 0 # store compute time for robustness verification
-
-
+        self.computation_time = 0 # store compute time for robustness verification, e.g. time/space, memory_usage, gpu_parallelization_ability=True, contract_formulationStatus=True, tightBounds=True 
+        self.counterexample_verificationState = False
 
 class SafetyProperties(HyperProperties):
     '''
         Description: Store specifications to compute violations of safety properties, which will be initialized to empty values. Define safety properties meant to assert network object state that adheres to safety constraints i.e. nothing bad is happening.
         Args:
-            % safety properties: assert network object state adheres to safety constraints i.e. nothing bad is happening
             - safety trace 1: observance of network object state at timestep n when network is doing x
-            - safety trace 2: model is negatively rewarding gaussian noise distribution, a function of the preprocessor for the input image
+            - safety trace 2: model is negatively rewarding gaussian noise distribution (adding noise to pixels vs. perturbing kernels), a function of the preprocessor for the input image
             - safety trace 3: model is not affected by perturbed pixels given correct label annotation for each pixel, if this is incorrect, then safety is threatened because region of space may be incorrectly classified given individual pixels
             - safety trace 4: the model is violating less than x number of classifications given each pixel given the input frame matrix
-            - safety trace 5: given lp-norm perturbation, the misclassified pixels is under certain threshold p 
-            - safety trace 6: given projected gradient descent attack meant to distort backpropagation process, assert that model updates its convergence to local minima with gradient descent correctly given bounds
         
         Returns:
 
         Raises:
+            Error if iter in layers [instanceof = False], def checks(): ([for v in initialize_verification]: BoundPropagationTypeDefinitionError , PublicSymbolicIntervalAnalysisError) 
 
         References:
 
@@ -100,32 +105,10 @@ class SafetyProperties(HyperProperties):
 
     def __init__(self):
         super(SafetyProperties, self).__init__()
-
-
-
-class LivenessProperties(HyperProperties):
-    '''
-        Description: Store specifications to compute violations of liveness properties, which will be initialized to empty values. For context, liveness properties are the eventual instance of a good event happening under certain constraints and conditions.
-        Args:
-            % liveness properties:
-            - note that params are variables specific to the trace property
-            - liveness trace 1: network is not making misclassifications with respect to L-norm and bound propagation
-            - liveness trace 2: proper backpropagation, convolutional kernel computations, correct gradient descent, and gradient accumulation
-            - liveness trace 3:
-            - liveness trace 4: compute automated input rectification on adversarial perturbations
-            - liveness trace 5:
-
-        Returns:
-        Raises:
-        References:
-    '''
-
-    def __init__(self):
-        super(LivenessProperties, self).__init__()
+        # define member variables that can apply to each safety property specification
+        self.safetyPropertyState = False
 
 if __name__ == '__main__':
     # instantiate objects that store computations and hyper>trace properties
-    HyperProperties()
     SafetyProperties()
     RobustnessProperties()
-    LivenessProperties()

@@ -8,7 +8,7 @@ import keras
 import tensorflow as tf
 
 from prediction.network import Network
-from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
+from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties
 from bound_propagation import BoundPropagation
 
 '''
@@ -23,7 +23,7 @@ import torch
 from torch import nn
 
 from prediction.network import Network
-from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
+from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties
 from bound_propagation import BoundPropagation
 
 
@@ -103,7 +103,7 @@ class STLRobustnessTrace():
 
 class STLSolver():
     '''
-        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds 
+        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds. Specifically, iter in range(H) for H = {R, S} for R and S are the subset lists of trace properties for R: robustness, S: safety
         Args:
         Returns:
         Raises:
