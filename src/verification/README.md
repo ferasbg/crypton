@@ -1,11 +1,10 @@
 # `src.verification`
-Compute finite-state abstractions for symbolic formal verification and specification of deep convolutional neural network with input bound propagation and signal temporal logic. Convert network state into bounded abstraction / interpretation, and convert the relevant input-output norm relationships (vector of network state variables) into a specification problem and check against the trace property's requirements.
+Compute finite-state abstractions for formal verification and specification of deep convolutional neural network. Convert network state into bounded abstraction / interpretation, and convert the relevant input-output norm relationships (vector of network state variables) into a specification problem and check against the trace property's requirements.
 
 
 ## Components
 - `src.verification.specification`: store safety and liveness properties and specification schema and routes to connect with `src.monitor` and `src.prediction.nn`, define core logic and formal properties to satisfy, for which `verification.stl` will execute the instance of analyzing the network
 - `src.verification.stl`: signal temporal logic code that processes data streams (e.g. signals) in runtime given no ds deadlocks, NP-complete state space
-- `src.verification.ibp`: compute verification of adversarial robustness given adversarial protocols and nodes in `src.adversarial` and network layers in `src.prediction.nn`
 - `src.verification.reachability`: setup reachability analysis to access reachable states of network and perform property inference on de-coupled network, define functions to symbolically represent network state and member variable state of tensor objects relating to network with respect to layers, process state when required at specified timesteps and steps of workflow, check against written property formalisms in `verification.specification` and client node that stores stl in `verification.stl`
 
 
@@ -19,7 +18,6 @@ Compute finite-state abstractions for symbolic formal verification and specifica
 - general, but must understand what must be accessed, what inputs are required, and what must be computed for other computations to occur (dependencies)
 - schema: class, member functions, arguments (type def, description), return object type  + description, raises, and description of function and neighboring nodes 
 - Given that there will training under the constraints of the model being encrypted and decrypted to access the object's state to compute trace properties given specifications for safety, robustness, and liveness properties, there will be tests and all metadata will be collected and tracked.
-- 
 
 
 ### Setup

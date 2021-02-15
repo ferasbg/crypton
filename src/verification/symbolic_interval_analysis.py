@@ -10,36 +10,36 @@ import tensorflow as tf
 from prediction.network import Network
 from hyperproperties import HyperProperties, RobustnessProperties, SafetyProperties, LivenessProperties
 from bound_propagation import BoundPropagation
-from prediction.network_convert import BoundedNetwork 
+from prediction.network_convert import BoundedNetwork
 
 class PublicSymbolicInterval(BoundedNetwork):
     '''
-        Description: 
+        Description:
 
         Args:
 
         Returns:
-        
+
         Raises:
-        
+
         References:
-        
-        Examples:    
-        
+
+        Examples:
+
     '''
     raise NotImplementedError
 
 class SymbolicIntervalAnalysis(PublicSymbolicInterval):
     '''
         Description: Compute Symbolic Interval Analysis with differentiable lower and upper bounds of tf.keras.model.ReLU.getLayerState().
-        
+
         Args:
             - self.reluState = prediction.network_convert.BoundedNetwork.getLayerState()
             - self.state_representation
             - self.bound_propagation
             - self.upperBound
             - self.lowerBound
-        
+
         Returns:
 
         Raises:
@@ -56,7 +56,7 @@ class SymbolicIntervalAnalysis(PublicSymbolicInterval):
 
 class IntervalIterativeRefinement():
     '''
-        Description: 
+        Description:
         Args:
         Returns:
         Raises:
@@ -65,10 +65,22 @@ class IntervalIterativeRefinement():
     '''
     raise NotImplementedError
 
+class ReachableSet():
+    '''
+    Description:
+    Args:
+    Returns:
+    Raises:
+    References:
+    Examples:
+
+    '''
+    raise NotImplementedError
+
 
 class SymbolicIntervalSplitting():
     '''
-        Description: 
+        Description:
         Args:
         Returns:
         Raises:
