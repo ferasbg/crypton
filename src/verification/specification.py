@@ -32,9 +32,6 @@ class Specification():
         self._safety_properties = SafetyProperties()
         # property check state
         self.verificationState = False # set to True when all trace properties have been checked
-        
-
-
 
     def main(self):
         '''
