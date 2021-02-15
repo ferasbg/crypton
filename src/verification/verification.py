@@ -48,7 +48,19 @@ class Verification():
         raise NotImplementedError
 
 
-class MPCSolver():
+class BoundedNetworkSolver():
+    '''
+        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for Network
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+
+class BoundedMPCNetworkSolver(BoundedNetworkSolver):
     '''
         Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for MPCNetwork
         Args:
