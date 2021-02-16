@@ -7,15 +7,17 @@ import random
 import time
 import argparse
 
-import keras
 import numpy as np
 from PIL import Image
 import random
 import tensorflow as tf
+from tensorflow import keras
 from keras.applications.vgg16 import VGG16
-from keras.models import Sequential
-from keras.layers import Dense, Conv2D, MaxPool2D , Flatten
+from keras.models import Input, Model, Sequential
 from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Dense, Conv2D, Conv2DTranspose, UpSampling2D, MaxPooling2D, Flatten
+from keras.preprocessing.image import ImageDataGenerator
+from keras.optimizers import Adam
 import numpy as np
 
 class Network():
@@ -44,7 +46,6 @@ class Network():
 
         # labels
         self.num_classes = 20
-        self.model = VGG16()
         self.epochs = 1000
         self.batch_size = 64 # maybe 128
         self.learning_rate = 1e-4
@@ -86,12 +87,13 @@ class Network():
         self.pixelwise_acc = 0
 
         # perturbation
-        self.gaussian_noise_factor = 0.10
-        self.perturbation_factor = 0.05
+        self.gaussian_noise_coefficient = 0.10
+        self.perturbation_coefficient = 0.05
 
     def build_compile_model(self):
         # build layers of network
         model = Sequential()
+
 
 
     def train(self):

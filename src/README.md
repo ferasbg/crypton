@@ -26,6 +26,8 @@ Note that the formal specifications are a representation of the formal constrain
 
 
 ## Requirements
-- setup data preprocessing and network + eval/training, `iter in range(train_dataset.size())` 
+- setup data preprocessing and network + eval/training, `iter in range(train_dataset.size())`, differentiate VGG16(), Sequential(), and Model(), track all args/params and member variables for training 
 - train public network based on VGG-16 architecture, perhaps split dataset based on train/test/val for `Network`, `MPCNetwork`, and `Network` with Verification, and `MPCNetwork` with Verification. 
+- setup mpc protocol to define crypto logic to encrypt `tf.keras.models.Input` tensor and dataset itself.
+- setup formal specifications given written logic to compute the symbolic abstractions given the keras network state
 
