@@ -26,8 +26,6 @@ Note that the formal specifications are a representation of the formal constrain
 
 
 ## Requirements
-- missing: adversarial protocol implementation and testing strategies; sequential workflow for src.deploy (instance / runner), and the specific symbolic and numeric representation of the safety and robustness properties for the neural network; implementing smpc for an extended neural network
-- setup access points for every node and its respective arguments necessary for each computation
-
-
+- setup data preprocessing and network + eval/training, `iter in range(train_dataset.size())` 
+- train public network based on VGG-16 architecture, perhaps split dataset based on train/test/val for `Network`, `MPCNetwork`, and `Network` with Verification, and `MPCNetwork` with Verification. 
 

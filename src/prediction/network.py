@@ -13,7 +13,10 @@ from PIL import Image
 import random
 import tensorflow as tf
 from keras.applications.vgg16 import VGG16
-
+from keras.models import Sequential
+from keras.layers import Dense, Conv2D, MaxPool2D , Flatten
+from keras.preprocessing.image import ImageDataGenerator
+import numpy as np
 
 class Network():
     '''
@@ -38,7 +41,7 @@ class Network():
             References:
             Examples:
         '''
-        super(Network, self).__init__()
+
         # labels
         self.num_classes = 20
         self.model = VGG16()
@@ -86,6 +89,19 @@ class Network():
         self.gaussian_noise_factor = 0.10
         self.perturbation_factor = 0.05
 
+    def build_compile_model(self):
+        # build layers of network
+        model = Sequential()
+
+
+    def train(self):
+        # setup training / test dataset and preprocessing
+        train_generator = ImageDataGenerator()
+        train = train_generator.flow_from_directory(directory="../../../data/train", target_size=(224, 224))
+        test_generator = ImageDataGenerator()
+        test = test_generator.flow_from_directory(directory="../../../data/test", target_size=(224, 224))
+
+
 
     def freeze_feature_layers(self):
         '''
@@ -111,7 +127,7 @@ class Network():
 
     @property
     def getSymbolicIntervalBounds(self):
-        
+
         '''
             Description: Return computed network state and convert to symbolic abstractions + temporal signals for property inference
             Args:
