@@ -10,6 +10,12 @@ import json
 def compute_mi_fgsm(adversarial_sample_size, correct_adversarial_labels):
     raise NotImplementedError
 
+def top_1():
+    raise NotImplementedError
+
+def top_5():
+    raise NotImplementedError
+
 
 def cross_entropy_loss():
     """ Compute Cross-Entropy Loss Given compute_softmax(Model model) """
