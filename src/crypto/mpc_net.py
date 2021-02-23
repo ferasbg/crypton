@@ -7,6 +7,7 @@ import keras
 import tensorflow as tf
 import random
 import pickle
+import tf_encrypted as tfe
 
 from prediction.network import Network
 
