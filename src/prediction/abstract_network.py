@@ -19,7 +19,7 @@ from keras.layers import Dense, Conv2D, Conv2DTranspose, MaxPool2D, Softmax, UpS
 
 class AbstractNetwork(Network):
     '''
-    Description: Finite-State Abstract Interpretation (A.I) for Computing Abstract Domain to Check Against Safety Trace Property Specifications.
+    Description: Finite-State Abstract Interpretation (A.I) for Computing Conditional Affine Transformations to Compute Abstract Domain Against Abstract Layers to Check Against Safety Trace Property Specifications.
     Args: tf.keras.Model
     Returns: AbstractNetwork
     Raises: BooleanError if lp_norm_perturbation_state=false e.g. input_image_set in perturbed_data_generator given perturbed_network_layer appended to network
@@ -27,6 +27,30 @@ class AbstractNetwork(Network):
     Examples:
 
     '''
+
+    def build_abstract_conv_layer(self):
+        raise NotImplementedError
+
+    def build_abstract_max_pooling_layer(self):
+        raise NotImplementedError
+
+    def build_abstract_relu_layer(self):
+        """ReLU to CAT."""
+        raise NotImplementedError
+
+    def build_abstract_domain(self):
+        raise NotImplementedError
+
+    def compute_abstract_domain_bounds(self):
+        raise NotImplementedError
+
+    def build_abstract_layers(self):
+        raise NotImplementedError
+
+
+
     raise NotImplementedError
+
+
 
 
