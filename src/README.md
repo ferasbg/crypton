@@ -1,17 +1,34 @@
-# `crypton.src`
+# `CRYPTON.SRC`
 Crypton's core backend components and engine.
 
+## Main Algorithm
+```python
+# instantiate public network with open-state given trusted local environment
+network = Network()
+# instantiate adversarial threat model with projected gradient descent (perturb gradient updates, perturb input_image with uncorrelated pixelwise guassian noise) 
+adversarial_node = PGD()
+# convert type to mpc_network for secure training
+network = MPCNetwork(network) # any interaction (e.g. f.s. abstraction, adversarial attack) is computed on network independent of encrypted type to test robustness either way (authorizing self-inflicted adversarial attack on party nodes computing on network node)
+# initialize and iterate for each safety trace property state
+safety_trace_properties = SafetyTrace()
+# initialize abstract public_network (type: mpc_network -> type: public_network) for open computational graph state
+abstract_network = BoundedNetwork(network) # if mpc_network, decrypt metadata, input vector norm and execution state necessary to generate abstraction
+# compute BMC and bounded abstract interpretation to verify safety properties on public_network (updates sent to mpc_network also update parent state of public_network)
+model_checker = BoundedMC(network)
+# assert metrics for verifiably robust network properties and system behavior with abstract domain
+Metrics.compute_nominal() # compute segmentation metrics
+Metrics.compute_adversarial() # compute adversarial robustness, pgd_attack_metrics
+Metrics.compute_verification() # verification output given bmc and abstract interpretation, violations / sound specifications met, termination_state, counterexample_trace_state
+Metrics.compute_crypto() # kl-divergence (log prob), privacy guarantee
+
+```
+
+
 ## Algorithms
-- Algorithm 1: De-Encrypted Deep Convolutional Neural Network Training for Semantic Image Segmentation
+- Algorithm 1: De-Encrypted Deep Convolutional Neural Network Training for Semantic Segmentation
 - Algorithm 2: Encrypted Deep Convolutional Neural Network Training and Testing
-- Algorithm 3: Design Formal Specifications Via Hyperproperties
-- Algorithm 4: Compute Symbolic Interval Analysis & Reachability Analysis Given Bounded Deep Convolutional Neural Network for Robustness Trace Properties
-- Algorithm 5: Compute Formal Specifications with Verification Techniques for Encrypted & Bounded Deep Convolutional Neural Network for Safety and Adversarial Robustness Verification
-
-
-Note that the formal specifications are a representation of the formal constraints for the required properties of the neural network, and the methods to execute the property checks are done by the means of symbolic interval analysis, reachability analysis, signal temporal logic and property inference / checking, and bound propagation as a means of representing the networkstate and then setting up the verification / constraint-satisfaction problem for the property to be checked.
-
-
+- Algorithm 3: Define Formal Specifications for Safety Properties
+- Algorithm 4: Compute Verification of Safety Properties with Abstract Interpretation
 
 ## Class Components
 - `crypton.src.prediction`: store base class for DCNN
@@ -22,7 +39,6 @@ Note that the formal specifications are a representation of the formal constrain
 - `crypton.src.client`: client to render analytics and processes
 - `crypton.src.deploy`: setup instance to train and test network
 - `crypton.src.crypto`: store algorithms for cryptographic scheme
-
 
 
 ## Requirements

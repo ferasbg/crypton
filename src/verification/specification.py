@@ -58,7 +58,7 @@ class CheckTraceData():
 
 class SafetyTrace():
     '''
-        Description:
+        Description: Specification of safety trace property that nests adversarial robustness and privacy trace properties.
         Args:
         Returns:
         Raises:

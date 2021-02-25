@@ -18,6 +18,7 @@ Compute finite-state abstractions for formal verification and specification of d
 - general, but must understand what must be accessed, what inputs are required, and what must be computed for other computations to occur (dependencies)
 - schema: class, member functions, arguments (type def, description), return object type  + description, raises, and description of function and neighboring nodes 
 - Given that there will training under the constraints of the model being encrypted and decrypted to access the object's state to compute trace properties given specifications for safety, robustness, and liveness properties, there will be tests and all metadata will be collected and tracked.
+- Convert network state with abstract interpretation then convert to constraint-satisfaction / optimization problem for property checking.
 
 
 ### Setup
