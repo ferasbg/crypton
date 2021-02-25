@@ -5,19 +5,12 @@ The core deep convolutional neural network for semantic image segmentation.
 ## Components
 - `src.prediction.network`: network class
 - `src.prediction.train`: train & evaluate network
-- `src.prediction.network_convert`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
+- `src.prediction.abstract_network`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
 
 
 ## Requirements
 - compute the labels/annotations for each pixel for each input frame given a tensor (set of matrices of images), with metadata including `frame_number`, `num_cores`, `training_time`
 - train model, then setup encrypted model that inherits base network from `prediction.network`, perform all operations necessary for training and testing, setup for formal specifications and encrypted training
-- figure out dependency fault with either framework for torch and tensorflow, make sure that syft and crypten work properly
-- later, use crypten bc it works best for encrypting Tensor objects such that computations over layers are done concurrently by parallel parties (nodes) over an image, iterating over a set of input frames
-
-
-
-
-
 
 ## Research
 - Logits are a probabilistic representation of the classification accuraccy of the model computed with softmax, generally can be symbolically represented with geoemtric abstraction

@@ -15,7 +15,7 @@ from tensorflow import keras
 from keras.applications.vgg16 import VGG16
 from keras.models import Input, Model, Sequential
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Conv2D, Conv2DTranspose, UpSampling2D, MaxPooling2D, Flatten
+from keras.layers import Dense, Conv2D, Conv2DTranspose, MaxPool2D, Softmax, UpSampling2D, ReLU, Flatten, Input, BatchNormalization, GaussianNoise, GaussianDropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adam
 import numpy as np
@@ -59,36 +59,14 @@ class Network():
         self.output_channels = 64 # number of channels produced by convolution
         self.image_size = [224, 224]
         self.bias = False
-        self.shuffle = True
-        self.weight_decay = 0.0005
-        self.momentum = 0.99
+        self.shuffle = True # randomization
+        self.weight_decay = 0.0005 # prevent vanishing gradient problem given diminishing weights over time
+        self.momentum = 0.05 # gradient descent convergence optimizer
 
         # dimensions, and metadata for training
         self.width = 2048
         self.height = 1024
-        # self.optimizer, self.schedule
 
-        # specification trace variables
-        self.reluUpperBound = 0 # upper bounds for each layer for symbolic interval
-        self.reluLowerBound = 0 # lower bounds for each layer for symbolic interval analysis, based on state, specification is met / not met
-        self.verificationState = False
-
-        # iou
-        self.mean_iou = 0
-        self.true_positive_pixels = 0
-        self.false_positive_pixels = 0
-        self.false_negative_pixels = 0
-        self.misclassified_pixels = 0
-        self.frequency_weighted_iou = 0
-
-
-        # acc
-        self.mean_acc = 0
-        self.pixelwise_acc = 0
-
-        # perturbation
-        self.gaussian_noise_coefficient = 0.10
-        self.perturbation_coefficient = 0.05
 
     def build_compile_model(self):
         # build layers of network
@@ -102,7 +80,6 @@ class Network():
         train = train_generator.flow_from_directory(directory="../../../data/train", target_size=(224, 224))
         test_generator = ImageDataGenerator()
         test = test_generator.flow_from_directory(directory="../../../data/test", target_size=(224, 224))
-
 
 
     def freeze_feature_layers(self):
