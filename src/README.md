@@ -1,5 +1,5 @@
-# `CRYPTON.SRC`
-Crypton's core backend components and engine.
+# Core
+Crypton's core backend components.
 
 ## Main Algorithm
 ```python
@@ -69,10 +69,13 @@ def main() {
 	network = MPCNetwork(network) # any interaction (e.g. f.s. abstraction, adversarial attack) is computed on network independent of encrypted type to test robustness either way (authorizing self-inflicted adversarial attack on party nodes computing on network node)
 	# initialize and iterate for each safety trace property state
 	safety_trace_properties = SafetyTrace()
+    CheckTrace()
+    VerifyTrace()
+    
 	# initialize abstract public_network (type: mpc_network -> type: public_network) for open computational graph state
-	abstract_network = BoundedNetwork(network) # if mpc_network, decrypt metadata, input vector norm and execution state necessary to generate abstraction
+	abstract_network = AbstractNetwork(network) # if mpc_network, decrypt metadata, input vector norm and execution state necessary to generate abstraction
 	# compute BMC and bounded abstract interpretation to verify safety properties on public_network (updates sent to mpc_network also update parent state of public_network)
-	model_checker = BoundedMC(network)
+	model_checker = BoundedNetworkSolver(network)
 	# assert metrics for verifiably robust network properties and system behavior with abstract domain
 	Metrics.compute_nominal() # compute segmentation metrics
 	Metrics.compute_adversarial() # compute adversarial robustness, pgd_attack_metrics
