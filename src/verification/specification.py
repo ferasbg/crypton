@@ -70,6 +70,7 @@ class SafetyTrace():
 class RobustnessTrace():
     '''
         Description:
+            Definition 2 (Robustness): Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
         Args:
         Returns:
         Raises:
