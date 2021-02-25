@@ -1,5 +1,5 @@
-# crypton.src.crypto
-store logic for security properties of the neural network. 
+# `crypton.src.crypto`
+store logic for mpc security properties of the neural network. 
 
 ## Class Components
 - `crypton.src.crypto.mpc`: store MPC scheme and functions to apply to base neural network class with updated weights/architecture given training

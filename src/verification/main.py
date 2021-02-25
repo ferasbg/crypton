@@ -75,7 +75,7 @@ class BoundedMPCNetworkSolver(BoundedNetworkSolver):
 
 class VerifyTrace():
     '''
-        Description: Given Computed Formal State Representation (e.g. BMC, STL, SymbolicInterval, BoundPropagation), Compute Probabilistic / Boolean Satisfiability Iterating Over All Traces in SafetyTrace, RobustnessTrace 
+        Description: Given Computed Formal State Representation (e.g. BMC, STL, SymbolicInterval, BoundPropagation), Compute Probabilistic / Boolean Satisfiability Iterating Over All Traces in SafetyTrace, RobustnessTrace
         Args:
         Returns:
         Raises:
@@ -89,4 +89,4 @@ if __name__ == '__main__':
     Verification.problem_formulation()
     # iterate over each trace property: sequential workflow of property checking where `src.specification` stores the object state for each trace property whereas verification does the property check
 
-    
+

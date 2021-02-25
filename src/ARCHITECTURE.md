@@ -1,5 +1,5 @@
 # ARCHITECTURE
-Defined specs
+Defined specs e.g. implementation given mathematical formulation
 
 ## Table of Contents
 - [Core Components](#core-components)
@@ -12,8 +12,7 @@ Defined specs
     - [main.py](#)
 - [`src.verification`](#src-verification)
     - [specification.py](#)
-    - [verification.py](#)
-    - [reachability.py](#)
+    - [main.py](#)
     - [stl.py](#)
 - [`src.prediction`](#src-prediction)
     - [network.py](#)
@@ -22,7 +21,7 @@ Defined specs
 - [`src.crypto`](#src-crypto)
     - [mpc.py](#)
     - [mpc_net.py](#)
-    - [mpc_convert.py]
+    - [abstract_mpc_network.py]
 - [`src.adversarial`](#src-adversarial)
 
 ## Requirement
