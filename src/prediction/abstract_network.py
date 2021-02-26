@@ -73,4 +73,21 @@ class AbstractNetwork(Network):
         else:
             return false
 
+    def get_abstract_loss():
+        raise NotImplementedError
 
+    def create_adversarial_polytope():
+        """Create bounded set representation via geometric figure after perturbations are applied OR we are generating finite representation of possible perturbations given perturbation_epsilon."""
+        raise NotImplementedError
+
+    def meet_abstract_domain_operator():
+        """The meet ( ) operator is an abstract transformer for set intersection: for an inequality expression E from Fig. 3, γ n (a) ∩ {x ∈ R n | x |= E} ⊆ γ n (a E)."""
+        raise NotImplementedError
+
+    def join_abstract_domain_operator():
+        """The join ( ) operator is an abstract transformer for set union: γ n (a 1 ) ∪ γ n (a 2 ) ⊆ γ n (a 1 a 2 )."""
+        raise NotImplementedError
+
+    def affine_transformer():
+        """"""
+        raise NotImplementedError
