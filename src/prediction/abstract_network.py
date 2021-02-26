@@ -47,10 +47,30 @@ class AbstractNetwork(Network):
     def build_abstract_layers(self):
         raise NotImplementedError
 
+    def build_zonotope_abstract_domain():
+        raise NotImplementedError
 
+    def relu_abstract_transformer():
+        raise NotImplementedError
 
-    raise NotImplementedError
+    def conv2d_abstract_transformer():
+        raise NotImplementedError
 
+    def dense_abstract_transformer():
+        raise NotImplementedError
 
+    def maxpool2d_abstract_transformer():
+        raise NotImplementedError
+
+    def get_greatest_robustness_bound():
+        raise NotImplementedError
+
+    def compute_reachable_states(network):
+        if network.check_perturbation_layer() == True:
+            # compute reachable states of perturbed network
+            return false
+
+        else:
+            return false
 
 
