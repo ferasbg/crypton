@@ -76,10 +76,14 @@ class Network():
 
     def train(self):
         # setup training / test dataset and preprocessing
+        # download the dataset for cifar10 directly, then partition dataset
+        train_directory = './'
+        test_directory = './'
+
         train_generator = ImageDataGenerator()
-        train = train_generator.flow_from_directory(directory="../../../data/train", target_size=(224, 224))
+        train = train_generator.flow_from_directory(directory=train_directory, target_size=(224, 224))
         test_generator = ImageDataGenerator()
-        test = test_generator.flow_from_directory(directory="../../../data/test", target_size=(224, 224))
+        test = test_generator.flow_from_directory(directory=test_directory, target_size=(224, 224))
 
 
     def freeze_feature_layers(self):
@@ -102,33 +106,6 @@ class Network():
             References:
             Examples:
         '''
-        raise NotImplementedError
-
-    @property
-    def getSymbolicIntervalBounds(self):
-
-        '''
-            Description: Return computed network state and convert to symbolic abstractions + temporal signals for property inference
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
-
-        raise NotImplementedError
-
-    @property
-    def sendNetworkState(self):
-        '''
-            Description: Get network object state, via semantics and numerical representation. Deduce symbolic representation with `src.verification.symbolic_representation` in order to represent the constraints and network state.
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
-
         raise NotImplementedError
 
     def evaluate_nominal(self):
