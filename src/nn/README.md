@@ -1,12 +1,9 @@
-# `src.prediction`
+# `src.nn`
 The core deep convolutional neural network.
 
 
 ## Components
-- `src.prediction.network`: network class
-- `src.prediction.train`: train & evaluate network
-- `src.prediction.abstract_network`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
-
+- `src.nn.network`: network class
 
 ## RESEARCH AND FORMULATION
 - An ML model can be viewed as a function mapping inputs – typically a vector of numerical feature values – to an output (a label for multiclass classification and a real number for regression). Focusing on multiclass classification, we define a model as a function f : R n → K that maps ndimensional inputs to a label in the set K = {1, . . . , K} of all possible labels. Such models typically map an input x to a vector of scores y(x) = (y1(x), . . . , yK(x)), such that yk(x) ∈ [0, 1] and PK k=1 yk(x) = 1. These scores are interpreted as a probability distribution over the labels, and the model returns the label with highest probability, i.e., f(x) = arg maxk∈K yk(x). ([https://arxiv.org/pdf/1802.03471.pdf](https://arxiv.org/pdf/1802.03471.pdf), *II.A*)
