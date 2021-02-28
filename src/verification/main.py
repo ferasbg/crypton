@@ -10,7 +10,8 @@ import keras
 import tensorflow
 
 from verification.hyperproperties import RobustnessProperties, SafetyProperties
-from verification.specification import Specification
+from verification.specification import RobustnessTrace, SafetyTrace, CheckTraceData
+
 
 class BoundedNetworkSolver():
     '''
@@ -45,6 +46,13 @@ class VerifyTrace():
         References:
         Examples:
     '''
-    raise NotImplementedError
 
-
+    @staticmethod
+    def verify_trace():
+        # get all property specifications
+        # check the state of the specification to check if trace property has been satisfied
+        if (RobustnessTrace.affine_abstract_output_vector_state == True and RobustnessTrace.adversarial_sample_created == False):
+            return True
+        
+        else:
+            return False

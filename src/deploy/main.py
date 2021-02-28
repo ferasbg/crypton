@@ -32,6 +32,7 @@ def main():
     # for each adversarial_attack which should be defined as functions part of the adversarial.adversarial.Adversarial class, simply execute the instance of each function and pass in the network and its network state variables as params 
     # will execute projected gradient descent attack to use the gradients to maximize the loss with signed gradient method, fgsm attack to perturb inputs before they are passed to keras.layers.Input layer
     # BoundedMPCNetworkSolver(MPCNetwork.layer)
+    # return evaluation metrics
 
     raise NotImplementedError
 
