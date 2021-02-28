@@ -8,6 +8,11 @@ The core deep convolutional neural network for semantic image segmentation.
 - `src.prediction.abstract_network`: convert tf layers into abstract (bounded) layers to evaluate in `src.verification`
 
 
+## RESEARCH AND FORMULATION
+- An ML model can be viewed as a function mapping inputs – typically a vector of numerical feature values – to an output (a label for multiclass classification and a real number for regression). Focusing on multiclass classification, we define a model as a function f : R n → K that maps ndimensional inputs to a label in the set K = {1, . . . , K} of all possible labels. Such models typically map an input x to a vector of scores y(x) = (y1(x), . . . , yK(x)), such that yk(x) ∈ [0, 1] and PK k=1 yk(x) = 1. These scores are interpreted as a probability distribution over the labels, and the model returns the label with highest probability, i.e., f(x) = arg maxk∈K yk(x). ([https://arxiv.org/pdf/1802.03471.pdf](https://arxiv.org/pdf/1802.03471.pdf), *II.A*)
+- Intuitively, a predictive model may be regarded as robust to adversarial examples if its output is insensitive to small changes to any plausible input that may be encountered in deployment. To formalize this notion, we must first establish what qualifies as a plausible input. This is difficult: the adversarial examples literature has not settled on such a definition. Instead, model robustness is typically assessed on inputs from a test set that are not used in model training – similar to how accuracy is assessed on a test set and not a property on all plausible inputs. We adopt this view of robustness. Next, given an input, we must establish a definition for insensitivity to small changes to the input. We say a model f is insensitive, or robust, to attacks of p-norm L on a given input x *if f(x) = f(x + α) for all α ∈ Bp(L). If f is a multiclass classification model based on label scores (as in §II-A), this is equivalent to: ∀α ∈ Bp(L)  yk(x + α) > max i:i6=k yi(x + α), (1) where k := f(x). A small change in the input does not alter the scores so much as to change the predicted label.*
+
+
 ## Requirements
 - compute the labels/annotations for each pixel for each input frame given a tensor (set of matrices of images), with metadata including `frame_number`, `num_cores`, `training_time`
 - train model, then setup encrypted model that inherits base network from `prediction.network`, perform all operations necessary for training and testing, setup for formal specifications and encrypted training
@@ -30,9 +35,6 @@ The core deep convolutional neural network for semantic image segmentation.
 - During pre-processing, important to initialize weights, and other variables specific to the Tensor object. So the problem also occurs when there's billions of different humans or obstacles, and that in runtime, the abstraction or problem formulation has to be such that there's no lost translation but also that it meets computational constraints.
 - A translation relation is a concept in model checking where
 - Important to understand signal sets (variables)
+- Note complexity in classification comes from the diversity of objects, their variants, the environmental conditions, and the randomness and perturbations to the visual perception that can distort the classification itself. Every input_image processed is assumed to have been segmented for each image to be evaluated with respect to its location.
 
-
-
-## References
-- https://github.com/tcwangshiqi-columbia/symbolic_interval
 
