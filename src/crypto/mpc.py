@@ -8,6 +8,7 @@ import tensorflow as tf
 import random
 import pickle
 
+from nn.network import Network
 
 class MPCTensor:
 

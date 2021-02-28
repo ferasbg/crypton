@@ -7,14 +7,12 @@ import sys
 import keras
 import tensorflow as tf
 
-from prediction.network import Network
-from hyperproperties import RobustnessProperties, SafetyProperties
-
+from nn.network import Network
 
 '''
 - Store hyperproperties e.g. safety and robustness specifications to be checked given s ⊆ H, r ⊆ H. 
 - Extract succinct input-output characterizations of the network behavior, and store property inference algorithms for each property type.
-
+- Converge temporal specifications, and remove STL variations if not necessary.
 '''
 
 class SafetyTrace():
@@ -66,10 +64,6 @@ class RobustnessTrace():
         # if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.03, then there is no adversarial_sample (evaluate given dict_string of image_label for cifar-10)
         raise NotImplementedError
 
-    
-
-    
-
 
 class CheckTraceData():
     '''
@@ -83,6 +77,51 @@ class CheckTraceData():
     raise NotImplementedError
 
 
+
+class STLCheckTraceData():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+class STLSafetyTrace():
+    '''
+        Description: Store safety properties that will be checked with bounded model checking. Note that each function of safety trace will be its own safety trace property.
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+class STLRobustnessTrace():
+    '''
+        Description: 
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
+
+
+class STLSolver():
+    '''
+        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds. Specifically, iter in range(H) for H = {R, S} for R and S are the subset lists of trace properties for R: robustness, S: safety
+        Args:
+        Returns:
+        Raises:
+        References:
+        Examples:
+    '''
+    raise NotImplementedError
 
 
 if __name__ == '__main__':

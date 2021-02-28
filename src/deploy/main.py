@@ -3,7 +3,7 @@ import sys
 import tensorflow as tf
 import random
 
-from crypto.mpc_net import MPCNetwork
+from crypto.mpc_network import MPCNetwork
 
 def main():
     # initialize the perturbation_layer e.g. perturbation epsilon to apply to every input going through ImageDataGenerator, also note gaussian noise vector

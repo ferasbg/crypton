@@ -9,7 +9,8 @@ import random
 import pickle
 import tf_encrypted as tfe
 
-from network import Network
+from nn.network import Network
+
 
 class MPCNetwork(Network):
     """

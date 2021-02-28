@@ -23,19 +23,16 @@ Defined specs e.g. implementation given mathematical formulation
 
 
 ## `deploy.main`
--
--
--
+- Train neural network with ds encrypted with dp, and train with mpc. Decrypt, and symbolically encode model into constraint-satisifaction problem to be proved by `BoundedNetworkSolver`, to then check against the robustness specifications 
 
-## `src.src.network.Network`
--
--
--
+## `nn.network.Network`
+- Define the convolutional network, given it is a computational graph and composite function.
+- Note that in this module, there is a `Metrics` class which will store all the evaluation metrics with respect to nominal/certification accuracy given perturbation_epsilon, mpc_network_accuracy and mpc_network_accuracy_under_certification (verifying mpc network), kl-divergence where necessary, and robustness properties that were checked and verified, satisfiability/non-satisfiability (either way, it proves that with neural network defenses, neural network is more robust and will be more so during testing) 
 
 ## `src.crypto.mpc`
--
--
--
+- Define the multi-party computation functions required for training the convolutional network (`nn.network.Network`). Note that DP noises the gradients and metadata that can reconstruct the original information, and MPC encodes the noisy gradients such that it can be computed in secure setting where reconstruction process is adversarially robust.
+- Evaluate the encryption and decryption process of the Tensors, Layers, network_metadata e.g. gradients 
+
 
 ## `src.crypto.mpc_network`
 -
@@ -43,9 +40,7 @@ Defined specs e.g. implementation given mathematical formulation
 -
 
 ## `verification.specification.RobustnessTrace`
--
--
--
+- Define the robustness property specifications that converge temporal properties and symbolic logical formulae in terms of the model checker analyzing the convolutional network during runtime. 
 
 ## `verification.main.BoundedNetworkSolver`
 -

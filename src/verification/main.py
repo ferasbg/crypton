@@ -7,10 +7,9 @@ import random
 import sys
 
 import keras
-import tensorflow
+import tensorflow as tf
 
-from verification.hyperproperties import RobustnessProperties, SafetyProperties
-from verification.specification import RobustnessTrace, SafetyTrace, CheckTraceData
+from specification import CheckTraceData, RobustnessTrace, SafetyTrace
 
 
 class BoundedNetworkSolver():
