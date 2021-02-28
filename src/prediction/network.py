@@ -97,17 +97,6 @@ class Network():
         '''
         raise NotImplementedError
 
-    def forward(self, input_tensor):
-        '''
-            Description:
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
-        raise NotImplementedError
-
     def evaluate_nominal(self):
 
         '''
