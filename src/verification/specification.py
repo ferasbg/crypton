@@ -60,6 +60,21 @@ class RobustnessTrace():
         # if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.03, then there is no adversarial_sample (evaluate given dict_string of image_label for cifar-10)
         raise NotImplementedError
 
+    def brightness_norm_trace(self):
+        raise NotImplementedError
+
+    def perturbation_norm_trace(self):
+        raise NotImplementedError
+    
+    def pgd_attack_trace(self):
+        raise NotImplementedError
+
+    def fgsm_attack_trace(self):
+        raise NotImplementedError
+
+    def smt_solver_trace_constraint(self):
+        raise NotImplementedError
+
 
 class CheckTraceData():
     '''

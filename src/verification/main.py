@@ -35,7 +35,6 @@ class BoundedNetworkSolver():
         # iterate over all traces and store in tuple or array to then evaluate each trace element
         adversarial_example = RobustnessTrace.adversarial_example_not_created()
         return adversarial_example # return array of all defined robustness trace properties, so define robustness trace properties given attack_types are fgsm, brightness_norm, adversarial_perturbation_for_adversarial_example_generation, projected_gradient_descent_attack_to_maximize_loss
-        
 
 class BoundedMPCNetworkSolver(BoundedNetworkSolver):
     '''
@@ -46,8 +45,6 @@ class BoundedMPCNetworkSolver(BoundedNetworkSolver):
         References:
         Examples:
     '''
-
-    
 
 class VerifyTrace():
     '''
