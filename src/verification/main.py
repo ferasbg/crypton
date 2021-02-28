@@ -33,8 +33,21 @@ class BoundedMPCNetworkSolver(BoundedNetworkSolver):
         References:
         Examples:
     '''
-    raise NotImplementedError
 
+    def symbolically_encode_network(self, network):
+        raise NotImplementedError
+
+    def get_relevant_reachable_states(self, network):
+        raise NotImplementedError
+
+    def initialize_constraint_satisfaction_formula(self):
+        raise NotImplementedError
+
+    @staticmethod
+    def getRobustnessTrace():
+        # iterate over all traces and store in tuple or array to then evaluate each trace element
+        adversarial_example = RobustnessTrace.adversarial_example_not_created()
+        return adversarial_example
 
 class VerifyTrace():
     '''
@@ -50,7 +63,7 @@ class VerifyTrace():
     def verify_trace():
         # get all property specifications
         # check the state of the specification to check if trace property has been satisfied
-        if (RobustnessTrace.affine_abstract_output_vector_state == True and RobustnessTrace.adversarial_sample_created == False):
+        if (RobustnessTrace.adversarial_sample_created == False):
             return True
         
         else:

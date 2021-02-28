@@ -46,16 +46,12 @@ class RobustnessTrace():
         Examples:
     '''
     # variables to then use for trace property
-    affine_output_vector = False
     adversarial_sample_created = False
     counterexample_verificationState = False
-    robustness_sensitivity = 1 # store robustness sensitivity of perturbation norm e.g. possibly euclidean distance 
+    robustness_sensitivity = 1 # store robustness sensitivity of perturbation norm e.g. possibly euclidean distance, given tuple of perturbation_norms to iteratively use
 
-
-    @staticmethod
-    def affine_abstract_output_vector_state():
-        # return : bool
-        # if vector is inside robustness region, then specification is met
+    def robustness_bound_check(self):
+        # if output vector is inside robustness region, then specification is met
         raise NotImplementedError
 
     @staticmethod
@@ -74,70 +70,17 @@ class CheckTraceData():
         References:
         Examples:
     '''
-    raise NotImplementedError
-
-
-
-class STLCheckTraceData():
-    '''
-        Description: 
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
-    raise NotImplementedError
-
-class STLSafetyTrace():
-    '''
-        Description: Store safety properties that will be checked with bounded model checking. Note that each function of safety trace will be its own safety trace property.
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
-    raise NotImplementedError
-
-class STLRobustnessTrace():
-    '''
-        Description: 
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
-    raise NotImplementedError
-
-
-class STLSolver():
-    '''
-        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds. Specifically, iter in range(H) for H = {R, S} for R and S are the subset lists of trace properties for R: robustness, S: safety
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
-    raise NotImplementedError
+    @staticmethod
+    def check_all_robustness_properties():
+        raise NotImplementedError
 
 
 if __name__ == '__main__':
-    t_f = RobustnessTrace.affine_abstract_output_vector_state()
     adv = RobustnessTrace.adversarial_example_not_created()
-    if (t_f == True and adv == False):
-        affine_output_vector = True
-        adversarial_sample_created = False
-    elif (t_f == True):
-        affine_output_vector = True
-    elif (adv == False):
+    if (adv == False):
         adversarial_sample_created = False
     elif (adv == True):
         adversarial_sample_created = True
-    elif (t_f == False):
-        affine_output_vector = False
 
 
 
