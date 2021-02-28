@@ -12,10 +12,13 @@ from nn.network import Network
 from nn.metrics import Metrics
 
 class MPC():
+    '''
+    MPC stores core logic, whereas MPCTensor encrypts the model layers and tensors (specific to tensorflow state graph), and the MPCNetwork will use functions from MPCTensor and MPC in order to build_and_compile_encrypted_model() which utilizes both dp and mpc protocol logic.
+    '''
     def __init__(self):
         self.secret = []
         # setup shares for each secret for each secret is-a f_1 in vector set f
-        self.secret = {}
+        self.secret = []
         self.party_1 = [] # each party computes a subset of the required shares for each secret iterating over all secrets to complete forward prop, iterate over each batch, iterate over defined epochs
         self.party_2 = []
 
@@ -58,10 +61,15 @@ class MPC():
         # assert type, act as parent function to encrypt all layers         
         pass
 
+    def reconstruct_shares(self):
+        """reconstruct secret shares computed by n parties"""
+        raise NotImplementedError 
+
+
 class MPCTensor:
 
     """
-        Description: Encrypted InputTensor for MPCNetwork
+        Description: Encrypt Tensors/Layers for MPCNetwork 
         Args: None
         Returns: InputTensor for tf.keras.Model.layer
         Raises:
@@ -70,30 +78,13 @@ class MPCTensor:
     
     """
 
-    
-
-    def reconstruct(self):
-        """reconstruct secret shares computed by n parties"""
-        pass
+    raise NotImplementedError
 
     
 
-class PublicTensor:
-    """
-        Description: PublicTensor=Default
-        Args: None
-        Returns: InputTensor for tf.keras.Model.layer
-        Raises:
-        References:
-        Examples:    
     
-    """
-    def __init__(self):
-        self.share0 = np.randn(.001)
-        self.share1 = np.randn(.001)
-        self.secret = {}
-        self.party_1 = {}
-        self.party_2 = {}
+
+ 
         
 
 

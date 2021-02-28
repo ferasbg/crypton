@@ -25,20 +25,14 @@ class MPCNetwork(Network):
 
     def __init__(self):
         super(MPCNetwork, self).__init__()
+        # encrypt layers with self.MPCConjugateLayer = MPC.encryptPublicConjugateLayer(Network.PublicConjugateLayer)
 
     def main(self):
         """Compute 3-Party MPC Training for MPCNetwork. Encrypt model layers/gradients, and train with respect to mpc protocol."""
         raise NotImplementedError
 
-    def reconstruct(self, share0, share1):
-        """Reconstruct computations, probably iterate as a subset set iterating over the kernels of the input matrix."""
-        return (share0 + share1) % .0001
-
-    def encrypt(self):
+    def encrypt_all(self):
         raise NotImplementedError
 
-    def decrypt(self):
-        raise NotImplementedError
-
-    def train_mpc(self):
+    def decrypt_all(self):
         raise NotImplementedError
