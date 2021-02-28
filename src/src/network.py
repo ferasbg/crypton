@@ -69,9 +69,8 @@ class Network():
 
 
     def build_compile_model(self):
-        # build layers of network
+        # build layers of public network
         model = Sequential()
-
 
 
     def train(self):

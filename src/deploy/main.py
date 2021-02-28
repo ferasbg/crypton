@@ -39,3 +39,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # every module (e.g. src/verification/crypto) has it's own main and static functions for arbitrary deviation from sequential program execution

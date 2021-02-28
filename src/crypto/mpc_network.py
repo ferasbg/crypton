@@ -9,8 +9,7 @@ import random
 import pickle
 import tf_encrypted as tfe
 
-from prediction.network import Network
-
+from network import Network
 
 class MPCNetwork(Network):
     """
@@ -26,9 +25,8 @@ class MPCNetwork(Network):
     def __init__(self):
         super(MPCNetwork, self).__init__()
 
-
     def main(self):
-        """Compute 3-Party MPC Training for MPCNetwork. """
+        """Compute 3-Party MPC Training for MPCNetwork. Encrypt model layers/gradients, and train with respect to mpc protocol."""
         raise NotImplementedError
 
     def reconstruct(self, share0, share1):
@@ -43,9 +41,3 @@ class MPCNetwork(Network):
 
     def train_mpc(self):
         raise NotImplementedError
-
-
-if __name__ == '__main__':
-    MPCNetwork()
-    MPCNetwork().main()
-

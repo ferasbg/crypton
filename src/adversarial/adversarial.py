@@ -6,6 +6,9 @@ import tensorflow as tf
 import cleverhans
 
 class Adversarial():
+    perturbation_epsilon: [0.1, 0.2, 0.3, 0.4, 0.5] # number of perturbed pixels (not gaussian noise)
+    gradient_signed_method = {}
+    network_gradients = {}
 
     @staticmethod
     def create_adversarial_example():

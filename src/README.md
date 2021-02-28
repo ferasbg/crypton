@@ -8,7 +8,7 @@ Crypton's core backend components.
 - Algorithm 4: Compute MPC Neural Network Verification With Abstract Interpretation & Bounded Model Checking
 
 ## Class Components
-- `crypton.src.prediction`: convolutional neural network and abstract interpretation
+- `crypton.src.src`: convolutional neural network and abstract interpretation
 - `crypton.src.verification`: bounded model checking + constraint-solver, safety/robustness specifications
 - `crypton.src.adversarial`: adversarial threat model, perturbation_layer
 - `crypton.src.deploy`: compute_verification(mpc_network)
@@ -57,4 +57,3 @@ def main() {
 - train public network based on VGG-16 architecture, perhaps split dataset based on train/test/val for `Network`, `MPCNetwork`, and `Network` with Verification, and `MPCNetwork` with Verification. 
 - setup mpc protocol to define crypto logic to encrypt `tf.keras.models.Input` tensor and dataset itself.
 - setup formal specifications given written logic to compute the symbolic abstractions given the keras network state
-
