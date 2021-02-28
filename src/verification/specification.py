@@ -15,22 +15,10 @@ from nn.network import Network
 - Converge temporal specifications, and remove STL variations if not necessary.
 '''
 
-class SafetyTrace():
-    '''
-        Description: Specification of safety trace property that nests adversarial robustness and privacy trace properties.
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
-    raise NotImplementedError
-
-
 class RobustnessTrace():
     '''
         Description:
-            Definition 2 (Robustness): Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
+            Definition 2 (Robustness): Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
 
             % robustness trace property set τ:
                 - robustness trace 1: given lp-norm perturbation, the misclassified pixels is under certain threshold p
@@ -60,10 +48,10 @@ class RobustnessTrace():
         # if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.03, then there is no adversarial_sample (evaluate given dict_string of image_label for cifar-10)
         raise NotImplementedError
 
-    def brightness_norm_trace(self):
+    def brightness_perturbation_norm_trace(self):
         raise NotImplementedError
 
-    def perturbation_norm_trace(self):
+    def l_perturbation_norm_trace(self):
         raise NotImplementedError
     
     def pgd_attack_trace(self):
@@ -75,10 +63,13 @@ class RobustnessTrace():
     def smt_solver_trace_constraint(self):
         raise NotImplementedError
 
+    def assert_mpc_reliability(self):
+        raise NotImplementedError
+
 
 class CheckTraceData():
     '''
-        Description: Check if all of the robustness specification formalisms are correct.
+        Description: Check if all of the robustness specification formalisms are correct. This is to circumvent any formalism faults given the formal statements for each robustness trace property.
         Args:
         Returns:
         Raises:
