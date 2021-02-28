@@ -64,16 +64,25 @@ class Network():
 
     def build_compile_model(self):
         # build layers of public neural network
-        # not parameterized yet, check reference for general architecture params used for cifar-10 models
         model = Sequential()
-        model.add(Conv2D())
-        model.add(Conv2D())
-        model.add(MaxPool2D())
-        model.add(Conv2D())
-        model.add(ReLU())
-        model.add(Conv2D())
-        model.add(Dense(activation='relu'))
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam')
+        # image_dimensions = 32x32
+        # feature layers
+        model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
+        model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        # classification layers
+        model.add(Flatten())
+        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(10, activation='softmax'))  
+        optimizer = Adam(learning_rate=0.003) # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+        
+        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
         return model
 
     def train(self, train_set, test_set):
@@ -105,3 +114,6 @@ class Network():
 if __name__ == '__main__':
     # initialize tf.Session(sess) to initialize tf computational graph to track state-transition
     graph = tf.compat.v1.get_default_graph()
+    network = Network()
+    network.build_compile_model()
+    print(network)
