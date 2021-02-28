@@ -30,3 +30,7 @@ class Adversarial():
     @staticmethod
     def create_adversarial_polytope():
         raise NotImplementedError
+
+    @staticmethod
+    def perturb_input_image(input_image):
+        raise NotImplementedError

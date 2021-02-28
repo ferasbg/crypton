@@ -20,7 +20,7 @@ def main():
     # compute formal specifications and return bmc_specification_status and abstract_network_specification_status
     # train model over cifar-10, and cifar-100 if necessary
     # return evaluation metrics are required for certification for a.i. and b.m.c 
-    # initialize the public network
+    # initialize the public network, and then execute precedence properties (check pretrained trainable weights, check layers / type def / params for size, preprocess cifar-10 data)
     # initialize the mpc network architecture variant 
     # sequentially compute non-plaintext model given shares made up from required variables (keras.layers.Layer) to then compute the secret iterating over each layer during forward propagation for secure training
     # use public network from prediction.network.Network() for abstract interpretation,

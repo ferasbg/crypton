@@ -8,26 +8,10 @@ import h5py
 import json
 
 """
-
 Define conventional/nominal, certification/verification (robustness, safety), mpc, adversarial evaluation metrics for network.
-
-
 """
 
 class Metrics():
-    def __init__(self):
-        self.true_positive_pixels = 0
-        self.false_positive_pixels = 0
-        self.false_negative_pixels = 0
-        self.misclassified_pixels = 0
-
-        # acc
-        self.mean_acc = 0
-
-        # perturbation
-        self.gaussian_epsilon = 0.10
-        self.perturbation_epsilon = 0.05
-
     @staticmethod
     def nominal_cross_entropy_loss(self):
         """ Compute Cross-Entropy Loss Given compute_softmax(Model model) """
