@@ -9,7 +9,7 @@ import sys
 import keras
 import tensorflow as tf
 
-from specification import CheckTraceData, RobustnessTrace, SafetyTrace
+from specification import CheckTraceData, RobustnessTrace 
 
 
 class BoundedNetworkSolver():
@@ -48,7 +48,7 @@ class BoundedMPCNetworkSolver(BoundedNetworkSolver):
 
 class VerifyTrace():
     '''
-        Description: Given Computed Formal State Representation (e.g. BMC, STL, SymbolicInterval, BoundPropagation), Compute Probabilistic / Boolean Satisfiability Iterating Over All Traces in SafetyTrace, RobustnessTrace
+        Description: Given Computed Formal State Representation (e.g. BMC, STL, SymbolicInterval, BoundPropagation), Compute Probabilistic / Boolean Satisfiability Iterating Over All Traces in RobustnessTrace
         Args:
         Returns:
         Raises:

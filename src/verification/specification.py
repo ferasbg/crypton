@@ -17,8 +17,7 @@ from nn.network import Network
 
 class RobustnessTrace():
     '''
-        Description:
-            Definition 2 (Robustness): Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
+        Description: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
 
             % robustness trace property set τ:
                 - robustness trace 1: given lp-norm perturbation, the misclassified pixels is under certain threshold p
