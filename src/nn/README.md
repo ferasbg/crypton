@@ -1,5 +1,5 @@
 # `src.prediction`
-The core deep convolutional neural network for semantic image segmentation.
+The core deep convolutional neural network.
 
 
 ## Components

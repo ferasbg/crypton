@@ -12,7 +12,6 @@ Defined specs e.g. implementation given mathematical formulation
 ### `src.verification`
 - [specification.py](#)
 - [main.py](#)
-- [stl.py](#)
 ### `src.src.`
 - [network.py](#)
 ### `src.crypto`    
@@ -20,7 +19,6 @@ Defined specs e.g. implementation given mathematical formulation
 - [mpc_network.py](#)
 ### `src.adversarial`   
 - [`src.adversarial`](#src-adversarial)
-
 
 ## `deploy.main`
 - Train neural network with ds encrypted with dp, and train with mpc. Decrypt, and symbolically encode model into constraint-satisifaction problem to be proved by `BoundedNetworkSolver`, to then check against the robustness specifications 
@@ -33,37 +31,27 @@ Defined specs e.g. implementation given mathematical formulation
 - Define the multi-party computation functions required for training the convolutional network (`nn.network.Network`). Note that DP noises the gradients and metadata that can reconstruct the original information, and MPC encodes the noisy gradients such that it can be computed in secure setting where reconstruction process is adversarially robust.
 - Evaluate the encryption and decryption process of the Tensors, Layers, network_metadata e.g. gradients 
 
-
 ## `src.crypto.mpc_network`
--
--
--
+- apply mpc protocol to convolutional network layers or perhaps to inputs to `keras.layers.Input` layer, depending on current literature
+- Setup local member `train()` function that can encrypt the network layers and setup the secrets and compartmentalize the shares to iteratively and sequentially compute over the network during forward propagation. Note evaluation metrics to evaluate security properties of network.
 
 ## `verification.specification.RobustnessTrace`
 - Define the robustness property specifications that converge temporal properties and symbolic logical formulae in terms of the model checker analyzing the convolutional network during runtime. 
-
+- robustness trace 1: given lp-norm perturbation, the `output_class` is under certain threshold p that indicates the minimum for robustness
+- robustness trace 2a: given brightness perturbation (maximize pixel intensity to maximize loss), model can reach certain robustness threshold after a set of epochs (this is important), then it indicates robustness, if at any point it doesn't satisfy robustness specification, it was formally verified that adversarial norm perturbation attacks can distort the input-output relationships e.g. given input_image and output class corresponding to its label
+- robustness trace 2b: given projected gradient descent attack meant to distort backpropagation process via compromised gradients to maximize loss, assert that model updates its convergence to local minima with gradient descent correctly given bounds
+- robustness trace 3: network is not making misclassifications with respect to L-norm (infinity, l^2, l-1)
 ## `verification.main.BoundedNetworkSolver`
--
--
--
-
+- Setup bounded model checking algorithm to evaluate reachable states and to encode network symbolically with finite-state abstraction in order to scale to larger param size of network.
+- Evaluate input-output relationships so that it satisfies the trace property that represents the model's robustness.
+- 
 ## `verification.BoundedMPCNetworkSolver`
--
--
--
-
-## `verification.stl`
--
--
+- Utilize the MPC logic written in `MPC()` to then decrypt the network state to encode symbolically.
 -
 
 ## `src.adversarial.Adversarial`
 -
 -
--
-
-## Mathematical Formulation
-
 
 ## NOTES
 - use `assert` vs conditional to check Sequential.layer_name type with `assert instanceof X`
