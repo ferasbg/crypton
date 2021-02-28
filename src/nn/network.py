@@ -22,27 +22,20 @@ import numpy as np
 
 class Network():
     '''
+        Description: Create keras model instance. Use build_and_compile_model() object function to append model layers and to initialize network for base/plaintext training.
+        
         Args: None
 
         Returns: tf.keras.Model
 
         Raises:
-            RaiseError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
+            ValueError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
 
         References:
             - https://arxiv.org/abs/1409.1556
-            - https://github.com/pochih/FCN-pytorch/blob/master/python/fcn.py
     '''
 
     def __init__(self):
-        '''
-            Description:
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
 
         # labels
         self.num_classes = 20
@@ -62,6 +55,7 @@ class Network():
         self.shuffle = True # randomization
         self.weight_decay = 0.0005 # prevent vanishing gradient problem given diminishing weights over time
         self.momentum = 0.05 # gradient descent convergence optimizer
+        self.model = self.build_compile_model()
 
         # dimensions, and metadata for training
         self.width = 2048
@@ -69,49 +63,45 @@ class Network():
 
 
     def build_compile_model(self):
-        # build layers of public network
+        # build layers of public neural network
+        # not parameterized yet, check reference for general architecture params used for cifar-10 models
         model = Sequential()
+        model.add(Conv2D())
+        model.add(Conv2D())
+        model.add(MaxPool2D())
+        model.add(Conv2D())
+        model.add(ReLU())
+        model.add(Conv2D())
+        model.add(Dense(activation='relu'))
+        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam')
+        return model
 
-
-    def train(self):
+    def train(self, train_set, test_set):
         # setup training / test dataset and preprocessing
         # download the dataset for cifar10 directly, then partition dataset
-        train_directory = './'
-        test_directory = './'
+        # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
 
         train_generator = ImageDataGenerator()
-        train = train_generator.flow_from_directory(directory=train_directory, target_size=(224, 224))
+        train = train_generator.flow_from_directory(directory=train_set, target_size=(224, 224))
         test_generator = ImageDataGenerator()
-        test = test_generator.flow_from_directory(directory=test_directory, target_size=(224, 224))
+        test = test_generator.flow_from_directory(directory=test_set, target_size=(224, 224))
 
 
-    def freeze_feature_layers(self):
-        '''
-            Description:
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
+    def get_cifar_data(self):
+        """
+        Reference: https://github.com/exelban/tensorflow-cifar-10/blob/master/include/data.py
+        
+        """
         raise NotImplementedError
 
+    def freeze_feature_layers(self):
+        for layer in self.model.layers:
+            layer.trainable = False
+
     def evaluate_nominal(self):
-
-        '''
-            Description:
-            Args:
-            Returns:
-            Raises:
-            References:
-            Examples:
-        '''
-
         raise NotImplementedError
 
 
 if __name__ == '__main__':
     # initialize tf.Session(sess) to initialize tf computational graph to track state-transition
     graph = tf.compat.v1.get_default_graph()
-
-
