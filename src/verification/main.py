@@ -31,6 +31,11 @@ class BoundedNetworkSolver():
     def initialize_constraint_satisfaction_formula(self):
         raise NotImplementedError
 
+    def parameterSynthesis(self):
+        """Synthesize logical formula translated through encoding convolutional network,"""
+        raise NotImplementedError
+
+
     def getRobustnessTrace(self):
         # iterate over all traces and store in tuple or array to then evaluate each trace element
         adversarial_example = RobustnessTrace.adversarial_example_not_created()

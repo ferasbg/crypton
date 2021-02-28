@@ -26,7 +26,7 @@ class Network():
         
         Args: None
 
-        Returns: tf.keras.Model
+        Returns: keras.Model
 
         Raises:
             ValueError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
@@ -58,6 +58,7 @@ class Network():
         self.dataset_labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
         # how many batches per epoch
         self.steps_per_epoch = 16 
+        classification_state = False
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -108,6 +109,10 @@ class Network():
 
     def evaluate_nominal(self):
         raise NotImplementedError
+
+    @staticmethod
+    def getClassificationState():
+        return classification_state
 
 
 if __name__ == '__main__':

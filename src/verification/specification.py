@@ -10,7 +10,7 @@ import tensorflow as tf
 from nn.network import Network
 
 '''
-- Store hyperproperties e.g. safety and robustness specifications to be checked given s ⊆ H, r ⊆ H. 
+- Store hyperproperties e.g. robustness specifications to be checked given r ⊆ H. 
 - Extract succinct input-output characterizations of the network behavior, and store property inference algorithms for each property type.
 - Converge temporal specifications, and remove STL variations if not necessary.
 '''
@@ -36,16 +36,28 @@ class RobustnessTrace():
     adversarial_sample_created = False
     counterexample_verificationState = False
     robustness_sensitivity = 1 # store robustness sensitivity of perturbation norm e.g. possibly euclidean distance, given tuple of perturbation_norms to iteratively use
+    lp_perturbation_status = False # l_p vector norm perturbation
+    brightness_perturbation_status = False
 
     def robustness_bound_check(self):
+        """robustness trace property 1: robustness_threshold and robustness_region given output vector norm."""
         # if output vector is inside robustness region, then specification is met
         raise NotImplementedError
 
     @staticmethod
     def adversarial_example_not_created():
-        # return : bool
-        # if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.03, then there is no adversarial_sample (evaluate given dict_string of image_label for cifar-10)
-        raise NotImplementedError
+        """
+        robustness trace property 2: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
+        
+        Note, if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better.
+        """
+        # use when perturbation_status=True
+        if (RobustnessTrace.lp_perturbation_status == True): # when perturbation epsilon and gaussian noise vector applied to input_image before input is passed to ImageDataGenerator and keras.layers.Input
+            # if the classified output class matches the correct output class
+            if (Network.getClassificationState() == True):
+                return True
+        
+        return False
 
     def brightness_perturbation_norm_trace(self):
         raise NotImplementedError
