@@ -23,6 +23,7 @@ class BoundedNetworkSolver():
     '''
 
     def symbolically_encode_network(self, network):
+        """Convert convolutional network state into prepositional formula given the constraint-satisfaction problem that it will be evaluated against with initialize_constraint_satisfaction_formula()"""
         raise NotImplementedError
 
     def get_relevant_reachable_states(self, network):
@@ -32,7 +33,7 @@ class BoundedNetworkSolver():
         raise NotImplementedError
 
     def parameterSynthesis(self):
-        """Synthesize logical formula translated through encoding convolutional network,"""
+        """Synthesize logical formula translated through encoding convolutional network, using symbolically_encode_network() and initialize_constraint_satisfaction_formula() for s.e.n is passed to i.c.s.f., and then parameter synthesis will evaluate or iterate over reachable states only to then update the state of the respective trace property for the SMT model checker."""
         raise NotImplementedError
 
 
