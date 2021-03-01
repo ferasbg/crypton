@@ -28,6 +28,12 @@ from nn.network import Network
 from PIL import Image
 from tensorflow import keras
 
+NUM_CLIENTS = 10
+NUM_EPOCHS = 25
+BATCH_SIZE = 32
+SHUFFLE_BUFFER = 100
+PREFETCH_BUFFER = 10
+
 
 class CryptoNetwork(Network):
     """
@@ -54,9 +60,15 @@ class CryptoNetwork(Network):
         x_test = x_test.reshape((-1, 32, 32, 3))
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
-        sample_batch = x_train[0]
-        return tff.learning.from_keras_model(self.public_network, sample_batch)
+        # specify input shape, loss function, plaintext network, and metrics
+        input_spec = x_train[0].shape
+        return tff.learning.from_keras_model(self.public_network, input_spec=input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+
 
     def main(self):
         raise NotImplementedError
 
+if __name__ == '__main__':
+    crypto_network = CryptoNetwork()
+    crypto_network.build_compile_crypto_model()
+    print(crypto_network.crypto_network)
