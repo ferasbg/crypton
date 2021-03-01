@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 # Copyright (c) 2021 Feras Baig
 
+import argparse
 import logging
 import os
 import random
 import time
-import argparse
 
 import numpy as np
-from PIL import Image
-import random
 import tensorflow as tf
-from tensorflow import keras
+from keras import backend as K
+from keras import optimizers, regularizers
 from keras.applications.vgg16 import VGG16
-from keras.models import Input, Model, Sequential
-from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Conv2D, Conv2DTranspose, MaxPool2D, Softmax, UpSampling2D, ReLU, Flatten, Input, BatchNormalization, GaussianNoise, GaussianDropout
-from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam
+from keras.datasets import cifar10
 from keras.datasets.cifar10 import load_data
-import numpy as np
+from keras.layers import (Activation, BatchNormalization, Conv2D,
+                          Conv2DTranspose, Dense, Dropout, Flatten,
+                          GaussianDropout, GaussianNoise, Input, MaxPool2D,
+                          ReLU, Softmax, UpSampling2D)
+from keras.layers.core import Lambda
+from keras.models import Input, Model, Sequential, load_model, save_model
+from keras.optimizers import Adam
+from keras.preprocessing.image import ImageDataGenerator
+from PIL import Image
+from tensorflow import keras
+from tensorflow.python.keras.applications.vgg16 import preprocess_input
 
 
 class Network():
@@ -40,7 +45,6 @@ class Network():
     dataset_labels = ['airplane', 'automobile', 'bird',
                       'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
     # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
-    
 
     def __init__(self):
 
@@ -63,8 +67,6 @@ class Network():
         self.weight_decay_regularization = 0.003
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
-        # how many batches per epoch
-        self.steps_per_epoch = 16
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -72,17 +74,19 @@ class Network():
         # feature layers
         model.add(Conv2D(32, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
-        model.add(Conv2D(32, (3, 3), activation='relu',
-                         kernel_initializer='he_uniform', padding='same'))
-        model.add(MaxPool2D((2, 2)))
-        model.add(Conv2D(64, (3, 3), activation='relu',
-                         kernel_initializer='he_uniform', padding='same'))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.3))
         model.add(Conv2D(64, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
         model.add(Conv2D(128, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
-        model.add(Conv2D(128, (3, 3), activation='relu',
+        model.add(Conv2D(256, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(512, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(512, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
         model.add(Flatten())
@@ -90,50 +94,57 @@ class Network():
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
         # 10 output classes possible
-        model.add(Dense(10, activation='softmax'))
-        model.add(Dense(units=2, activation='sigmoid'))
-        # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
-        optimizer = Adam(learning_rate=0.003)
+        model.add(Dense(10))
+         # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+        optimizer = Adam(learning_rate=0.001)
         model.compile(loss='categorical_crossentropy',
                       optimizer=optimizer, metrics=['accuracy'])
         return model
 
     def train(self):
-        # get cifar10-data first, and assign data and categorical labels as such
-        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-
-        train_generator = ImageDataGenerator()
-        train = train_generator.flow_from_directory(directory=x_train, target_size=(32, 32), batch_size=32, class_mode='categorical')
-        test_generator = ImageDataGenerator()
-        test = test_generator.flow_from_directory(directory=x_test, target_size=(32, 32), batch_size=32, class_mode='categorical')
-
-        self.model.fit(train, epochs=25, batch_size=32, validation_data=test)
-        return self.model
-
-
-    @staticmethod
-    def get_cifar_data():
-
-        # xy train is rgb image matrix and xy test is category labels for each respective image matrix
         '''
+        Train network on nominal multi-label classification problem. Make sure to allocate images for each test variation e.g. mpc_network, certified_mpc_network, certified_nominal_network
+
         x_test, y_test = load_batch(fpath)
         y_train = np.reshape(y_train, (len(y_train), 1))
         y_test = np.reshape(y_test, (len(y_test), 1))
 
-        The CIFAR-10 dataset consists of 60000 32x32 colour images in 10 classes, with 6000 images per class. There are 50000 
+        The CIFAR-10 dataset consists of 60000 32x32 colour images in 10 classes, with 6000 images per class. There are 50000
         training images and 10000 test images.
 
         (50000, 32, 32, 3)
         (50000, 1)
         (10000, 32, 32, 3)
         (10000, 1)
-
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
-        
+        # get cifar10-data first, and assign data and categorical labels as such
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 
-    def evaluate_nominal(self):
-        raise NotImplementedError
+        x_train = x_train.astype('float32')
+        x_test = x_test.astype('float32')
+
+        y_train = keras.utils.to_categorical(y_train, 10)
+        y_test = keras.utils.to_categorical(y_test, 10)
+
+        generator = ImageDataGenerator(
+            featurewise_center=False,
+            samplewise_center=False,
+            featurewise_std_normalization=False,
+            samplewise_std_normalization=False,
+            zca_whitening=False,
+            rotation_range=15,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            horizontal_flip=True,
+            vertical_flip=False)
+
+        history = self.model.fit_generator(generator.flow(x_train, y_train, batch_size=128),
+                                           steps_per_epoch=x_train.shape[0]//128, epochs=100, validation_data=(x_test, y_test), verbose=1)
+
+        self.model.save_weights('network.h5')
+        print(history)
+        
 
     @staticmethod
     def getClassificationState():
@@ -146,3 +157,5 @@ if __name__ == '__main__':
     # instantiate tf.Session
     network = Network()
     print(network.model.summary())
+    network.build_compile_model()
+    network.train()
