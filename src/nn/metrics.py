@@ -12,41 +12,51 @@ Define conventional/nominal, certification/verification (robustness, safety), mp
 
 Recorded metrics:
 
-Nominal/Conventional Accuracy Trained With Geforce K80:
+Natural Accuracy for Plaintext Network Trained With Geforce K80:
 1563/1563 [==============================] - 9s 6ms/step - loss: 0.1419 - accuracy: 0.9522 - val_loss: 1.2321 - val_accuracy: 0.7442
 
 Certified Accuracy Trained With Geforce K80:
 1563/1563 [==============================] - {}s {}ms/step - certified_loss: 0.1419 - certified_accuracy: {} - certified_val_loss: {} - certified_val_accuracy: {}
 
+Accuracy-Under-MPC Trained with Geforce K80:
 
+Certified CryptoNetwork (Accuracy-Under-Federated/DP) Accuracy Trained With Geforce K80:
+
+Graphs:
+- epsilon vs l^2-bounded norm adversary
+- epsilon vs l-infinity-bounded norm adversary
+- compare accuracies of networks (note that adversarial examples optimized performance vs any other technique for natural training)
+- BoundedNetworkSolver termination_time
+- properties checked and the computation time for all trace properties
 
 """
 
 class Metrics():
+    '''
+    Functions to compute natural/nominal/convential evaluation metrics, crypto-specific metrics, verification/certification metrics, and robustness metrics given adversarial attacks to network variant (public/crypto) under the state of being verified with certification checkers and defined formal trace properties.
+    '''
     @staticmethod
-    def nominal_cross_entropy_loss(self):
-        """ Compute Cross-Entropy Loss Given compute_softmax(Model model) """
-        raise NotImplementedError
+    def natural_accuracy(correct_images, dataset):
+        dataset_length = len(dataset)
+        natural_accuracy = correct_images // dataset_length
+        return natural_accuracy        
 
     @staticmethod
-    def mean_accuracy(self, correct_pixels, total_pixels):
-        """Mean Pixel Accuracy. Proportion of all correctly classified pixels over the total pixels of the image, then compute sum of all proportions, then average it out.
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def certified_robustness_accuracy(prediction_robustness_threshold, certified_accuracy):
+    def certified_robustness_accuracy(prediction_robustness_threshold, certified_robustness_norm):
         """robustSize(scores, , δ, L) returns the certified robustness size, which is then compared to the prediction robustness threshold T."""
-        certified_robustness_size = {}
-        if (certified_robustness_size > prediction_robustness_threshold):
-            return certified_robustness_size
+        if (certified_robustness_norm > prediction_robustness_threshold):
+            euclidean_distance = certified_robustness_norm - prediction_robustness_threshold
+            return euclidean_distance
+        else:
+            return "Failed to get proper variables for robustness region, threshold, and robustness norm computed from specification given convergence/optimization setup."
+
 
     @staticmethod
     def nominal_kl_divergence():
         raise NotImplementedError
 
     @staticmethod
-    def get_certification_accuracy():
+    def crypto_certification_accuracy():
         raise NotImplementedError
 
     @staticmethod
@@ -59,22 +69,44 @@ class Metrics():
         raise NotImplementedError
 
     @staticmethod
-    def l_diversity():
-        """
-        "it was proposed by Machanavajjhala et al. in 2007 [7]. The l-diversity scheme was proposed
-        to handle some weaknesses in the k-anonymity scheme by promoting intra-group diversity of sensitive
-        data within the anonymization scheme [8]. It is prone to skewness and similarity attacks" 
-        """
+    def get_certified_accuracy():
         raise NotImplementedError
 
     @staticmethod
-    def t_closeness():
-        '''
-        "this anonymization scheme was proposed by Li et al. in 2007 [9]. It is a refinement
-        of l-diversity discussed above [8]. It requires that distribution of sensitive attributes within each
-        quasi-identifier group should be “close” to their distribution in the entire original dataset (that is, the
-        distance between the two distributions should be no more than a threshold t)"
-        '''
+    def get_certified_robustness_region():
         raise NotImplementedError
 
+    @staticmethod
+    def get_crypto_certified_robustness_region():
+        raise NotImplementedError
+
+    @staticmethod
+    def get_certified_metrics_for_network():
+        '''Batch return all the metrics for network given specifications are checked.'''
+        print("Certified accuracy: {}".format(Metrics.get_certified_accuracy()))
+        print("Certified robustness region: {}".format(Metrics.get_certified_robustness_region()))    
+
+    @staticmethod
+    def get_certified_metrics_for_crypto_network():
+        '''Batch return all the metrics for crypto_network given specifications are checked.'''
+        print("CryptoNetwork certified accuracy: {}".format(Metrics.crypto_certification_accuracy()))
+        print("CryptoNetwork certified robustness region: {}".format(Metrics.get_crypto_certified_robustness_region()))    
+
+    @staticmethod
+    def getCryptoMetrics():
+        '''Batch return all the crypto metrics for crypto_network.'''
+        print("K-Anonymity: {}".format(Metrics.k_anonymity()))
+
+
+    @staticmethod
+    def getNominalAdversarialMetrics():
+        raise NotImplementedError
+    
+    @staticmethod
+    def getCryptoAdversarialMetrics():
+        raise NotImplementedError
+    
+    @staticmethod
+    def getNominalMetrics():
+        raise NotImplementedError
     

@@ -42,10 +42,14 @@ class BoundedNetworkSolver():
     def traverse_robust_network_state_transitions(self):
         raise NotImplementedError
 
+    def smt_solver_trace_check(self):
+        raise NotImplementedError
 
-class BoundedMPCNetworkSolver(BoundedNetworkSolver):
+
+
+class BoundedCryptoNetworkSolver(BoundedNetworkSolver):
     '''
-        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for MPCNetwork
+        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for CryptoNetwork.
         Args:
         Returns:
         Raises:

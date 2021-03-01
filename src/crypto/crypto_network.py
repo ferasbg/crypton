@@ -8,15 +8,15 @@ import tensorflow as tf
 import random
 import pickle
 import tf_encrypted as tfe
+# import tf_federated as tff
 
 from nn.network import Network
 
 
-class MPCNetwork(Network):
+class CryptoNetwork(Network):
     """
         Description: Deep Convolutional Neural Network With Secure Training and Testing
         Raises:
-            - Error if NetworkStateEncryption=NULL, if Sanity Checks Fail, if Reconstruction State Checker Fails
         Returns:
         References:
         Examples:
@@ -24,15 +24,12 @@ class MPCNetwork(Network):
     """
 
     def __init__(self):
-        super(MPCNetwork, self).__init__()
+        super(CryptoNetwork, self).__init__()
+        # get plaintext layers for network architecture, focus primarily on heavy dp and federated e.g. iterate on data processing to ImageDataGenerator and model.fit_generator() or model.fit()
+        self.crypto_network = super().build_compile_model()
+        # perform encryption operations on the input images themselves before passing to network 
         # encrypt layers with self.MPCConjugateLayer = MPC.encryptPublicConjugateLayer(Network.PublicConjugateLayer)
 
     def main(self):
-        """Compute 3-Party MPC Training for MPCNetwork. Encrypt model layers/gradients, and train with respect to mpc protocol."""
         raise NotImplementedError
 
-    def encrypt_all(self):
-        raise NotImplementedError
-
-    def decrypt_all(self):
-        raise NotImplementedError

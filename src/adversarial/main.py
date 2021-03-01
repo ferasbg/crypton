@@ -6,12 +6,12 @@ import tensorflow as tf
 import cleverhans
 
 from nn.network import Network
-from crypto.mpc_network import MPCNetwork
-from crypto.mpc import MPC
+from crypto.crypto_network import CryptoNetwork
+from crypto.main import Crypto
 from nn.metrics import Metrics
 
+
 class Adversarial():
-    gradient_signed_method = {}
     network_gradients = getGradients()
     perturbation_epsilon = 0.3 # perturbation epsilon
 
@@ -55,7 +55,7 @@ class Adversarial():
         raise NotImplementedError
 
     @staticmethod
-    def setup_pgd_attack():
+    def setup_pgd_attack(loss, l_infinity_norm=0.2, l2_norm=2.0):
         raise NotImplementedError
 
     @staticmethod
@@ -63,9 +63,9 @@ class Adversarial():
         """Fast Gradient Signed Method (FGSM) attack as described in [Explaining and Harnessing Adversarial Examples](https://arxiv.org/abs/1412.6572) by Goodfellow *et al*. This was one of the first and most popular attacks to fool a neural network.
 
         Note, we will compute a pixelwise norm perturbation with respect to the proportionality of the pixel to its corresponding loss value, in order to maximize the loss, e.g. making it inaccurate. It is given that model is pretrained and the model parameters are constant.
-        
+
         Formally denoted as η=ϵ sign(∇ₓ J(θ,x,y)).
-        
+
         Args:
         -   x : Original input image.
         -   y : Original input label.
@@ -75,24 +75,29 @@ class Adversarial():
 
         Returns: adv_x e.g. adversarial image with perturbations with respect to adversarial optimization.
 
+        References:
+            - https://github.com/gongzhitaao/tensorflow-adversarial/blob/master/attacks/fast_gradient.py
+            - https://neptune.ai/blog/adversarial-attacks-on-neural-networks-exploring-the-fast-gradient-sign-method
+            - https://arxiv.org/pdf/1811.06492.pdf
+            - https://deepai.org/publication/simultaneous-adversarial-training-learn-from-others-mistakes
         """
         perturbations = Adversarial.create_adversarial_pattern(input_image, input_image_label)
         for i in enumerate(1):
             adv_x = input_image + perturbation_epsilon*perturbations # matmul with perturbation epsilon
             adv_x = tf.clip_by_value(adv_x, -1, 1)
             i+=1
-        
+
         return adv_x
 
     @staticmethod
     def create_adversarial_pattern(input_image, input_label):
         with tf.GradientTape() as tape:
-            tape.watch(input_image) # map gradients  
+            tape.watch(input_image) # map gradients
             network = Network()
             prediction = (input_image) # given x to VGG-Net # rework model design
             loss_object = tf.keras.losses.CategoricalCrossentropy()
             loss = loss_object(input_label, prediction) # total error
-        
+
         gradient = tape.gradient(loss, input_image)
 
         signed_grad = tf.sign(gradient)
@@ -110,11 +115,8 @@ class Adversarial():
         raise NotImplementedError
 
     @staticmethod
-    def perturb_input_image(input_image):
-        raise NotImplementedError
-
-    @staticmethod
     def brightness_perturbation_norm(input_image):
         sigma = 0.085
         brightness_threshold = 1 - sigma
         input_image = tf.math.scalar_mul(brightness_threshold, input_image)
+        return input_image

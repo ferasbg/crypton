@@ -31,7 +31,9 @@ class RobustnessTrace():
         References:
             - https://arxiv.org/pdf/1904.13215.pdf
             - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
+
         Examples:
+        
     '''
     # variables to then use for trace property
     adversarial_sample_created = False
@@ -46,7 +48,8 @@ class RobustnessTrace():
     pgd_attack_state = False
     pgd_correctness_state = False
 
-    def robustness_bound_check(self):
+    @staticmethod
+    def robustness_bound_check():
         """robustness trace property 1: robustness_threshold and robustness_region given output vector norm. 
         
         Note, given the lp-norm perturbation, this trace property will be evaluated given the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
@@ -56,7 +59,7 @@ class RobustnessTrace():
         raise NotImplementedError
 
     @staticmethod
-    def adversarial_example_not_created():
+    def adversarial_example_not_created_trace():
         """
         robustness trace property 2: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
         
@@ -89,24 +92,22 @@ class RobustnessTrace():
             return "L-p norm perturbation trace failed."
 
     @staticmethod
-    def pgd_attack_trace(self):
+    def pgd_attack_trace():
         """Create the adversarial attack, then perform adversarial analysis and check against trace property, that is stored here that defines the success metrics for each trace property given the state of the network given the adversarial attack."""
         raise NotImplementedError
 
     @staticmethod
-    def fgsm_attack_trace(self):
+    def fgsm_attack_trace():
         if (RobustnessTrace.fgsm_perturbation_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
             return "FGSM attack trace successfully checked out. Given the input variance of the fast gradient sign method with F(P(x,y)), the output state Q(x,y) was consistent under the robustness trace for FGSM."
         else:
             return "FGSM attack trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
 
     @staticmethod
-    def smt_solver_trace_constraint(self):
-        '''Define the trace property given the constraint-satisfaction logical problem that the model checker is checking against. If the output state vector norm satisfies the specification, then the constraint and the model is certified to be robust given the SMT Solver.'''
-        raise NotImplementedError
-
-    @staticmethod
-    def assert_mpc_reliability(self):
+    def smt_solver_trace_constraint():
+        '''Define the trace property given the constraint-satisfaction logical problem that the model checker is checking against. If the output state vector norm satisfies the specification, then the constraint and the model is certified to be robust given the SMT Solver.
+        
+        In other words, a proportion of the reachable states satisfy the robustness threshold for accuracy with respect to n number of iterations (batches) and image samples.'''
         raise NotImplementedError
 
 
