@@ -20,7 +20,7 @@ class RobustnessTrace():
         Description: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]).
 
             % robustness trace property set τ:
-                - robustness trace 1: given lp-norm perturbation, the misclassified pixels is under certain threshold p
+                - robustness trace 1: given lp-norm perturbation, the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
                 - robustness trace 2: given projected gradient descent attack meant to distort backpropagation process, assert that model updates its convergence to local minima with gradient descent correctly given bounds
                 - robustness trace 3: network is not making misclassifications with respect to L-norm (infinity, l^2, l-1)
 
@@ -46,7 +46,11 @@ class RobustnessTrace():
     pgd_correctness_state = False
 
     def robustness_bound_check(self):
-        """robustness trace property 1: robustness_threshold and robustness_region given output vector norm."""
+        """robustness trace property 1: robustness_threshold and robustness_region given output vector norm. 
+        
+        Note, given the lp-norm perturbation, this trace property will be evaluated given the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
+        
+        """
         # if output vector is inside robustness region, then specification is met
         raise NotImplementedError
 
