@@ -126,7 +126,7 @@ class CheckTraceData():
 
 
 if __name__ == '__main__':
-    adv = RobustnessTrace.adversarial_example_not_created()
+    adv = RobustnessTrace.adversarial_example_not_created_trace()
     if (adv == False):
         adversarial_sample_created = False
     elif (adv == True):

@@ -109,6 +109,14 @@ class Network():
         y_train = np.reshape(y_train, (len(y_train), 1))
         y_test = np.reshape(y_test, (len(y_test), 1))
 
+        # partitioning dataset for different tests.
+        x_val = x_train[-10000:]
+        y_val = y_train[-10000:]
+        x_train = x_train[:-10000]
+        y_train = y_train[:-10000]
+
+        Add dataset, and dataset_labels as parameter (overload this method or make re-write)
+
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         # get cifar10-data first, and assign data and categorical labels as such
