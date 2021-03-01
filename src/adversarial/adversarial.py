@@ -56,8 +56,13 @@ class Adversarial():
     def fgsm_attack(model_parameters, input_image, cost_function):
         """Fast-sign gradient method, denoted as η = sign (∇xJ(θ, x, y)). Generate adversarial examples to pass into network."""
         raise NotImplementedError
-   
 
     @staticmethod
     def perturb_input_image(input_image):
         raise NotImplementedError
+
+    @staticmethod
+    def brightness_perturbation_norm(input_image):
+        sigma = 0.085
+        brightness_threshold = 1 - sigma
+        input_image = tf.math.scalar_mul(brightness_threshold, input_image)

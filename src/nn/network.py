@@ -18,12 +18,14 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Conv2D, Conv2DTranspose, MaxPool2D, Softmax, UpSampling2D, ReLU, Flatten, Input, BatchNormalization, GaussianNoise, GaussianDropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adam
+from keras.datasets.cifar10 import load_data
 import numpy as np
+
 
 class Network():
     '''
         Description: Create keras model instance. Use build_and_compile_model() object function to append model layers and to initialize network for base/plaintext training.
-        
+
         Args: None
 
         Returns: keras.Model
@@ -34,13 +36,23 @@ class Network():
         References:
             - https://arxiv.org/abs/1409.1556
     '''
+    classification_state = False
+    dataset_labels = ['airplane', 'automobile', 'bird',
+                               'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    
+    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
+    x_train = []
+    y_train = []
+    x_test = []
+    y_test = []
+    
 
     def __init__(self):
 
         # labels
         self.num_classes = 20
         self.epochs = 1000
-        self.batch_size = 64 # maybe 128
+        self.batch_size = 64  # maybe 128
         self.learning_rate = 1e-4
         self.batch_size = 32
         self.kernel_size = 3
@@ -49,75 +61,103 @@ class Network():
         self.dilation = 1
         self.epochs = 500
         self.input_channels = 3
-        self.output_channels = 64 # number of channels produced by convolution
+        self.output_channels = 64  # number of channels produced by convolution
         self.image_size = [32, 32]
         self.bias = False
-        self.weight_decay_regularization = 0.003 # stabilize convergence to local minima for gradient descent
-        self.momentum = 0.05 # gradient descent convergence optimizer
+        # stabilize convergence to local minima for gradient descent
+        self.weight_decay_regularization = 0.003
+        self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
-        self.dataset_labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
         # how many batches per epoch
-        self.steps_per_epoch = 16 
-        classification_state = False
+        self.steps_per_epoch = 16
+        
 
     def build_compile_model(self):
         # build layers of public neural network
         model = Sequential()
         # feature layers
-        model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
-        model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(32, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
+        model.add(Conv2D(32, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
-        model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-        model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
-        model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-        model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
         model.add(Flatten())
         # classification layers
-        model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+        model.add(Dense(128, activation='relu',
+                        kernel_initializer='he_uniform'))
         # 10 output classes possible
-        model.add(Dense(10, activation='softmax')) 
+        model.add(Dense(10, activation='softmax'))
         model.add(Dense(units=2, activation='sigmoid'))
-        optimizer = Adam(learning_rate=0.003) # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+        # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+        optimizer = Adam(learning_rate=0.003)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=optimizer, metrics=['accuracy'])
         return model
 
-    def train(self, dataset):
-        # append first 500 cifar-10 images to train_set and 500 next images to validation set
-        train_set = {}
-        validation_set = {}
-        
+    def train(self):
+        # get cifar10-data first, and assign data and categorical labels as such
+        Network.get_cifar_data()
+        train_set = Network.x_train
+        train_labels = Network.y_train
+        test_set = Network.x_test
+        test_labels = Network.y_test
+
         train_generator = ImageDataGenerator()
-        train = train_generator.flow_from_directory(directory=train_set, target_size=(32, 32))
-        validation_generator = ImageDataGenerator()
-        validation = validation_generator.flow_from_directory(directory=validation_set, target_size=(32, 32))
-        self.model.fit()
+        train = train_generator.flow_from_directory(
+            directory=train_set[:500], target_size=(32, 32))
+        test_generator = ImageDataGenerator()
+        test = test_generator.flow_from_directory(
+            directory=test_set[:500], target_size=(32, 32))
+        self.model.fit(epochs=10, batch_size=32)
 
-    def get_cifar_data(self):
-        """
-        Reference: https://github.com/exelban/tensorflow-cifar-10/blob/master/include/data.py
+    @staticmethod
+    def get_cifar_data():
+
+        # xy train is rgb image matrix and xy test is category labels for each respective image matrix
+        '''
+        x_test, y_test = load_batch(fpath)
+        y_train = np.reshape(y_train, (len(y_train), 1))
+        y_test = np.reshape(y_test, (len(y_test), 1))
+
+        The CIFAR-10 dataset consists of 60000 32x32 colour images in 10 classes, with 6000 images per class. There are 50000 
+        training images and 10000 test images.
+
+        (50000, 32, 32, 3)
+        (50000, 1)
+        (10000, 32, 32, 3)
+        (10000, 1)
+
+        '''
+        # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
         
-        """
-        dataset = {}
+        Network.x_train = x_train
+        Network.y_train = y_train
+        Network.x_test = x_test
+        Network.y_test = y_test
 
-        return dataset
-
-    def freeze_feature_layers(self):
-        for layer in self.model.layers:
-            layer.trainable = False
 
     def evaluate_nominal(self):
         raise NotImplementedError
 
     @staticmethod
     def getClassificationState():
-        return classification_state
+        return Network.classification_state
 
 
 if __name__ == '__main__':
-    # initialize tf.Session(sess) to initialize tf computational graph to track state-transition
     # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
     graph = tf.compat.v1.get_default_graph()
+    # instantiate tf.Session
     network = Network()
-    print(network.model.summary())    
+    print(network.model.summary())

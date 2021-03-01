@@ -16,7 +16,7 @@ def main():
     # pass input_params to model checker that is initialized with the object that represents the network's state-transitions to worry about and evaluate e.g. compare input-output vector norms, check against specification to verify trace property with satisfiability : this method is to reduce search complexity and to approach from more symbolic representation of the network e.g. composite function / computational-graph
     # compute formal specifications and return bmc_specification_status and abstract_network_specification_status
     # train model over cifar-10, and cifar-100 if necessary
-    # return evaluation metrics are required for certification for a.i. and b.m.c 
+    # return evaluation metrics are required for certification for boundedNetworkSolver, the images that are iterated over will have certified_accuracy for accuracy metric 
     # initialize the public network, and then execute precedence properties (check pretrained trainable weights, check layers / type def / params for size, preprocess cifar-10 data)
     # initialize the mpc network architecture variant 
     # sequentially compute non-plaintext model given shares made up from required variables (keras.layers.Layer) to then compute the secret iterating over each layer during forward propagation for secure training

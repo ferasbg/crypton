@@ -38,6 +38,12 @@ class RobustnessTrace():
     robustness_sensitivity = 1 # store robustness sensitivity of perturbation norm e.g. possibly euclidean distance, given tuple of perturbation_norms to iteratively use
     lp_perturbation_status = False # l_p vector norm perturbation
     brightness_perturbation_status = False
+    # accuracy under brightness perturbation with (1-sigma) threshold
+    correctness_under_brightness_perturbation = False
+    fgsm_perturbation_attack_state = False
+    fgsm_perturbation_correctness_state = False
+    pgd_attack_state = False
+    pgd_correctness_state = False
 
     def robustness_bound_check(self):
         """robustness trace property 1: robustness_threshold and robustness_region given output vector norm."""
@@ -59,21 +65,42 @@ class RobustnessTrace():
         
         return False
 
-    def brightness_perturbation_norm_trace(self):
-        raise NotImplementedError
+    @staticmethod
+    def brightness_perturbation_norm_trace():
+        """Best way to compute brightness perturbation norm is to iterate the function of maximizing brightness for each pixel for each input image. Define adversarial operators in Adversarial, and write trace properties and assert checks here."""
+        if (RobustnessTrace.brightness_perturbation_status == True and RobustnessTrace.correctness_under_brightness_perturbation == True):
+            return "Brightness perturbation norm trace property checked out successfully."
 
-    def l_perturbation_norm_trace(self):
-        raise NotImplementedError
-    
+        elif (RobustnessTrace.correctness_under_brightness_perturbation == False):
+            return "Brightness perturbation norm trace property failed."
+        
+
+    @staticmethod
+    def l_perturbation_norm_trace(self, norm_perturbation_correctnessState):
+        '''Apply l_p perturbation norm for each input_image to maximize its loss.'''
+        if (RobustnessTrace.lp_perturbation_status == True and norm_perturbation_correctnessState == True):
+            return "L-p norm perturbation trace successfully checked out."
+        else:
+            return "L-p norm perturbation trace failed."
+
+    @staticmethod
     def pgd_attack_trace(self):
+        """Create the adversarial attack, then perform adversarial analysis and check against trace property, that is stored here that defines the success metrics for each trace property given the state of the network given the adversarial attack."""
         raise NotImplementedError
 
+    @staticmethod
     def fgsm_attack_trace(self):
-        raise NotImplementedError
+        if (RobustnessTrace.fgsm_perturbation_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
+            return "FGSM attack trace successfully checked out. Given the input variance of the fast gradient sign method with F(P(x,y)), the output state Q(x,y) was consistent under the robustness trace for FGSM."
+        else:
+            return "FGSM attack trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
 
+    @staticmethod
     def smt_solver_trace_constraint(self):
+        '''Define the trace property given the constraint-satisfaction logical problem that the model checker is checking against. If the output state vector norm satisfies the specification, then the constraint and the model is certified to be robust given the SMT Solver.'''
         raise NotImplementedError
 
+    @staticmethod
     def assert_mpc_reliability(self):
         raise NotImplementedError
 
