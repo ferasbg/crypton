@@ -14,7 +14,10 @@ from specification import CheckTraceData, RobustnessTrace
 
 class BoundedNetworkSolver():
     '''
-        Description: Compute BMC (Incremental, Parameterized Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for Network. In other words, use constraint-satisfaction solver to evaluate reachable states concerned with (e.g. output layer, dense) to process bounded network state abstraction to compute satisfiability for each trace property.
+        Description: Compute BMC (Incremental, Parameterized Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for Network. 
+        
+        Note, we are initializing our constraint-satisfaction problem, our prepositional modal logic formula to assert robust output states after network state-transition T(x) for P(x,y) => Q(x,y) | x ∝ y or input-output state is proportional and thus correctness is proven. Negate non-robust output states and consider them in violation of the constraint specified.        
+        
         Args:
         Returns:
         Raises:
@@ -32,15 +35,13 @@ class BoundedNetworkSolver():
     def initialize_constraint_satisfaction_formula(self):
         raise NotImplementedError
 
-    def parameterSynthesis(self):
+    def bmc_to_propositional_satisfiability(self):
         """Synthesize logical formula translated through encoding convolutional network, using symbolically_encode_network() and initialize_constraint_satisfaction_formula() for s.e.n is passed to i.c.s.f., and then parameter synthesis will evaluate or iterate over reachable states only to then update the state of the respective trace property for the SMT model checker."""
         raise NotImplementedError
 
+    def traverse_robust_network_state_transitions(self):
+        raise NotImplementedError
 
-    def getRobustnessTrace(self):
-        # iterate over all traces and store in tuple or array to then evaluate each trace element
-        adversarial_example = RobustnessTrace.adversarial_example_not_created()
-        return adversarial_example # return array of all defined robustness trace properties, so define robustness trace properties given attack_types are fgsm, brightness_norm, adversarial_perturbation_for_adversarial_example_generation, projected_gradient_descent_attack_to_maximize_loss
 
 class BoundedMPCNetworkSolver(BoundedNetworkSolver):
     '''
@@ -51,6 +52,10 @@ class BoundedMPCNetworkSolver(BoundedNetworkSolver):
         References:
         Examples:
     '''
+
+    def reconstruct_secrets(self):
+        raise NotImplementedError
+        
 
 class VerifyTrace():
     '''
