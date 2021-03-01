@@ -39,12 +39,8 @@ class Network():
     classification_state = False
     dataset_labels = ['airplane', 'automobile', 'bird',
                       'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-
     # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
-    x_train = []
-    y_train = []
-    x_test = []
-    y_test = []
+    
 
     def __init__(self):
 
@@ -104,17 +100,16 @@ class Network():
 
     def train(self):
         # get cifar10-data first, and assign data and categorical labels as such
-        data = Network.get_cifar_data()
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+
         train_generator = ImageDataGenerator()
-        train = train_generator.flow_from_directory(
-            # note that x_train is directory to all train images
-            directory=Network.x_train[:500], target_size=(32, 32), batch_size=32, class_mode='categorical')
+        train = train_generator.flow_from_directory(directory=x_train, target_size=(32, 32), batch_size=32, class_mode='categorical')
         test_generator = ImageDataGenerator()
-        test = test_generator.flow_from_directory(directory=Network.x_test[:500], target_size=(32, 32))
+        test = test_generator.flow_from_directory(directory=x_test, target_size=(32, 32), batch_size=32, class_mode='categorical')
 
         self.model.fit(train, epochs=25, batch_size=32, validation_data=test)
-        self.model.predict(self.model)
-        print(self.model.summary())
+        return self.model
+
 
     @staticmethod
     def get_cifar_data():
@@ -135,12 +130,7 @@ class Network():
 
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
-        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-
-        Network.x_train = x_train
-        Network.y_train = y_train
-        Network.x_test = x_test
-        Network.y_test = y_test
+        
 
     def evaluate_nominal(self):
         raise NotImplementedError
