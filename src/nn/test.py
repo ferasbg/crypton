@@ -9,3 +9,7 @@ from network import Network
 Network.get_cifar_data()
 input_image = Network.x_train[0]
 print(input_image)
+
+network = Network()
+train = network.train()
+print(network.model.summary())

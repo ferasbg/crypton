@@ -38,14 +38,13 @@ class Network():
     '''
     classification_state = False
     dataset_labels = ['airplane', 'automobile', 'bird',
-                               'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-    
+                      'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+
     # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
     x_train = []
     y_train = []
     x_test = []
     y_test = []
-    
 
     def __init__(self):
 
@@ -70,7 +69,6 @@ class Network():
         self.model = self.build_compile_model()
         # how many batches per epoch
         self.steps_per_epoch = 16
-        
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -106,19 +104,17 @@ class Network():
 
     def train(self):
         # get cifar10-data first, and assign data and categorical labels as such
-        Network.get_cifar_data()
-        train_set = Network.x_train
-        train_labels = Network.y_train
-        test_set = Network.x_test
-        test_labels = Network.y_test
-
+        data = Network.get_cifar_data()
         train_generator = ImageDataGenerator()
         train = train_generator.flow_from_directory(
-            directory=train_set[:500], target_size=(32, 32))
+            # note that x_train is directory to all train images
+            directory=Network.x_train[:500], target_size=(32, 32), batch_size=32, class_mode='categorical')
         test_generator = ImageDataGenerator()
-        test = test_generator.flow_from_directory(
-            directory=test_set[:500], target_size=(32, 32))
-        self.model.fit(epochs=10, batch_size=32)
+        test = test_generator.flow_from_directory(directory=Network.x_test[:500], target_size=(32, 32))
+
+        self.model.fit(train, epochs=25, batch_size=32, validation_data=test)
+        self.model.predict(self.model)
+        print(self.model.summary())
 
     @staticmethod
     def get_cifar_data():
@@ -140,12 +136,11 @@ class Network():
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-        
+
         Network.x_train = x_train
         Network.y_train = y_train
         Network.x_test = x_test
         Network.y_test = y_test
-
 
     def evaluate_nominal(self):
         raise NotImplementedError

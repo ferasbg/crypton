@@ -16,7 +16,7 @@ class BoundedNetworkSolver():
     '''
         Description: Compute BMC (Incremental, Parameterized Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for Network. 
         
-        Note, we are initializing our constraint-satisfaction problem, our prepositional modal logic formula to assert robust output states after network state-transition T(x) for P(x,y) => Q(x,y) | x ∝ y or input-output state is proportional and thus correctness is proven. Negate non-robust output states and consider them in violation of the constraint specified.        
+        Note, we are initializing our constraint-satisfaction problem, our prepositional modal logic formula to assert robust output states after network state-transition T(x) for P(x,y) => Q(x,y) | x := y or input-output states match and are thus robust and thus correctness is proven. Negate non-robust output states and consider them in violation of the constraint specified.        
         
         Args:
         Returns:
