@@ -24,7 +24,7 @@ class MPC():
 
     @staticmethod
     def initialize_network_secrets(network):
-        '''Setup secrets such that for f_n(x) = {f_1, ..., f_n}, each secret is a function over each layer given the shares e.g. weights and synapses of the previous layers.
+        '''Setup secrets such that for f_n(x) = {f_1, ..., f_n}, each secret is a function over each layer given the shares e.g. weights and synapses of the previous layers.'''
         raise NotImplementedError
 
     @staticmethod
