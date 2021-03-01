@@ -1,14 +1,33 @@
+import argparse
+import logging
 import os
-import sys
-
-import numpy as np
-import matplotlib.pyplot as plt
-import keras
-import tensorflow as tf
-import random
 import pickle
+import random
+import sys
+import time
+
+import keras
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
 import tensorflow_federated as tff
-from src.nn.network import Network
+from keras import backend as K
+from keras import optimizers, regularizers
+from keras.applications.vgg16 import VGG16, preprocess_input
+from keras.datasets import cifar10
+from keras.datasets.cifar10 import load_data
+from keras.layers import (Activation, BatchNormalization, Conv2D,
+                          Conv2DTranspose, Dense, Dropout, Flatten,
+                          GaussianDropout, GaussianNoise, Input, MaxPool2D,
+                          ReLU, Softmax, UpSampling2D)
+from keras.layers.core import Lambda
+from keras.models import Input, Model, Sequential, load_model, save_model
+from keras.optimizers import Adam
+from keras.preprocessing.image import ImageDataGenerator
+from nn.network import Network
+from PIL import Image
+from tensorflow import keras
+
 
 class CryptoNetwork(Network):
     """
@@ -25,8 +44,7 @@ class CryptoNetwork(Network):
         # get plaintext layers for network architecture, focus primarily on heavy dp and federated e.g. iterate on data processing to ImageDataGenerator and model.fit_generator() or model.fit()
         self.public_network = super().build_compile_model()
         self.crypto_network = self.build_compile_crypto_model()
-        # perform encryption operations on the input images themselves before passing to network 
-
+        # perform encryption operations on the input images themselves before passing to network
 
     def build_compile_crypto_model(self):
         '''Build federated variant of convolutional network.'''
@@ -36,9 +54,8 @@ class CryptoNetwork(Network):
         x_test = x_test.reshape((-1, 32, 32, 3))
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
-        sample_batch =x_train[0]
+        sample_batch = x_train[0]
         return tff.learning.from_keras_model(self.public_network, sample_batch)
-
 
     def main(self):
         raise NotImplementedError
