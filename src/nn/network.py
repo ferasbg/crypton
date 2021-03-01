@@ -79,14 +79,14 @@ class Network():
         model.add(Conv2D(64, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
         model.add(Conv2D(128, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
         model.add(Conv2D(256, (3, 3), activation='relu',
-                         kernel_initializer='he_uniform', padding='same'))
-        model.add(MaxPool2D((2, 2)))
-        model.add(Conv2D(512, (3, 3), activation='relu',
-                         kernel_initializer='he_uniform', padding='same'))
-        model.add(Conv2D(512, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same'))
         model.add(MaxPool2D((2, 2)))
         model.add(Flatten())
@@ -94,7 +94,7 @@ class Network():
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
         # 10 output classes possible
-        model.add(Dense(10))
+        model.add(Dense(10, activation='softmax'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
         model.compile(loss='categorical_crossentropy',
@@ -109,23 +109,16 @@ class Network():
         y_train = np.reshape(y_train, (len(y_train), 1))
         y_test = np.reshape(y_test, (len(y_test), 1))
 
-        The CIFAR-10 dataset consists of 60000 32x32 colour images in 10 classes, with 6000 images per class. There are 50000
-        training images and 10000 test images.
-
-        (50000, 32, 32, 3)
-        (50000, 1)
-        (10000, 32, 32, 3)
-        (10000, 1)
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         # get cifar10-data first, and assign data and categorical labels as such
         (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 
-        x_train = x_train.astype('float32')
-        x_test = x_test.astype('float32')
+        x_train = x_train.reshape((-1, 32, 32, 3))
+        x_test = x_test.reshape((-1, 32, 32, 3))
 
-        y_train = keras.utils.to_categorical(y_train, 10)
-        y_test = keras.utils.to_categorical(y_test, 10)
+        y_train = tf.keras.utils.to_categorical(y_train, 10)
+        y_test = tf.keras.utils.to_categorical(y_test, 10)
 
         generator = ImageDataGenerator(
             featurewise_center=False,
@@ -139,8 +132,8 @@ class Network():
             horizontal_flip=True,
             vertical_flip=False)
 
-        history = self.model.fit_generator(generator.flow(x_train, y_train, batch_size=128),
-                                           steps_per_epoch=x_train.shape[0]//128, epochs=100, validation_data=(x_test, y_test), verbose=1)
+        history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
+        self.model.evaluate(x=x_test, y=y_test, verbose=0)
 
         self.model.save_weights('network.h5')
         print(history)

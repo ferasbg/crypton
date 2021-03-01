@@ -64,6 +64,8 @@ class Adversarial():
 
         Note, we will compute a pixelwise norm perturbation with respect to the proportionality of the pixel to its corresponding loss value, in order to maximize the loss, e.g. making it inaccurate. It is given that model is pretrained and the model parameters are constant.
         
+        Formally denoted as η=ϵ sign(∇ₓ J(θ,x,y)).
+        
         Args:
         -   x : Original input image.
         -   y : Original input label.
