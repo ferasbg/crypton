@@ -3,6 +3,7 @@
 
 import os
 import sys
+import sympy
 
 import keras
 import tensorflow as tf

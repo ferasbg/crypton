@@ -3,11 +3,15 @@ import sys
 import tensorflow as tf
 import random
 
+from nn.network import Network
+from nn.metrics import Metrics
 from crypto.mpc_network import MPCNetwork
+from adversarial.adversarial import Adversarial
 
 def main():
     # initialize the perturbation_layer e.g. perturbation epsilon to apply to every input going through ImageDataGenerator, also note gaussian noise vector
-    
+    Network()
+    Adversarial()
     # initialize fgsm attack (e.g. use the gradients to maximize the loss e.g. inaccuracy of the classification with gradient sign method to generate adversarial example)
     # initialize the l-norm bounded attack e.g. projected gradient descent attack (gradients compromised, maximize loss and inaccuracy), l^2 norm vs l-infinity norm for optimization after data augmentation 
     # initialize the defined robustness specifications that are written as formal logical statements in sympy
