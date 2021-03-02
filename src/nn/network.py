@@ -146,6 +146,10 @@ class Network():
         self.model.save_weights('network.h5')
         print(history)
         
+    def evaluate(self, image_set, label_set):
+        '''Evaluate with test set, generally isolated to one client node. Given we want to pass in custom image_set and custom image_labels.'''
+        self.model.evaluate(x=x_test, y=y_test, verbose=0)
+        return self.model
 
     @staticmethod
     def getClassificationState():
@@ -155,8 +159,17 @@ class Network():
 if __name__ == '__main__':
     # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
     graph = tf.compat.v1.get_default_graph()
-    # instantiate tf.Session
+    # train network
     network = Network()
-    print(network.model.summary())
+    # print(network.model.summary())
     network.build_compile_model()
     network.train()
+
+    # evaluate model
+    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+    x_train = x_train.reshape((-1, 32, 32, 3))
+    x_test = x_test.reshape((-1, 32, 32, 3))
+    y_train = tf.keras.utils.to_categorical(y_train, 10)
+    y_test = tf.keras.utils.to_categorical(y_test, 10)
+
+    network.evaluate(x_test, y_test)

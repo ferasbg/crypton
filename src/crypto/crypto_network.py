@@ -188,7 +188,7 @@ class CryptoNetwork(Network):
         # we need federated dataset, setup client nodes
         raise NotImplementedError
 
-    def federated_evaluate(self):
+    def federated_evaluate(self, clients, client_data_as_array):
         raise NotImplementedError
     
     @tff.tf_computation
@@ -196,7 +196,15 @@ class CryptoNetwork(Network):
         model = self.crypto_network 
         return model.trainable_variables
 
-    @tff.federated_computation
+    def federated_averaging(self):
+        '''Federated averaging method for computing over K clients.
+        
+        Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
+        '''
+        raise NotImplementedError
+
+
+    @tff.tf_computation
     def initialize_fn(self):
         return tff.federated_value(self.server_init(), tff.SERVER)
 

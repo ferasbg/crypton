@@ -8,7 +8,7 @@ import h5py
 import json
 
 """
-Define conventional/nominal, certification/verification (robustness, safety), mpc, adversarial evaluation metrics for network.
+Define graphs and federated evaluation metrics.
 
 Recorded metrics:
 
@@ -36,77 +36,5 @@ class Metrics():
     Functions to compute natural/nominal/convential evaluation metrics, crypto-specific metrics, verification/certification metrics, and robustness metrics given adversarial attacks to network variant (public/crypto) under the state of being verified with certification checkers and defined formal trace properties.
     '''
     @staticmethod
-    def natural_accuracy(correct_images, dataset):
-        dataset_length = len(dataset)
-        natural_accuracy = correct_images // dataset_length
-        return natural_accuracy        
-
-    @staticmethod
-    def certified_robustness_accuracy(prediction_robustness_threshold, certified_robustness_norm):
-        """robustSize(scores, , δ, L) returns the certified robustness size, which is then compared to the prediction robustness threshold T."""
-        if (certified_robustness_norm > prediction_robustness_threshold):
-            euclidean_distance = certified_robustness_norm - prediction_robustness_threshold
-            return euclidean_distance
-        else:
-            return "Failed to get proper variables for robustness region, threshold, and robustness norm computed from specification given convergence/optimization setup."
-
-
-    @staticmethod
-    def nominal_kl_divergence():
+    def getEpsilonNormAdversaryGraph(epoch_set, norm_set):
         raise NotImplementedError
-
-    @staticmethod
-    def crypto_certification_accuracy():
-        raise NotImplementedError
-
-    @staticmethod
-    def k_anonymity():
-        """
-        "this approach was proposed by Sweeney in 2002 [6]. A dataset is said to be k-anonymous if
-        every combination of identity-revealing characteristics occurs in at least k different rows of the dataset.
-        This anonymization approach is vulnerable to such attacks as background knowledge attacks."
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def get_certified_accuracy():
-        raise NotImplementedError
-
-    @staticmethod
-    def get_certified_robustness_region():
-        raise NotImplementedError
-
-    @staticmethod
-    def get_crypto_certified_robustness_region():
-        raise NotImplementedError
-
-    @staticmethod
-    def get_certified_metrics_for_network():
-        '''Batch return all the metrics for network given specifications are checked.'''
-        print("Certified accuracy: {}".format(Metrics.get_certified_accuracy()))
-        print("Certified robustness region: {}".format(Metrics.get_certified_robustness_region()))    
-
-    @staticmethod
-    def get_certified_metrics_for_crypto_network():
-        '''Batch return all the metrics for crypto_network given specifications are checked.'''
-        print("CryptoNetwork certified accuracy: {}".format(Metrics.crypto_certification_accuracy()))
-        print("CryptoNetwork certified robustness region: {}".format(Metrics.get_crypto_certified_robustness_region()))    
-
-    @staticmethod
-    def getCryptoMetrics():
-        '''Batch return all the crypto metrics for crypto_network.'''
-        print("K-Anonymity: {}".format(Metrics.k_anonymity()))
-
-
-    @staticmethod
-    def getNominalAdversarialMetrics():
-        raise NotImplementedError
-    
-    @staticmethod
-    def getCryptoAdversarialMetrics():
-        raise NotImplementedError
-    
-    @staticmethod
-    def getNominalMetrics():
-        raise NotImplementedError
-    

@@ -9,7 +9,8 @@ import sys
 import keras
 import tensorflow as tf
 
-from specification import CheckTraceData, RobustnessTrace 
+from specification import RobustnessTrace 
+from adversarial.main import Adversarial
 
 
 class BoundedNetworkSolver():
@@ -25,40 +26,46 @@ class BoundedNetworkSolver():
         Examples:
     '''
 
-    def symbolically_encode_network(self, network):
-        """Convert convolutional network state into prepositional formula given the constraint-satisfaction problem that it will be evaluated against with initialize_constraint_satisfaction_formula()"""
-        raise NotImplementedError
+    @staticmethod
+    def symbolically_encode_network(network_precondition, network_postcondition):
+        """Convert convolutional network state into propositional formula given the constraint-satisfaction problem defined in trace.
+        
+        Store some static variable state to indicate satisfiability in order to update the respective trace state to verify against specification given model checker.
+        
+        Args:
+            - network_precondition | Type := image_label_element isinstance tf.float32)
+            - network_postcondition | Type := output_class isinstance int (corresponding to label in image_label_set) 
 
-    def get_relevant_reachable_states(self, network):
-        raise NotImplementedError
+        Returns: Propositional Logic Formula Given Relationship Between Variable States 
+        """
+        # if any adversarial attack state is true, then check for network's classification e.g. output state is it's output_class
+        if (Adversarial.pgd_attack_state == True):
+            return None
+        
+        elif (Adversarial.fgsm_attack_state == True):
+            return None
+        
+        elif (Adversarial.norm_perturbation_attack_state == True):
+            return None
+        
+    def propositional_satisfiability_formula(self):
+        """Synthesize logical formula translated through encoding convolutional network as a constraint-satisfaction problem with respect to pre-condition and post-condition after network state-transition e.g. forwardpropagation. 
+        
+        """
 
-    def initialize_constraint_satisfaction_formula(self):
         raise NotImplementedError
-
-    def bmc_to_propositional_satisfiability(self):
-        """Synthesize logical formula translated through encoding convolutional network, using symbolically_encode_network() and initialize_constraint_satisfaction_formula() for s.e.n is passed to i.c.s.f., and then parameter synthesis will evaluate or iterate over reachable states only to then update the state of the respective trace property for the SMT model checker."""
-        raise NotImplementedError
-
-    def traverse_robust_network_state_transitions(self):
-        raise NotImplementedError
-
-    def smt_solver_trace_check(self):
-        raise NotImplementedError
-
 
 
 class BoundedCryptoNetworkSolver(BoundedNetworkSolver):
     '''
-        Description: Compute BMC (Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for CryptoNetwork.
+        Compute Model Checker on Local Models in Federated Environment.
         Args:
         Returns:
         Raises:
         References:
         Examples:
     '''
-
-    def reconstruct_secrets(self):
-        raise NotImplementedError
+    raise NotImplementedError
         
 
 class VerifyTrace():
@@ -80,3 +87,39 @@ class VerifyTrace():
         
         else:
             return False
+
+    @staticmethod
+    def verify_smt():
+        '''
+        Verify given the updated state of the Kripke node/world of output state given the variable state of 'RobustnessTrace.smt_satisfiability_state'
+
+        '''
+        raise NotImplementedError
+
+    @staticmethod
+    def verify_adversarial_example_not_created():
+        adv = RobustnessTrace.adversarial_example_not_created_trace()
+        if (adv == False):
+            RobustnessTrace.adversarial_sample_created = False
+            return False
+        elif (adv == True):
+            RobustnessTrace.adversarial_sample_created = True
+            return True
+
+    @staticmethod
+    def verify_brightness_perturbation_robustness():
+        '''Verify robustness given brightness perturbation norm-bounded attack against each input_image passed to network. '''
+        raise NotImplementedError
+
+    @staticmethod
+    def verify_norm_perturbation_robustness():
+        '''Verify robustness given l-norm (l^2, l-infinity, l-1) bounded perturbation attack against each input_image passed to network. '''
+        raise NotImplementedError
+
+    @staticmethod
+    def verify_fgsm_attack_robustness():
+        raise NotImplementedError
+
+    @staticmethod
+    def verify_pgd_attack_robustness():
+        raise NotImplementedError

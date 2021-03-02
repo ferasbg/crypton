@@ -37,26 +37,17 @@ class RobustnessTrace():
     '''
     # variables to then use for trace property
     adversarial_sample_created = False
+    robustness_threshold_state = False
     counterexample_verificationState = False
-    robustness_sensitivity = 1 # store robustness sensitivity of perturbation norm e.g. possibly euclidean distance, given tuple of perturbation_norms to iteratively use
     lp_perturbation_status = False # l_p vector norm perturbation
+    correctness_under_lp_perturbation_status = False
     brightness_perturbation_status = False
-    # accuracy under brightness perturbation with (1-sigma) threshold
-    correctness_under_brightness_perturbation = False
+    correctness_under_brightness_perturbation = False # accuracy under brightness perturbation with (1-sigma) threshold
     fgsm_perturbation_attack_state = False
     fgsm_perturbation_correctness_state = False
     pgd_attack_state = False
     pgd_correctness_state = False
-
-    @staticmethod
-    def robustness_bound_check():
-        """robustness trace property 1: robustness_threshold and robustness_region given output vector norm. 
-        
-        Note, given the lp-norm perturbation, this trace property will be evaluated given the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
-        
-        """
-        # if output vector is inside robustness region, then specification is met
-        raise NotImplementedError
+    smt_satisfiability_state = False # note that input_image is perturbed under some norm-bounded adversarial attack, but the input_class is constant as a precondition, append precondition of adversarial attack as well, this is what sets up the verification problem
 
     @staticmethod
     def adversarial_example_not_created_trace():
@@ -104,33 +95,19 @@ class RobustnessTrace():
             return "FGSM attack trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
 
     @staticmethod
-    def smt_solver_trace_constraint():
+    def smt_constraint_satisfiability_trace():
         '''Define the trace property given the constraint-satisfaction logical problem that the model checker is checking against. If the output state vector norm satisfies the specification, then the constraint and the model is certified to be robust given the SMT Solver.
         
-        In other words, a proportion of the reachable states satisfy the robustness threshold for accuracy with respect to n number of iterations (batches) and image samples.'''
+        In other words, a proportion of the reachable states satisfy the robustness threshold for accuracy with respect to n number of iterations (batches) and image samples.
+        
+        Simply stated, we compare the pre-condition and relate it to the post-condition computed from keras.layers.Dense(10, activation='softmax') under the constraint of at least one norm perturbation or adversarial attack.
+
+        Relating to the idea of Kripke Structures for modeling state-transitions, we reduce our state space to evaluate by comparing the input and output layers and their pre and post conditions respectively in order to optimize computational efficiency and to maintain scalability and precision under a constraint of norm-bounded adversary for robustness evaluation.
+
+        If we would evaluate the hidden layers and their state-transition relationships with respect to the model's behavior to optimize its computations, we would need abstract interpretation that adheres to formal rigor when generating abstract conjugates of concrete layers and their node-to-node interactions, which is out of the focus of this project.
+        '''
         raise NotImplementedError
 
-
-class CheckTraceData():
-    '''
-        Description: Check if all of the robustness specification formalisms are correct. This is to circumvent any formalism faults given the formal statements for each robustness trace property.
-        Args:
-        Returns:
-        Raises:
-        References:
-        Examples:
-    '''
     @staticmethod
-    def check_all_robustness_properties():
-        raise NotImplementedError
-
-
-if __name__ == '__main__':
-    adv = RobustnessTrace.adversarial_example_not_created_trace()
-    if (adv == False):
-        adversarial_sample_created = False
-    elif (adv == True):
-        adversarial_sample_created = True
-
-
-
+    def getRobustnessThresholdState():
+        return RobustnessTrace.robustness_threshold_state
