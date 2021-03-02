@@ -10,5 +10,11 @@ import pickle
 import tensorflow_federated as tff
 from crypto_network import CryptoNetwork
 
+'''
+Crypto stores logics for differential privacy and federated learning techniques. If secrets are computed as subsets of the entire composition function (network) f(x), then we must apply this to the context of a federated setting.
+
+'''
+
 crypto_network = CryptoNetwork()
-print(crypto_network.build_compile_crypto_model())
+
+

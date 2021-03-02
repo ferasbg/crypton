@@ -65,8 +65,9 @@ class BoundedNetworkSolver():
         Formally written as: Network ⊢ SAT ⟺ P(x,y) ⇒ Q(x,y) | P | ∀ x ∧ ∀ y     
 
         """
-
-        raise NotImplementedError
+        
+        return None
+        
 
 
 class BoundedCryptoNetworkSolver(BoundedNetworkSolver):
@@ -90,16 +91,6 @@ class VerifyTrace():
         References:
         Examples:
     '''
-
-    @staticmethod
-    def verify_trace():
-        # get all property specifications
-        # check the state of the specification to check if trace property has been satisfied
-        if (RobustnessTrace.adversarial_sample_created == False):
-            return True
-        
-        else:
-            return False
 
     @staticmethod
     def verify_smt():

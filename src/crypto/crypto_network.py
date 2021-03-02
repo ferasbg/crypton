@@ -30,6 +30,8 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
+from crypto_utils import model_fn
+
 warnings.filterwarnings('ignore')
 
 NUM_CLIENTS = 10
@@ -150,7 +152,10 @@ class Network():
 
 class CryptoNetwork(Network):
     """
-        Description: Deep Convolutional Neural Network With Federated Computation 
+        Deep Convolutional Neural Network With Federated Computation 
+
+        Note that in real-world production scenario, we would have to analyze the states of our clients such that local training is possible since on-prem only works when their devices are on. Also note that data in the real-world is always messy and not clean as the datasets being used for this process.
+
         Raises:
         Returns:
         References:
@@ -165,6 +170,7 @@ class CryptoNetwork(Network):
         self.public_network = super().build_compile_model()
         self.input_spec = collections.OrderedDict(
             x=collections.OrderedDict(
+            # check input spec for tensor inputs given
             # [32,32, 3], 
             a=tf.TensorSpec(shape=[None, 1], dtype=tf.float32),
             b=tf.TensorSpec(shape=[1, 1], dtype=tf.float32)),
@@ -172,13 +178,19 @@ class CryptoNetwork(Network):
         # tff wants new tff network created upon instantiation or invocation of method call
         self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-    def train_federated(self):
+    def federated_train(self):
         # we need federated dataset, setup client nodes
+        
+        
         raise NotImplementedError
+
+    
+    
 
     def federated_evaluate(self, clients, client_data_as_array):
         raise NotImplementedError
     
+
     @tff.tf_computation
     def server_init(self):
         model = self.crypto_network 
@@ -210,8 +222,27 @@ class CryptoNetwork(Network):
         # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
         return client_names
 
+    def prepare_data(self):
+        cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
+        # need to get data for federated training and to partition later
+        return cifar_train, cifar_test # such that assignment follows order
+
 if __name__ == '__main__':
+    # create constructor for tff network
+
+    # setup crypto_network, federated_dataset, federated_clients, setup federated_eval() 
     crypto_network = CryptoNetwork()
     print("Trainable variables: ", crypto_network.crypto_network.trainable_variables)
-    print(crypto_network.initialize_clients())
-    # if 10 clients and total of 50000 images, assume 1000 images per client
+    cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
+    # compute federated eval
+    # pass meth
+    federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False)
+    print(federated_eval)
+
+
+'''
+iterative_process = tff.learning.build_federated_averaging_process(
+    model_fn,
+    client_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=0.02),
+    server_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=1.0))
+'''
