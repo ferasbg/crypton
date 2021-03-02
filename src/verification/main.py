@@ -9,7 +9,7 @@ import sys
 import keras
 import tensorflow as tf
 
-from specification import RobustnessTrace 
+from verification.specification import RobustnessTrace 
 from adversarial.main import Adversarial
 
 

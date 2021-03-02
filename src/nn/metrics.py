@@ -38,3 +38,7 @@ class Metrics():
     @staticmethod
     def getEpsilonNormAdversaryGraph(epoch_set, norm_set):
         raise NotImplementedError
+
+    @staticmethod
+    def perturbation_type_and_accuracy_under_perturbation():
+        raise NotImplementedError

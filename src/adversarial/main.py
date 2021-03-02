@@ -19,7 +19,6 @@ class Adversarial():
     norm_perturbation_attack_state = False
     # pixelwise_gaussian_noise_state = False
 
-
     @staticmethod
     def create_adversarial_example():
         '''General adversarial attack type that each perturbation type is nested in. I.e. every perturbation is the attempt to generate adversarial examples.'''
