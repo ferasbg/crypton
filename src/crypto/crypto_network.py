@@ -156,6 +156,10 @@ class CryptoNetwork(Network):
 
         Note that in real-world production scenario, we would have to analyze the states of our clients such that local training is possible since on-prem only works when their devices are on. Also note that data in the real-world is always messy and not clean as the datasets being used for this process.
 
+        "There is a fixed set of K clients, each with a fixed local dataset. At the beginning of each round, a random fraction C of clients is selected, and the server sends the current global algorithm state to each of these clients (e.g., the current model parameters). We only select a fraction of clients for efficiency, as our experiments show diminishing returns for adding more clients beyond a certain point. Each selected client then performs local computation based on the global state and its local dataset, and sends an update to the server. The server then applies these updates to its global state, and the process repeats." (McMahan et. al)
+
+        "The key consequence of this is that federated computations, by design, are expressed in a manner that is oblivious to the exact set of participants; all processing is expressed as aggregate operations on an abstract group of anonymous clients, and that group might vary from one round of training to another. The actual binding of the computation to the concrete participants, and thus to the concrete data they feed into the computation, is thus modeled outside of the computation itself."
+
         Raises:
         Returns:
         References:
@@ -170,77 +174,41 @@ class CryptoNetwork(Network):
         self.public_network = super().build_compile_model()
         self.input_spec = collections.OrderedDict(
             x=tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-            y=tf.TensorSpec(shape=[None, 1], dtype=tf.int64) # [None, 1]
+            y=tf.TensorSpec(shape=[None, 1], dtype=tf.int64)  
         )
         # tff wants new tff network created upon instantiation or invocation of method call
         self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-    def federated_train(self):
-        # we need federated dataset, setup client nodes
-        raise NotImplementedError
+    def getTrainingData(self):
+        (x_train, y_train), (x_test, y_test) = tff.simulation.datasets.cifar100.load_data()
+        x_train = x_train.reshape((-1, 32, 32, 3))
+        x_test = x_test.reshape((-1, 32, 32, 3))
+        y_train = tf.keras.utils.to_categorical(y_train, 10)
+        y_test = tf.keras.utils.to_categorical(y_test, 10)
 
-    def federated_evaluate(self, clients, client_data_as_array):
-        raise NotImplementedError
-
-    @tff.tf_computation
-    def server_init(self):
-        # what is returned given we initialize server to host global model and send local model copies to K clients
-        model = self.crypto_network 
-        return model.trainable_variables
-
-    def federated_averaging(self):
-        '''Federated averaging method for computing over K clients.
-        
-        Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
-        '''
-        raise NotImplementedError
-
-    @tff.tf_computation
-    def initialize_fn(self):
-        return tff.federated_value(self.server_init(), tff.SERVER)
-
-    @tff.federated_computation
-    def initialize_clients(self):
-        '''TFF is strict in terms of type specifications and no parameters for natively decorated functions for federated network training.'''
-        num_clients = 10
-        initial = 'clients'
-
-        client_names = ['{}_{}'.format(initial, i+1) for i in range(num_clients)]
-        # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
-        return client_names
-
-    def prepare_data(self):
-        cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
-        # need to get data for federated training and to partition later
-        return cifar_train, cifar_test # such that assignment follows order
-
-    @staticmethod
-    def iterative_process():
-        '''
-        iterative_process = tff.learning.build_federated_averaging_process(
-            model_fn,
-            client_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=0.02),
-            server_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=1.0))
-        '''
-        # note that model_fn, client_optimizer_fn, server_optimizer_fn all refer to the tff network
-        iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-        return iterative_process
+        return x_train, x_test 
 
     @staticmethod
     def client_optimizer_fn():
-        return tf.keras.optimizers.SGD(learning_rate=0.02) # how does variance of learning_rate affect local and global model
+        return tf.keras.optimizers.SGD(learning_rate=0.02)
 
     @staticmethod
     def server_optimizer_fn():
         return tf.keras.optimizers.SGD(learning_rate=1.0)
+
 
 if __name__ == '__main__':
     # setup crypto_network, federated_dataset, federated_clients, setup federated_eval() 
     crypto_network = CryptoNetwork()
     print("Trainable variables: ", crypto_network.crypto_network.trainable_variables)
     cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
-    # compute federated eval
-    # pass method as Callable[]
-    federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False)
+    
+    federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+    iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
     print(federated_eval)
-
+        
+    # compute federated averaging e.g. computing over K clients.        
+    # Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
+    # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
+    # Question: how does variance of learning_rate AND low epoch_amount affect local and global model?
+    
