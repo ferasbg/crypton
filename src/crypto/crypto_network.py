@@ -211,6 +211,7 @@ class CryptoNetwork(Network):
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
         client_names = ['{}_{}'.format(initial, i+1) for i in range(num_clients)]
+        # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
         return client_names
 
 if __name__ == '__main__':
