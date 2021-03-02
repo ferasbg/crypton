@@ -24,9 +24,12 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from nn.network import Network
 from PIL import Image
 from tensorflow import keras
+import tqdm
+import collections
+import warnings
+warnings.filterwarnings('ignore')
 
 NUM_CLIENTS = 10
 NUM_EPOCHS = 25
@@ -35,9 +38,120 @@ SHUFFLE_BUFFER = 100
 PREFETCH_BUFFER = 10
 
 
+class Network():
+    classification_state = False
+    dataset_labels = ['airplane', 'automobile', 'bird',
+                      'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
+
+    def __init__(self):
+
+        # labels
+        self.num_classes = 20
+        self.epochs = 1000
+        self.batch_size = 64  # maybe 128
+        self.learning_rate = 1e-4
+        self.batch_size = 32
+        self.kernel_size = 3
+        self.stride = 2
+        self.padding = 1
+        self.dilation = 1
+        self.epochs = 500
+        self.input_channels = 3
+        self.output_channels = 64  # number of channels produced by convolution
+        self.image_size = [32, 32]
+        self.bias = False
+        # stabilize convergence to local minima for gradient descent
+        self.weight_decay_regularization = 0.003
+        self.momentum = 0.05  # gradient descent convergence optimizer
+        self.model = self.build_compile_model()
+
+    def build_compile_model(self):
+        # build layers of public neural network
+        model = Sequential()
+        # feature layers
+        model.add(Conv2D(32, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.3))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(256, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Flatten())
+        # classification layers
+        model.add(Dense(128, activation='relu',
+                        kernel_initializer='he_uniform'))
+        # 10 output classes possible
+        model.add(Dense(10, activation='softmax'))
+         # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+        optimizer = Adam(learning_rate=0.001)
+        # model.compile(loss='categorical_crossentropy',
+        #               optimizer=optimizer, metrics=['accuracy'])
+        return model
+
+    def train(self):
+        '''
+        Train network on nominal multi-label classification problem. Make sure to allocate images for each test variation e.g. mpc_network, certified_mpc_network, certified_nominal_network
+
+        x_test, y_test = load_batch(fpath)
+        y_train = np.reshape(y_train, (len(y_train), 1))
+        y_test = np.reshape(y_test, (len(y_test), 1))
+
+        # partitioning dataset for different tests.
+        x_val = x_train[-10000:]
+        y_val = y_train[-10000:]
+        x_train = x_train[:-10000]
+        y_train = y_train[:-10000]
+
+        Add dataset, and dataset_labels as parameter (overload this method or make re-write)
+
+        '''
+        # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
+        # get cifar10-data first, and assign data and categorical labels as such
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+
+        x_train = x_train.reshape((-1, 32, 32, 3))
+        x_test = x_test.reshape((-1, 32, 32, 3))
+
+        y_train = tf.keras.utils.to_categorical(y_train, 10)
+        y_test = tf.keras.utils.to_categorical(y_test, 10)
+
+        generator = ImageDataGenerator(
+            featurewise_center=False,
+            samplewise_center=False,
+            featurewise_std_normalization=False,
+            samplewise_std_normalization=False,
+            zca_whitening=False,
+            rotation_range=15,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            horizontal_flip=True,
+            vertical_flip=False)
+
+        history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
+        self.model.evaluate(x=x_test, y=y_test, verbose=0)
+
+        self.model.save_weights('network.h5')
+        print(history)
+        
+
+    @staticmethod
+    def getClassificationState():
+        return Network.classification_state
+
 class CryptoNetwork(Network):
     """
-        Description: Deep Convolutional Neural Network With Secure Training and Testing
+        Description: Deep Convolutional Neural Network With Federated Computation 
         Raises:
         Returns:
         References:
@@ -61,14 +175,47 @@ class CryptoNetwork(Network):
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
         # specify input shape, loss function, plaintext network, and metrics
-        input_spec = x_train[0].shape
-        return tff.learning.from_keras_model(self.public_network, input_spec=input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+        input_spec = collections.OrderedDict(
+            x=collections.OrderedDict(
+            # [32,32, 3], 
+            a=tf.TensorSpec(shape=[None, 1], dtype=tf.float32),
+            b=tf.TensorSpec(shape=[1, 1], dtype=tf.float32)),
+            y=tf.TensorSpec(shape=[None, 1], dtype=tf.float32))
+        self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+        return self.crypto_network
 
-
-    def main(self):
+    def train_federated(self):
+        # we need federated dataset, setup client nodes
         raise NotImplementedError
+
+    def federated_evaluate(self):
+        raise NotImplementedError
+    
+    @tff.tf_computation
+    def server_init(self):
+        model = self.crypto_network 
+        return model.trainable_variables
+
+    @tff.federated_computation
+    def initialize_fn(self):
+        return tff.federated_value(self.server_init(), tff.SERVER)
+
+    @tff.federated_computation
+    def initialize_clients(self):
+        '''TFF is strict in terms of specifications and no parameters for natively decorated functions for federated network training.'''
+        num_clients = 10
+        initial = 'clients'
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+        x_train = x_train.reshape((-1, 32, 32, 3))
+        x_test = x_test.reshape((-1, 32, 32, 3))
+        y_train = tf.keras.utils.to_categorical(y_train, 10)
+        y_test = tf.keras.utils.to_categorical(y_test, 10)
+        client_names = ['{}_{}'.format(initial, i+1) for i in range(num_clients)]
+        return client_names
 
 if __name__ == '__main__':
     crypto_network = CryptoNetwork()
-    crypto_network.build_compile_crypto_model()
-    print(crypto_network.crypto_network)
+    crypto_network = crypto_network.build_compile_crypto_model()
+    print(crypto_network)
+    print("Trainable variables: ", crypto_network.trainable_variables)
+    print(crypto_network.initialize_clients())

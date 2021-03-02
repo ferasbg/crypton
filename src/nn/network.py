@@ -24,7 +24,7 @@ from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
-from tensorflow.python.keras.applications.vgg16 import preprocess_input
+from keras.applications.vgg16 import preprocess_input
 
 
 class Network():

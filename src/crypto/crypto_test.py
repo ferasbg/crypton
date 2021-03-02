@@ -8,11 +8,7 @@ import tensorflow as tf
 import random
 import pickle
 import tensorflow_federated as tff
-
 from crypto_network import CryptoNetwork
-from crypto.main import Crypto
 
 crypto_network = CryptoNetwork()
-
-crypto_network.build_compile_crypto_model()
-print(crypto_network)
+print(crypto_network.build_compile_crypto_model())
