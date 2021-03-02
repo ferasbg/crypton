@@ -18,7 +18,9 @@ class BoundedNetworkSolver():
         Description: Compute BMC (Incremental, Parameterized Bounded Model Checking) to Compute Violation of Signal-Temporal Specifications Given Temporal Bounds for Network. 
         
         Note, we are initializing our constraint-satisfaction problem, our prepositional modal logic formula to assert robust output states after network state-transition T(x) for P(x,y) => Q(x,y) | x := y or input-output states match and are thus robust and thus correctness is proven. Negate non-robust output states and consider them in violation of the constraint specified.        
-        
+
+        Note that this logic proves partial program correctness, since it's evaluating the input-output relations under the constraint of an adversarial attack on the network's inputs.
+
         Args:
         Returns:
         Raises:
@@ -39,18 +41,29 @@ class BoundedNetworkSolver():
         Returns: Propositional Logic Formula Given Relationship Between Variable States 
         """
         # if any adversarial attack state is true, then check for network's classification e.g. output state is it's output_class
-        if (Adversarial.pgd_attack_state == True):
-            return None
+        if (Adversarial.pgd_attack_state == True and RobustnessTrace.smt_satisfiability_state == True):
+            return True
         
-        elif (Adversarial.fgsm_attack_state == True):
-            return None
+        elif (Adversarial.fgsm_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
+            return True
         
-        elif (Adversarial.norm_perturbation_attack_state == True):
-            return None
-        
+        elif (Adversarial.norm_perturbation_attack_state == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
+            return True
+
+        else:
+            return False
+
     def propositional_satisfiability_formula(self):
         """Synthesize logical formula translated through encoding convolutional network as a constraint-satisfaction problem with respect to pre-condition and post-condition after network state-transition e.g. forwardpropagation. 
         
+        Note, the implication is satisfied given the network_postcondition e.g. output_state given perturbation norm and input_image as network_precondition
+
+        Note, according to Hoare logic with regards to propositional logic, the implementation of a function is partially correct with respect to its specification if, assuming the precondition is true just before the function executes, then if the function terminates, the postcondition is true
+
+        Note that x := input_class and y := output_class
+
+        Formally written as: Network ⊢ SAT ⟺ P(x,y) ⇒ Q(x,y) | P | ∀ x ∧ ∀ y     
+
         """
 
         raise NotImplementedError
