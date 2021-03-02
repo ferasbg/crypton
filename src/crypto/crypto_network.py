@@ -169,30 +169,22 @@ class CryptoNetwork(Network):
         # get plaintext layers for network architecture, focus primarily on heavy dp and federated e.g. iterate on data processing to ImageDataGenerator and model.fit_generator() or model.fit()
         self.public_network = super().build_compile_model()
         self.input_spec = collections.OrderedDict(
-            x=collections.OrderedDict(
-            # check input spec for tensor inputs given
-            # [32,32, 3], 
-            a=tf.TensorSpec(shape=[None, 1], dtype=tf.float32),
-            b=tf.TensorSpec(shape=[1, 1], dtype=tf.float32)),
-            y=tf.TensorSpec(shape=[None, 1], dtype=tf.float32))
+            x=tf.TensorSpec(shape=[None, None], dtype=tf.float32),
+            y=tf.TensorSpec(shape=[None, 1], dtype=tf.int64) # [None, 1]
+        )
         # tff wants new tff network created upon instantiation or invocation of method call
         self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
     def federated_train(self):
         # we need federated dataset, setup client nodes
-        
-        
         raise NotImplementedError
-
-    
-    
 
     def federated_evaluate(self, clients, client_data_as_array):
         raise NotImplementedError
-    
 
     @tff.tf_computation
     def server_init(self):
+        # what is returned given we initialize server to host global model and send local model copies to K clients
         model = self.crypto_network 
         return model.trainable_variables
 
@@ -203,21 +195,16 @@ class CryptoNetwork(Network):
         '''
         raise NotImplementedError
 
-
     @tff.tf_computation
     def initialize_fn(self):
         return tff.federated_value(self.server_init(), tff.SERVER)
 
     @tff.federated_computation
     def initialize_clients(self):
-        '''TFF is strict in terms of specifications and no parameters for natively decorated functions for federated network training.'''
+        '''TFF is strict in terms of type specifications and no parameters for natively decorated functions for federated network training.'''
         num_clients = 10
         initial = 'clients'
-        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-        x_train = x_train.reshape((-1, 32, 32, 3))
-        x_test = x_test.reshape((-1, 32, 32, 3))
-        y_train = tf.keras.utils.to_categorical(y_train, 10)
-        y_test = tf.keras.utils.to_categorical(y_test, 10)
+
         client_names = ['{}_{}'.format(initial, i+1) for i in range(num_clients)]
         # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
         return client_names
@@ -227,22 +214,33 @@ class CryptoNetwork(Network):
         # need to get data for federated training and to partition later
         return cifar_train, cifar_test # such that assignment follows order
 
-if __name__ == '__main__':
-    # create constructor for tff network
+    @staticmethod
+    def iterative_process():
+        '''
+        iterative_process = tff.learning.build_federated_averaging_process(
+            model_fn,
+            client_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=0.02),
+            server_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=1.0))
+        '''
+        # note that model_fn, client_optimizer_fn, server_optimizer_fn all refer to the tff network
+        iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
+        return iterative_process
 
+    @staticmethod
+    def client_optimizer_fn():
+        return tf.keras.optimizers.SGD(learning_rate=0.02) # how does variance of learning_rate affect local and global model
+
+    @staticmethod
+    def server_optimizer_fn():
+        return tf.keras.optimizers.SGD(learning_rate=1.0)
+
+if __name__ == '__main__':
     # setup crypto_network, federated_dataset, federated_clients, setup federated_eval() 
     crypto_network = CryptoNetwork()
     print("Trainable variables: ", crypto_network.crypto_network.trainable_variables)
     cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
     # compute federated eval
-    # pass meth
+    # pass method as Callable[]
     federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False)
     print(federated_eval)
 
-
-'''
-iterative_process = tff.learning.build_federated_averaging_process(
-    model_fn,
-    client_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=0.02),
-    server_optimizer_fn=lambda: tf.keras.optimizers.SGD(learning_rate=1.0))
-'''

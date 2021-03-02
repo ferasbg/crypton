@@ -63,12 +63,9 @@ def model_fn():
     
     # other method of constructing federated network object
     input_spec = collections.OrderedDict(
-        x=collections.OrderedDict(
-        # [32,32, 3], 
-        a=tf.TensorSpec(shape=[None, 1], dtype=tf.float32),
-        b=tf.TensorSpec(shape=[1, 1], dtype=tf.float32)),
-        y=tf.TensorSpec(shape=[None, 1], dtype=tf.float32))
-
+            x=tf.TensorSpec(shape=[1, 1024], dtype=tf.float32), # shape=[ndims, ]
+            y=tf.TensorSpec(shape=[1, 1024], dtype=tf.int64)
+    )
     # tff wants new tff network created upon instantiation or invocation of method call
     crypto_network =  tff.learning.from_keras_model(model, input_spec=input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
     return crypto_network
