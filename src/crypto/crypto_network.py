@@ -63,7 +63,7 @@ class Network():
         self.image_size = [32, 32]
         self.bias = False
         # stabilize convergence to local minima for gradient descent
-        self.weight_decay_regularization = 0.003
+        self.weight_decay_regularization = 0.003 # us kernel_regularizer in Conv2d as iteration
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
 
@@ -104,15 +104,13 @@ class Network():
         '''
         Train network on nominal multi-label classification problem. Make sure to allocate images for each test variation e.g. mpc_network, certified_mpc_network, certified_nominal_network
 
-        x_test, y_test = load_batch(fpath)
-        y_train = np.reshape(y_train, (len(y_train), 1))
-        y_test = np.reshape(y_test, (len(y_test), 1))
-
         # partitioning dataset for different tests.
         x_val = x_train[-10000:]
         y_val = y_train[-10000:]
         x_train = x_train[:-10000]
         y_train = y_train[:-10000]
+
+        # if 10 clients and total of 50000 images, assume 1000 images per client
 
         Add dataset, and dataset_labels as parameter (overload this method or make re-write)
 
@@ -214,7 +212,6 @@ class CryptoNetwork(Network):
 
 if __name__ == '__main__':
     crypto_network = CryptoNetwork()
-    crypto_network = crypto_network.build_compile_crypto_model()
-    print(crypto_network)
-    print("Trainable variables: ", crypto_network.trainable_variables)
+    print("Trainable variables: ", crypto_network.crypto_network.trainable_variables)
     print(crypto_network.initialize_clients())
+    # if 10 clients and total of 50000 images, assume 1000 images per client

@@ -56,13 +56,12 @@ class RobustnessTrace():
         
         Note, if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better.
         """
-        # use when perturbation_status=True
-        if (RobustnessTrace.lp_perturbation_status == True): # when perturbation epsilon and gaussian noise vector applied to input_image before input is passed to ImageDataGenerator and keras.layers.Input
-            # if the classified output class matches the correct output class
-            if (Network.getClassificationState() == True):
-                return True
-        
-        return False
+
+        # if the classified output class matches the correct output class
+        if (RobustnessTrace.lp_perturbation_status == True and RobustnessTrace.getRobustnessThresholdState() == True): # when perturbation epsilon and gaussian noise vector applied to input_image before input is passed to ImageDataGenerator and keras.layers.Input
+            return "Success! Model's accuracy under adversarial training exceeds the robustness threshold given the norm-bounded adversarial attack."
+        else:
+            return False
 
     @staticmethod
     def brightness_perturbation_norm_trace():
@@ -80,12 +79,15 @@ class RobustnessTrace():
         if (RobustnessTrace.lp_perturbation_status == True and norm_perturbation_correctnessState == True):
             return "L-p norm perturbation trace successfully checked out."
         else:
-            return "L-p norm perturbation trace failed."
+            return "L-p norm perturbation trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
 
     @staticmethod
     def pgd_attack_trace():
         """Create the adversarial attack, then perform adversarial analysis and check against trace property, that is stored here that defines the success metrics for each trace property given the state of the network given the adversarial attack."""
-        raise NotImplementedError
+        if (RobustnessTrace.pgd_attack_state == True and RobustnessTrace.pgd_correctness_state == True):
+            return "Success! Network is adversarially robust against PGD attacks."
+        else:
+            return "PGD attack trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
 
     @staticmethod
     def fgsm_attack_trace():
@@ -106,8 +108,15 @@ class RobustnessTrace():
 
         If we would evaluate the hidden layers and their state-transition relationships with respect to the model's behavior to optimize its computations, we would need abstract interpretation that adheres to formal rigor when generating abstract conjugates of concrete layers and their node-to-node interactions, which is out of the focus of this project.
         '''
-        raise NotImplementedError
+        if (RobustnessTrace.smt_satisfiability_state == True):
+            return "Success! The model checker has verified the postcondition of the output state of the convolutional network satisfies the constraint of the specification."
+
+        else:
+            return "The model checker has failed to verify the postcondition of the neural network's output state. Iterate on adversarial training and examples to make your model more robust, and try again."
 
     @staticmethod
     def getRobustnessThresholdState():
         return RobustnessTrace.robustness_threshold_state
+
+if __name__ == '__main__':
+    RobustnessTrace()
