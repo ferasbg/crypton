@@ -67,6 +67,8 @@ class Network():
         self.weight_decay_regularization = 0.003
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
+        # self.model_grads = (k.gradients(self.model.layers[0].output, self.model.trainable_weights[0])) # get Conv2d grads to perturb the network for PGD
+
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -100,6 +102,7 @@ class Network():
         model.compile(loss='categorical_crossentropy',
                       optimizer=optimizer, metrics=['accuracy'])
         # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
+
         return model
 
     def train(self):

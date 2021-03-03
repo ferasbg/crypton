@@ -50,33 +50,10 @@ y_test = tf.keras.utils.to_categorical(y_test, 10)
 
 # federated data
 cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
-
-'''
-
-  training_loop.run(
-      iterative_process=iterative_process,
-      client_datasets_fn=client_datasets_fn,
-      validation_fn=validation_fn,
-      total_rounds=FLAGS.total_rounds,
-      experiment_name=FLAGS.experiment_name,
-      root_output_dir=FLAGS.root_output_dir,
-      rounds_per_eval=FLAGS.rounds_per_eval,
-      rounds_per_checkpoint=FLAGS.rounds_per_checkpoint,
-      rounds_per_profile=FLAGS.rounds_per_profile)
-
-
-  evaluate_fn = training_utils.build_centralized_evaluate_fn(
-      eval_dataset=emnist_test,
-      model_builder=model_builder,
-      loss_builder=loss_builder,
-      metrics_builder=metrics_builder)
-  validation_fn = lambda model_weights, round_num: evaluate_fn(model_weights)
-
-'''
-
-# example_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[0])
-# compute federated averaging e.g. computing over K clients. Compute federated evaluation.        
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-#federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+# federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
 
-   
+# 500 train clients, 100 test clients
+  
+print(cifar_train.client_ids)
+print(cifar_train.element_type_structure)
