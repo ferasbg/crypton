@@ -28,7 +28,7 @@ Graphs:
 - compare accuracies of networks (note that adversarial examples optimized performance vs any other technique for natural training)
 - BoundedNetworkSolver termination_time
 - properties checked and the computation time for all trace properties
-
+- PGD accuracy, FGSM accuracy
 """
 
 class Metrics():
