@@ -67,7 +67,7 @@ def model_fn():
         y=tf.TensorSpec([None, 1], tf.int32)
     )
     # tff wants new tff network created upon instantiation or invocation of method call, uncompiled
-    crypto_network =  tff.learning.from_keras_model(model, input_spec=input_spec, loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+    crypto_network =  tff.learning.from_keras_model(model, input_spec=input_spec, loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
     return crypto_network
 
 

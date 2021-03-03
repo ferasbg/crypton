@@ -51,9 +51,10 @@ y_test = tf.keras.utils.to_categorical(y_test, 10)
 # federated data
 cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-# federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
 
 # 500 train clients, 100 test clients
-  
-print(cifar_train.client_ids)
-print(cifar_train.element_type_structure)
+print(federated_eval)
+print(iterative_process)
+
+
