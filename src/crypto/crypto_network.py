@@ -68,6 +68,8 @@ class Network():
         # build layers of public neural network
         model = Sequential()
         # feature layers
+
+        # input_shape maps exactly to Conv2d, maybe it should have more padding
         model.add(Conv2D(32, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
         model.add(BatchNormalization())
@@ -93,29 +95,18 @@ class Network():
         model.add(Dense(10, activation='softmax'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
-        model.compile(loss='categorical_crossentropy',
+        model.compile(loss='sparse_categorical_crossentropy',
                       optimizer=optimizer, metrics=['accuracy'])
         return model
 
 
     def federated_train(self, batch_size, epochs, client_train_data, client_train_labels, client_validation_data, client_validation_labels):
-        generator = ImageDataGenerator(
-            featurewise_center=False,
-            samplewise_center=False,
-            featurewise_std_normalization=False,
-            samplewise_std_normalization=False,
-            zca_whitening=False,
-            rotation_range=15,
-            width_shift_range=0.1,
-            height_shift_range=0.1,
-            horizontal_flip=True,
-            vertical_flip=False)
-
+        '''We want to use federated_train() for each client that runs local model.'''
         history = self.model.fit(client_train_data, client_train_labels, batch_size=batch_size, epochs=epochs, validation_data=(client_validation_data, client_validation_labels))
         self.model.evaluate(x=client_validation_data, y=client_validation_labels, verbose=0)
-
         self.model.save_weights('network.h5')
         print(history)
+        return self.model
 
 
     def train(self):
@@ -127,18 +118,6 @@ class Network():
 
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
-
-        generator = ImageDataGenerator(
-            featurewise_center=False,
-            samplewise_center=False,
-            featurewise_std_normalization=False,
-            samplewise_std_normalization=False,
-            zca_whitening=False,
-            rotation_range=15,
-            width_shift_range=0.1,
-            height_shift_range=0.1,
-            horizontal_flip=True,
-            vertical_flip=False)
 
         history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
         self.model.evaluate(x=x_test, y=y_test, verbose=0)
@@ -205,29 +184,4 @@ if __name__ == '__main__':
     print(len(cifar_train.client_ids)) # 500 client ids for cifar-100
     print(cifar_train.element_type_structure) # (32,32,3)
 
-    # generating dataset for each client
-    for i in range(10):
-        client_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[i])
-
-    print(client_dataset)
-
-    NUM_CLIENTS = 10
-    NUM_EPOCHS = 25
-    BATCH_SIZE = 32
-    SHUFFLE_BUFFER = 100
-    PREFETCH_BUFFER = 10
-
-    example_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[0])
-    print(example_dataset)
-
-    # compute federated averaging e.g. computing over K clients. Compute federated evaluation.        
-    iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-
-
-
-    #federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
-
-    # Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
-    # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
-    # Question: how does variance of learning_rate AND low epoch_amount affect local and global model?
     

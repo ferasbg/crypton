@@ -9,263 +9,74 @@ import random
 import pickle
 import tensorflow_federated as tff
 from crypto_network import CryptoNetwork
+from crypto_utils import model_fn
 
 '''
-Crypto stores logics for differential privacy and federated learning techniques. If secrets are computed as subsets of the entire composition function (network) f(x), then we must apply this to the context of a federated setting.
-
+- For each client k in K clients, given B = batch_size, E = epochs, n = learning_rate=0.001
+- Rounds are iterations for each client iterating over each client node, and we want to sequentially iterate over each client node
+- Use .model.function_name to train each model iteratively on local models that will update global model
+- Use iterative_process.next(), federated_averaging_process(), and custom utils to setup clients nodes / server node 
+- implement federated averaging with federated_averaging_process() and iterative_process.next() and iterate_train_over_clients(), and update_client_nodes_to_global_aggregator()
+- implement mpc-based secure aggregation (Bonawitz et. al, 2017), where the secrets are the model gradients that cannot reconstruct the original input data, since the average of the gradients are updated by the global model, where local model gradients are updated to the global model that is controlled by the aggregator that handles synchronous computation over K clients.
+- attest to epistemic rigor given fed sim 
+- how does byzantine fault tolerance work for production-based federated learning?
+# Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
+# partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
+# Question: how does variance of learning_rate AND low epoch_amount affect local and global model?
+    
 '''
 
-global_node = CryptoNetwork().model
+# CONSTANTS
+BATCH_SIZE = 20
+EPOCHS = 1
+# constant lr for optimizer
+CLIENT_LEARNING_RATE = 0.02
+SERVER_LEARNING_RATE = 1.0 
+# let's just assume we are able to control the data that each client stores for models, that their status is available, their data isn't corrupted, and it's synchronous
+NUM_ROUNDS = 5
+CLIENTS_PER_ROUND = 2
+CLIENT_EPOCHS_PER_ROUND = 1
+SHUFFLE_BUFFER = 100
+PREFETCH_BUFFER = 10
 
-# clients
-client_1 = CryptoNetwork().model
-client_2 = CryptoNetwork().model
-client_3 = CryptoNetwork().model
-client_4 = CryptoNetwork().model
-client_5 = CryptoNetwork().model
-client_6 = CryptoNetwork().model
-client_7 = CryptoNetwork().model
-client_8 = CryptoNetwork().model
-client_9 = CryptoNetwork().model
-client_10 = CryptoNetwork().model
 
-clients = []
-
-clients.append(client_1)
-clients.append(client_2)
-clients.append(client_3)
-clients.append(client_4)
-clients.append(client_5)
-clients.append(client_6)
-clients.append(client_7)
-clients.append(client_8)
-clients.append(client_9)
-clients.append(client_10)
-
-# for each client k in K clients, given B = batch_size, E = epochs, n = learning_rate=0.001
-# rounds are iterations, and we want to sequentially iterate over each client node
-# use .model.function_name to train each model iteratively on local models that will update global model
+# plaintext data
 (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-
 x_train = x_train.reshape((-1, 32, 32, 3))
 x_test = x_test.reshape((-1, 32, 32, 3))
-
 y_train = tf.keras.utils.to_categorical(y_train, 10)
 y_test = tf.keras.utils.to_categorical(y_test, 10)
 
-# each client gets 1000 images
-BATCH_SIZE = 32
-EPOCHS = 25
 
-## CLIENT DATASET GENERATION
+# federated data
+cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
 
-# add data and labels for each client
-client_train_dataset_1 = x_train[-1250:]
-client_train_labels_1 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_1 = x_test[-500:]
-client_validation_labels_1 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
+'''
 
+  training_loop.run(
+      iterative_process=iterative_process,
+      client_datasets_fn=client_datasets_fn,
+      validation_fn=validation_fn,
+      total_rounds=FLAGS.total_rounds,
+      experiment_name=FLAGS.experiment_name,
+      root_output_dir=FLAGS.root_output_dir,
+      rounds_per_eval=FLAGS.rounds_per_eval,
+      rounds_per_checkpoint=FLAGS.rounds_per_checkpoint,
+      rounds_per_profile=FLAGS.rounds_per_profile)
 
 
-# add data and labels for each client
-client_train_dataset_2 = x_train[-1250:]
-client_train_labels_2 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_2 = x_test[-500:]
-client_validation_labels_2 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
+  evaluate_fn = training_utils.build_centralized_evaluate_fn(
+      eval_dataset=emnist_test,
+      model_builder=model_builder,
+      loss_builder=loss_builder,
+      metrics_builder=metrics_builder)
+  validation_fn = lambda model_weights, round_num: evaluate_fn(model_weights)
 
+'''
 
-# add data and labels for each client
-client_train_dataset_3 = x_train[-1250:]
-client_train_labels_3 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_3 = x_test[-500:]
-client_validation_labels_3 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
+# example_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[0])
+# compute federated averaging e.g. computing over K clients. Compute federated evaluation.        
+iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
+#federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
 
-
-
-
-# add data and labels for each client
-client_train_dataset_4 = x_train[-1250:]
-client_train_labels_4 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_4 = x_test[-500:]
-client_validation_labels_4 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-# add data and labels for each client
-client_train_dataset_5 = x_train[-1250:]
-client_train_labels_5 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_5 = x_test[-500:]
-client_validation_labels_5 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-# add data and labels for each client
-client_train_dataset_6 = x_train[-1250:]
-client_train_labels_6 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_6 = x_test[-500:]
-client_validation_labels_6 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-# add data and labels for each client
-client_train_dataset_7 = x_train[-1250:]
-client_train_labels_7 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_7 = x_test[-500:]
-client_validation_labels_7 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-
-# add data and labels for each client
-client_train_dataset_8 = x_train[-1250:]
-client_train_labels_8 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_8 = x_test[-500:]
-client_validation_labels_8 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-
-# add data and labels for each client
-client_train_dataset_9 = x_train[-1250:]
-client_train_labels_9 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_9 = x_test[-500:]
-client_validation_labels_9 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-
-# add data and labels for each client
-client_train_dataset_10 = x_train[-1250:]
-client_train_labels_10 = y_train[-1250:]
-# remove train
-x_train = x_train[:-1250]
-y_train = y_train[:-1250]
-client_validation_data_10 = x_test[-500:]
-client_validation_labels_10 = y_test[-500:]
-# remove validation
-x_test = x_test[:-500]
-y_test = y_test[:-500]
-
-
-
-
-client_train_datasets = []
-# add client train sets to list
-client_train_datasets.append(client_train_dataset_1)
-client_train_datasets.append(client_train_dataset_2)
-client_train_datasets.append(client_train_dataset_3)
-client_train_datasets.append(client_train_dataset_4)
-client_train_datasets.append(client_train_dataset_5)
-client_train_datasets.append(client_train_dataset_6)
-client_train_datasets.append(client_train_dataset_7)
-client_train_datasets.append(client_train_dataset_8)
-client_train_datasets.append(client_train_dataset_9)
-client_train_datasets.append(client_train_dataset_10)
-
-
-client_train_labels = []
-client_train_labels.append(client_train_labels_1)
-client_train_labels.append(client_train_labels_2)
-client_train_labels.append(client_train_labels_3)
-client_train_labels.append(client_train_labels_4)
-client_train_labels.append(client_train_labels_5)
-client_train_labels.append(client_train_labels_6)
-client_train_labels.append(client_train_labels_7)
-client_train_labels.append(client_train_labels_8)
-client_train_labels.append(client_train_labels_9)
-client_train_labels.append(client_train_labels_10)
-
-
-client_validation_data = []
-client_validation_data.append(client_validation_data_1)
-client_validation_data.append(client_validation_data_2)
-client_validation_data.append(client_validation_data_3)
-client_validation_data.append(client_validation_data_4)
-client_validation_data.append(client_validation_data_5)
-client_validation_data.append(client_validation_data_6)
-client_validation_data.append(client_validation_data_7)
-client_validation_data.append(client_validation_data_8)
-client_validation_data.append(client_validation_data_9)
-client_validation_data.append(client_validation_data_10)
-
-
-
-
-client_validation_labels = []
-client_validation_labels.append(client_validation_labels_1)
-client_validation_labels.append(client_validation_labels_2)
-client_validation_labels.append(client_validation_labels_3)
-client_validation_labels.append(client_validation_labels_4)
-client_validation_labels.append(client_validation_labels_5)
-client_validation_labels.append(client_validation_labels_6)
-client_validation_labels.append(client_validation_labels_7)
-client_validation_labels.append(client_validation_labels_8)
-client_validation_labels.append(client_validation_labels_9)
-client_validation_labels.append(client_validation_labels_10)
-
-i = 0
-
-for round in range(10):
-    for client in clients:
-        client.federated_train(BATCH_SIZE, EPOCHS, client_train_data=client_train_datasets[i], client_train_labels=client_train_labels[i], client_validation_data=client_validation_data[i], client_validation_labels=client_validation_labels[i])
-        i+=1
-        if (i == len(clients)):
-            break
-
-# get average of all the weights from all of the clients to update global model
-
-
+   

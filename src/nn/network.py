@@ -99,6 +99,7 @@ class Network():
         optimizer = Adam(learning_rate=0.001)
         model.compile(loss='categorical_crossentropy',
                       optimizer=optimizer, metrics=['accuracy'])
+        # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
         return model
 
     def train(self):
@@ -133,7 +134,7 @@ class Network():
 
         self.model.save_weights('client.h5')
         print(history)
-        
+
     def evaluate(self, image_set, label_set):
         '''Evaluate with test set, generally isolated to one client node. Given we want to pass in custom image_set and custom image_labels.'''
         self.model.evaluate(x=x_test, y=y_test, verbose=0)
