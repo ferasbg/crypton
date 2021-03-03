@@ -7,28 +7,20 @@ import cleverhans
 
 from nn.network import Network
 from crypto.crypto_network import CryptoNetwork
-from crypto.main import Crypto
 from nn.metrics import Metrics
 
 
 class Adversarial():
+    '''
+    Note that every adversarial attack function will be done to individual images, so define the images to iterate over (the train_set), and the number of clients to concurrently attack in deploy.main
+
+    '''
     perturbation_epsilon = 0.3 # perturbation epsilon is constant for each attack variant
     # track states for each adversarial attack, so in src.deploy.main we update this state if the static function is called 
     pgd_attack_state = False
     fgsm_attack_state = False
     norm_perturbation_attack_state = False
     # pixelwise_gaussian_noise_state = False
-
-    @staticmethod
-    def create_adversarial_example():
-        '''General adversarial attack type that each perturbation type is nested in. I.e. every perturbation is the attempt to generate adversarial examples.'''
-        # create adversarial example with perturbations to input_image iterating over entire train set to then pass into perturbed_train_generator
-        raise NotImplementedError
-
-    @staticmethod
-    def setup_pixelwise_gaussian_noise(epsilon, input_image):
-        # setup perturbation layer in network as adversarial defense/attack and perhaps use as utility function
-        raise NotImplementedError
 
     @staticmethod
     def fgsm_attack(model_parameters, input_image, cost_function):

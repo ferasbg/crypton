@@ -34,11 +34,6 @@ from crypto_utils import model_fn
 
 warnings.filterwarnings('ignore')
 
-NUM_CLIENTS = 10
-NUM_EPOCHS = 25
-BATCH_SIZE = 32
-SHUFFLE_BUFFER = 100
-PREFETCH_BUFFER = 10
 
 
 class Network():
@@ -98,26 +93,32 @@ class Network():
         model.add(Dense(10, activation='softmax'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
-        # model.compile(loss='categorical_crossentropy',
-        #               optimizer=optimizer, metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=optimizer, metrics=['accuracy'])
         return model
 
+
+    def federated_train(self, batch_size, epochs, client_train_data, client_train_labels, client_validation_data, client_validation_labels):
+        generator = ImageDataGenerator(
+            featurewise_center=False,
+            samplewise_center=False,
+            featurewise_std_normalization=False,
+            samplewise_std_normalization=False,
+            zca_whitening=False,
+            rotation_range=15,
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            horizontal_flip=True,
+            vertical_flip=False)
+
+        history = self.model.fit(client_train_data, client_train_labels, batch_size=batch_size, epochs=epochs, validation_data=(client_validation_data, client_validation_labels))
+        self.model.evaluate(x=client_validation_data, y=client_validation_labels, verbose=0)
+
+        self.model.save_weights('network.h5')
+        print(history)
+
+
     def train(self):
-        '''
-        Train network on nominal multi-label classification problem. Make sure to allocate images for each test variation e.g. mpc_network, certified_mpc_network, certified_nominal_network
-
-        # partitioning dataset for different tests.
-        x_val = x_train[-10000:]
-        y_val = y_train[-10000:]
-        x_train = x_train[:-10000]
-        y_train = y_train[:-10000]
-
-        # if 10 clients and total of 50000 images, assume 1000 images per client
-
-        Add dataset, and dataset_labels as parameter (overload this method or make re-write)
-
-        '''
-        # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         # get cifar10-data first, and assign data and categorical labels as such
         (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 
@@ -173,8 +174,8 @@ class CryptoNetwork(Network):
         # get plaintext layers for network architecture, focus primarily on heavy dp and federated e.g. iterate on data processing to ImageDataGenerator and model.fit_generator() or model.fit()
         self.public_network = super().build_compile_model()
         self.input_spec = collections.OrderedDict(
-            x=tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-            y=tf.TensorSpec(shape=[None, 1], dtype=tf.int64)  
+            x=tf.TensorSpec(shape=[None, 32*32], dtype=tf.float32, name='pixels'),
+            y=tf.TensorSpec(shape=[None, None], dtype=tf.int64, name='label')  
         )
         # tff wants new tff network created upon instantiation or invocation of method call
         self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
@@ -200,14 +201,32 @@ class CryptoNetwork(Network):
 if __name__ == '__main__':
     # setup crypto_network, federated_dataset, federated_clients, setup federated_eval() 
     crypto_network = CryptoNetwork()
-    print("Trainable variables: ", crypto_network.crypto_network.trainable_variables)
     cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
-    
-    federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+    print(len(cifar_train.client_ids)) # 500 client ids for cifar-100
+    print(cifar_train.element_type_structure) # (32,32,3)
+
+    # generating dataset for each client
+    for i in range(10):
+        client_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[i])
+
+    print(client_dataset)
+
+    NUM_CLIENTS = 10
+    NUM_EPOCHS = 25
+    BATCH_SIZE = 32
+    SHUFFLE_BUFFER = 100
+    PREFETCH_BUFFER = 10
+
+    example_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[0])
+    print(example_dataset)
+
+    # compute federated averaging e.g. computing over K clients. Compute federated evaluation.        
     iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-    print(federated_eval)
-        
-    # compute federated averaging e.g. computing over K clients.        
+
+
+
+    #federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+
     # Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
     # partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
     # Question: how does variance of learning_rate AND low epoch_amount affect local and global model?

@@ -128,22 +128,10 @@ class Network():
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         y_test = tf.keras.utils.to_categorical(y_test, 10)
 
-        generator = ImageDataGenerator(
-            featurewise_center=False,
-            samplewise_center=False,
-            featurewise_std_normalization=False,
-            samplewise_std_normalization=False,
-            zca_whitening=False,
-            rotation_range=15,
-            width_shift_range=0.1,
-            height_shift_range=0.1,
-            horizontal_flip=True,
-            vertical_flip=False)
-
         history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
         self.model.evaluate(x=x_test, y=y_test, verbose=0)
 
-        self.model.save_weights('network.h5')
+        self.model.save_weights('client.h5')
         print(history)
         
     def evaluate(self, image_set, label_set):

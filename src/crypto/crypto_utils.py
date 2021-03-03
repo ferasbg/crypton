@@ -37,6 +37,7 @@ def model_fn():
     # build layers of public neural network to pass into tff constructor as plaintext model, do in function since it's static 
     model = Sequential()
     # feature layers
+    model.add(tf.keras.Input(shape=(32,32,3)))
     model.add(Conv2D(32, (3, 3), activation='relu',
                         kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
     model.add(BatchNormalization())
@@ -61,11 +62,10 @@ def model_fn():
     # 10 output classes possible
     model.add(Dense(10, activation='softmax'))
     
-    # other method of constructing federated network object
     input_spec = collections.OrderedDict(
-            x=tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-            y=tf.TensorSpec(shape=[None, 1], dtype=tf.int64)  
-        )
+        x=tf.TensorSpec([-1, 32, 32, 3], tf.float32),
+        y=tf.TensorSpec([None, 1], tf.int32)
+    )
     # tff wants new tff network created upon instantiation or invocation of method call
     crypto_network =  tff.learning.from_keras_model(model, input_spec=input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
     return crypto_network
