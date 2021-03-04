@@ -1,17 +1,37 @@
+import argparse
+import collections
+import logging
 import os
-import sys
-
-import numpy as np
-import matplotlib.pyplot as plt
-import keras
-import tensorflow as tf
-import random
 import pickle
+import random
+import sys
+import time
+import warnings
+
+import keras
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
 import tensorflow_federated as tff
+import tqdm
+from keras import backend as K
+from keras import optimizers, regularizers
+from keras.applications.vgg16 import VGG16, preprocess_input
+from keras.datasets import cifar10
+from keras.datasets.cifar10 import load_data
+from keras.layers import (Activation, BatchNormalization, Conv2D,
+                          Conv2DTranspose, Dense, Dropout, Flatten,
+                          GaussianDropout, GaussianNoise, Input, MaxPool2D,
+                          ReLU, Softmax, UpSampling2D)
+from keras.layers.core import Lambda
+from keras.models import Input, Model, Sequential, load_model, save_model
+from keras.optimizers import Adam
+from keras.preprocessing.image import ImageDataGenerator
+from PIL import Image
+from tensorflow import keras
+
 from crypto_network import CryptoNetwork
 from crypto_utils import model_fn
-
-
 
 '''
 pointers for constructors for federated eval / iterative_process Callable[], and some temporary reference
@@ -53,18 +73,19 @@ For example, if client A has been sampled m times at round n, and each time loca
 - For each client k in K clients, given B = batch_size, E = epochs, n = learning_rate=0.001
 - Rounds are iterations for each client iterating over each client node, and we want to sequentially iterate over each client node
 - Use .model.function_name to train each model iteratively on local models that will update global model
-- Use iterative_process.next(), federated_averaging_process(), and custom utils to setup clients nodes / server node 
+- Use iterative_process.next(), federated_averaging_process(), and custom utils to setup clients nodes / server node
 - implement federated averaging with federated_averaging_process() and iterative_process.next() and iterate_train_over_clients(), and update_client_nodes_to_global_aggregator()
 - implement mpc-based secure aggregation (Bonawitz et. al, 2017), where the secrets are the model gradients that cannot reconstruct the original input data, since the average of the gradients are updated by the global model, where local model gradients are updated to the global model that is controlled by the aggregator that handles synchronous computation over K clients.
-- attest to epistemic rigor given fed sim 
+- attest to epistemic rigor given fed sim
 - how does byzantine fault tolerance work for production-based federated learning?
-# Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side. 
-# partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)        
+# Albeit unrelated, but note that BatchNormalization() will destabilize local model instances because averaging over heterogeneous data and making averages over a non-linear distribution can create unstable effects on the neural network's performance locally, and then further distorting the shared global model whose weights are updated based on the updated state of the client's local model on-device or on-prem client-side.
+# partition dataset (train) for each client so it acts as its own local data (private from other users during training, same global model used, update gradients to global model)
 # let's just assume we are able to control the data that each client stores for models, that their status is available, their data isn't corrupted, and it's synchronous
 
 # Research Question: how does variance of learning_rate AND low epoch_amount affect local and global model?
+# Research Question: adding gradient norm clipping as an approach to regularize local client models given the adjusted learning_rate and adding learning_decay_rate and using l2_kernel_regularizer for weight regularization for plaintext keras network.
 
-This recovers the original FedAvg algorithm in McMahan et al., 2017. More sophisticated federated averaging procedures may use different learning rates or server optimizers. 
+This recovers the original FedAvg algorithm in McMahan et al., 2017. More sophisticated federated averaging procedures may use different learning rates or server optimizers.
 
 Remember the 4 elements of an FL algorithm?
 
@@ -92,20 +113,90 @@ def next_fn(server_weights, federated_dataset):
 
   return server_weights
 
+  We are dealing with non-iid data given K clients.
+
 '''
 
 # CONSTANTS
+NUM_CLIENTS = 10
+# MODEL TRAIN CONFIG
 BATCH_SIZE = 20
-EPOCHS = 10
-# constant lr for optimizer
+NUM_EPOCHS = 5
+# constant lr for SGD optimizer
 CLIENT_LEARNING_RATE = 0.02
-SERVER_LEARNING_RATE = 1.0 
+SERVER_LEARNING_RATE = 1.0
 NUM_ROUNDS = 5
 CLIENTS_PER_ROUND = 2
 CLIENT_EPOCHS_PER_ROUND = 1
+# helper constants for data preprocessing given tf.data.Dataset to tff native transformations
 SHUFFLE_BUFFER = 100
 PREFETCH_BUFFER = 10
 
+# federated cifar-100 dataset: 500 train clients, 100 test clients
+cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
+
+# this code is very convoluted, fix
+def preprocess(dataset):
+  # for element in dataset
+  def batch_format_fn(element):
+    """Flatten a batch `pixels` and return the features as an `OrderedDict`.
+
+    ===> Datset.from_tensors(train_image_set, train_label_set)
+    ===> return dataset.repeat(NUM_EPOCHS).shuffle(SHUFFLE_BUFFER).batch(
+    ===> BATCH_SIZE).map(batch_format_fn).prefetch(PREFETCH_BUFFER)
+
+    There's a difference between passing callable as param, calling member function of object/callable, nesting functions for recursion or iteration, referencing to Callable[] like `obj.next` instead of `obj.member_function()`
+    """
+    return collections.OrderedDict(
+        x=tf.reshape(element['pixels'], [-1, 784]),
+        y=tf.reshape(element['label'], [-1, 1]))
+
+  # stack method calls instead and improve setup of nested function for tf and tff data preprocessing
+  dataset = dataset.repeat(NUM_EPOCHS)
+  dataset = dataset.shuffle(SHUFFLE_BUFFER)
+  dataset = dataset.batch(BATCH_SIZE)
+  dataset = dataset.prefetch(PREFETCH_BUFFER)
+  dataset = dataset.map(batch_format_fn)
+  return dataset
+
+
+# setup clients with cifar-100 train
+client_ids = np.random.choice(cifar_train.client_ids, size=NUM_CLIENTS, replace=False)
+
+# creating federated train dataset for each client
+federated_train_data = [preprocess(cifar_train.create_tf_dataset_for_client(x) for x in client_ids)]
+
+
+def build_uncompiled_plaintext_keras_model():
+  # build layers, do not compile model since federated evaluation will use optimizer through their own custom decorators
+  # build layers of public neural network
+  model = Sequential()
+  # feature layers
+  model.add(Conv2D(32, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
+  model.add(BatchNormalization())
+  model.add(Dropout(0.3))
+  model.add(Conv2D(64, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same'))
+  model.add(MaxPool2D((2, 2)))
+  model.add(Conv2D(64, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same'))
+  model.add(Conv2D(128, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same'))
+  model.add(MaxPool2D((2, 2)))
+  model.add(Conv2D(128, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same'))
+  model.add(Conv2D(256, (3, 3), activation='relu',
+                    kernel_initializer='he_uniform', padding='same'))
+  model.add(MaxPool2D((2, 2)))
+  model.add(Flatten())
+  # classification layers
+  model.add(Dense(128, activation='relu',
+                  kernel_initializer='he_uniform'))
+  # 10 output classes possible
+  model.add(Dense(10, activation='softmax'))
+    # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+  return model
 
 @tff.tf_computation
 def server_init():
@@ -125,7 +216,6 @@ model_weights_type = server_init.type_signature.result
 tf_dataset_type = tff.SequenceType(dummy_model.input_spec)
 federated_server_type = tff.FederatedType(model_weights_type, tff.SERVER)
 federated_dataset_type = tff.FederatedType(tf_dataset_type, tff.CLIENTS)
-
 
 @tf.function
 def client_update(model, dataset, server_weights, client_optimizer):
@@ -173,41 +263,73 @@ def server_update_fn(mean_client_weights):
 
 @tff.federated_computation(federated_server_type, federated_dataset_type)
 def next_fn(server_weights, federated_dataset):
-  '''Compute client-to-server update and server-to-client update between nodes.'''
+  '''Compute client-to-server update and server-to-client update between nodes.
+
+  Note, theserver state stores the global model's gradients and its weights respectively given tff model state dict and optimizer_state e.g. vars of optimizer
+  '''
   # broadcast server weights to client nodes for local model set
   server_weights_at_client = tff.federated_broadcast(server_weights)
   client_weights = tff.federated_map(client_update_fn, (federated_dataset, server_weights_at_client))
 
   # server averages client updates
   mean_client_weights = tff.federated_mean(client_weights)
-  
+
   # server updates its model with average of the clients' updated gradients
   server_weights = tff.federated_map(server_update_fn, mean_client_weights)
-
   return server_weights
 
-# setup IterativeProcess and federated_eval for Federated Evaluation and Federated Averaging 
+# setup IterativeProcess and federated_eval for Federated Evaluation and Federated Averaging
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
-federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+
 # note that federated_eval returns the federated_output_computation, which computes federated aggregation of the model's local_inputs e.g. compute function federated network over its input for client node
+federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+print(str(federated_eval.type_signature))
 
 
-# define ServerState and ClientState
-server_state = iterative_process.initialize()
-# apparently call class again with initialize_fn() and next_fn() custom funcs
+# accept server model and client data given client models, and then return an updated server model with defined with federated averaging process
+federated_algorithm = tff.templates.IterativeProcess(initialize_fn=initialize_fn, next_fn=next_fn)
+
+# define federated eval on given server_state given weights and gradients and model architecture
+central_cifar_test = cifar_test.create_tf_dataset_from_all_clients().take(1000) # 1000 images for test
+central_cifar_test = preprocess(central_cifar_test)
 
 
-# update both client and server
-# check implementations for IterativeProcess
-initialize_federated_algorithm = tff.templates.IterativeProcess(initialize_fn=initialize_fn, next_fn=next_fn)
+# custom eval given server_state
+def evaluate(server_state):
+  # use plaintext model
+  network = build_uncompiled_plaintext_keras_model()
+  network.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+  network.set_weights(server_state) # vectorized state of network in server
+  network.evaluate(central_cifar_test) # pass data to keras model
 
-# federated cifar-100 dataset: 500 train clients, 100 test clients
-cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
 
-# server state stores the global model's gradients and its weights respectively given tff model state dict and optimizer_state e.g. vars of optimizer
+# define ServerState and ClientState, initialize state of tff computation
+server_state = federated_algorithm.initialize()
+evaluate(server_state)
 
-# for round_iter in range(1, NUM_ROUNDS):
-  # iterate over all clients per round
-  # assign server model state and its metrics to the abstract tff computation to compute tff state transition
-  # state, metrics = {}
-# track client node state, gradientState
+# RUN ITERATIVE PROCESS TO COMPUTE FEDERATED EVALUATION WITH FEDERATED AVERAGING
+
+# iterate over all clients per round
+# assign server model state and its metrics to the abstract tff computation to compute tff state transition
+for round_iter in range(NUM_ROUNDS):
+    # for round n, client k is on epoch M iterating over batch size B
+    # train local models for each client sequentially/concurrently, then take the average of all of the clients' gradients to then update the global model stored in the server
+    server_state, metrics = federated_algorithm.next(server_state, federated_train_data)
+    print("Federated Metrics: {}".format(metrics))
+    evaluate(server_state)
+
+    '''
+        EXPECTED OUTPUT:
+        round  2, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.941014), ('accuracy', 0.14218107)]))])
+        round  3, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.9052832), ('accuracy', 0.14444445)]))])
+        round  4, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.7491086), ('accuracy', 0.17962962)]))])
+        round  5, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.5129666), ('accuracy', 0.19526748)]))])
+        round  6, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4175923), ('accuracy', 0.23600823)]))])
+        round  7, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4273515), ('accuracy', 0.24176955)]))])
+        round  8, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.2426176), ('accuracy', 0.2802469)]))])
+        round  9, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1567981), ('accuracy', 0.295679)]))])
+        round 10, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1092515), ('accuracy', 0.30843621)]))])
+
+    '''
+
+

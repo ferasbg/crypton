@@ -99,10 +99,41 @@ class Network():
         model.add(Dense(10, activation='softmax'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=optimizer, metrics=['accuracy'])
         # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
+        model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                      optimizer=optimizer, metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
 
+        return model
+
+    def build_uncompiled_model(self):
+        # build layers, do not compile model since federated evaluation will use optimizer through their own custom decorators
+        # build layers of public neural network
+        model = Sequential()
+        # feature layers
+        model.add(Conv2D(32, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.3))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Conv2D(128, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(Conv2D(256, (3, 3), activation='relu',
+                         kernel_initializer='he_uniform', padding='same'))
+        model.add(MaxPool2D((2, 2)))
+        model.add(Flatten())
+        # classification layers
+        model.add(Dense(128, activation='relu',
+                        kernel_initializer='he_uniform'))
+        # 10 output classes possible
+        model.add(Dense(10, activation='softmax'))
+         # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         return model
 
     def train(self):
@@ -135,12 +166,12 @@ class Network():
         history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
         self.model.evaluate(x=x_test, y=y_test, verbose=0)
 
-        self.model.save_weights('client.h5')
+        self.model.save_weights('network.h5')
         print(history)
 
     def evaluate(self, image_set, label_set):
-        '''Evaluate with test set, generally isolated to one client node. Given we want to pass in custom image_set and custom image_labels.'''
-        self.model.evaluate(x=x_test, y=y_test, verbose=0)
+        '''Evaluate with test set, generally isolated to one client node for tensorflow-specific custom evaluation. Given we want to pass in custom image_set and custom image_labels.'''
+        self.model.evaluate(x=image_set, y=label_set, verbose=0)
         return self.model
 
     @staticmethod
