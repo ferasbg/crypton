@@ -51,12 +51,10 @@ class RobustnessTrace():
 
     @staticmethod
     def adversarial_example_not_created_trace():
-        """
-        robustness trace property 2: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
+        '''
         
-        Note, if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better.
-        """
-
+        '''
+        
         # if the classified output class matches the correct output class
         if (RobustnessTrace.lp_perturbation_status == True and RobustnessTrace.getRobustnessThresholdState() == True): # when perturbation epsilon and gaussian noise vector applied to input_image before input is passed to ImageDataGenerator and keras.layers.Input
             return "Success! Model's accuracy under adversarial training exceeds the robustness threshold given the norm-bounded adversarial attack."
@@ -65,7 +63,10 @@ class RobustnessTrace():
 
     @staticmethod
     def brightness_perturbation_norm_trace():
-        """Best way to compute brightness perturbation norm is to iterate the function of maximizing brightness for each pixel for each input image. Define adversarial operators in Adversarial, and write trace properties and assert checks here."""
+        """Best way to compute brightness perturbation norm is to iterate the function of maximizing brightness for each pixel for each input image.
+        
+        Formal Notation: Trace ⊢ SAT ⟺ B(P(x,y)) ⇒ Q(x,y) | ∀ x ∧ ∀ y
+        """
         if (RobustnessTrace.brightness_perturbation_status == True and RobustnessTrace.correctness_under_brightness_perturbation == True):
             return "Brightness perturbation norm trace property checked out successfully."
 
@@ -74,9 +75,16 @@ class RobustnessTrace():
         
 
     @staticmethod
-    def l_perturbation_norm_trace(self, norm_perturbation_correctnessState):
-        '''Apply l_p perturbation norm for each input_image to maximize its loss.'''
-        if (RobustnessTrace.lp_perturbation_status == True and norm_perturbation_correctnessState == True):
+    def l_perturbation_norm_trace(perturbation_epsilon):
+        '''
+        robustness trace property 2: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
+
+        Apply l_p perturbation norm for each input_image to maximize its loss.
+
+        Note, if the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better.
+
+        '''
+        if (RobustnessTrace.lp_perturbation_status == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
             return "L-p norm perturbation trace successfully checked out."
         else:
             return "L-p norm perturbation trace failed. This neural network has successfully been affected in terms of adversarial example generation, and can lead to much disastrous faults if launched in production. Hotfix network architecture with training iterations."
@@ -91,6 +99,10 @@ class RobustnessTrace():
 
     @staticmethod
     def fgsm_attack_trace():
+        '''
+        Formal Notation: Given η=ϵ sign(∇ₓ J(θ,x,y)), for Trace ⊢ SAT ⟺ P(x,y) ⇒ Q(x,y) | x := η(x) | ∀ x ∧ ∀ y
+        
+        '''
         if (RobustnessTrace.fgsm_perturbation_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
             return "FGSM attack trace successfully checked out. Given the input variance of the fast gradient sign method with F(P(x,y)), the output state Q(x,y) was consistent under the robustness trace for FGSM."
         else:

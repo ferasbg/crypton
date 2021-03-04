@@ -15,24 +15,30 @@ class Adversarial():
     Note that every adversarial attack function will compute on individual images, but we must perturb all images iterating over the entire image sets used given convention. To perturb images passed for each local model for federated averaging, it is very important to perturb the image such that the vectorized Tensor passed with crypto.federated.preprocess() is sufficient in terms of tensor shape, and that we perturb an image_set. Note that when we process the image_sets for our test_set, we will perturb all the images in the test_set, and THEN create clients to compute federated averaging under secure aggregation environment.
     '''
     perturbation_epsilon = 0.3 # perturbation epsilon is constant for each attack variant
-    # track states for each adversarial attack, so in src.deploy.main we update this state if the static function is called 
     pgd_attack_state = False
     fgsm_attack_state = False
-    norm_perturbation_attack_state = False
-    # pixelwise_gaussian_noise_state = False
+    l2_norm_perturbation_attack_state = False
+    l_infinity_norm_perturbation_attack_state = False
+    brightness_perturbation_norm_state = False
+
 
     @staticmethod
-    def fgsm_attack(model_parameters, input_image, cost_function):
-        """Fast-sign gradient method, denoted as η = sign (∇xJ(θ, x, y)). Generate adversarial examples to pass into network."""
-        raise NotImplementedError
+    def compute_norm_bounded_perturbation(input_image, norm_type, perturbation_epsilon):
+        '''Reuse for each additive perturbation type for all norm-bounded variants.'''
+        if (norm_type == 'l-inf'):
+            return None
+        elif (norm_type == 'l-2'):
+            return None
+          
 
     @staticmethod
-    def setup_fgsm_attack(input_image, input_image_label, perturbation_epsilon, model_parameters, loss):
+    def compute_fgsm_attack(input_image, input_image_label, perturbation_epsilon, model_parameters, loss):
         """Fast Gradient Signed Method (FGSM) attack as described in [Explaining and Harnessing Adversarial Examples](https://arxiv.org/abs/1412.6572) by Goodfellow *et al*. This was one of the first and most popular attacks to fool a neural network.
 
         Note, we will compute a pixelwise norm perturbation with respect to the proportionality of the pixel to its corresponding loss value, in order to maximize the loss, e.g. making it inaccurate. It is given that model is pretrained and the model parameters are constant.
 
         Formally denoted as η=ϵ sign(∇ₓ J(θ,x,y)).
+
 
         Perturbation Type: Non-Iterative
 
@@ -52,6 +58,8 @@ class Adversarial():
             - https://neptune.ai/blog/adversarial-attacks-on-neural-networks-exploring-the-fast-gradient-sign-method
             - https://arxiv.org/pdf/1811.06492.pdf
             - https://deepai.org/publication/simultaneous-adversarial-training-learn-from-others-mistakes
+
+
         """
         perturbations = Adversarial.create_adversarial_pattern(input_image, input_image_label)
         for i in enumerate(1):
@@ -75,12 +83,7 @@ class Adversarial():
         return signed_grad
 
     @staticmethod
-    def setup_pgd_attack(loss, l_infinity_norm=0.2, l2_norm=2.0):
-        raise NotImplementedError
-
-
-    @staticmethod
-    def projected_gradient_descent_attack(layer_gradient, network_gradients):
+    def compute_projected_gradient_descent_attack(conv2d_gradients, netwrork_loss, l_infinity_norm=0.2, l2_norm=2.0):
         # converge to max loss to create adversarial example
         # to get layer_gradient: tape.gradient(loss, linear_layer.trainable_weights)
         raise NotImplementedError
