@@ -12,8 +12,7 @@ from nn.metrics import Metrics
 
 class Adversarial():
     '''
-    Note that every adversarial attack function will be done to individual images, so define the images to iterate over (the train_set), and the number of clients to concurrently attack in deploy.main
-
+    Note that every adversarial attack function will compute on individual images, but we must perturb all images iterating over the entire image sets used given convention. To perturb images passed for each local model for federated averaging, it is very important to perturb the image such that the vectorized Tensor passed with crypto.federated.preprocess() is sufficient in terms of tensor shape, and that we perturb an image_set. Note that when we process the image_sets for our test_set, we will perturb all the images in the test_set, and THEN create clients to compute federated averaging under secure aggregation environment.
     '''
     perturbation_epsilon = 0.3 # perturbation epsilon is constant for each attack variant
     # track states for each adversarial attack, so in src.deploy.main we update this state if the static function is called 
@@ -35,6 +34,10 @@ class Adversarial():
 
         Formally denoted as η=ϵ sign(∇ₓ J(θ,x,y)).
 
+        Perturbation Type: Non-Iterative
+
+        "Consider the dot product between a weight vector w and an adversarial example x˜: w>x˜ = w>x + w>η. The adversarial perturbation causes the activation to grow by w>η.We can maximize this increase subject to the max norm constraint on η by assigning η = sign(w). If w has n dimensions and the average magnitude of an element of the weight vector is m, then the activation will grow by mn. Since ||η||∞ does not grow with the dimensionality of the problem but the change in activation caused by perturbation by η can grow linearly with n, then for high dimensional problems, we can make many infinitesimal changes to the input that add up to one large change to the output. We can think of this as a sort of “accidental steganography,” where a linear model is forced to attend exclusively to the signal that aligns most closely with its weights, even if multiple signals are present and other signals have much greater amplitude. This explanation shows that a simple linear model can have adversarial examples if its input has sufficient dimensionality. Previous explanations for adversarial examples invoked hypothesized properties of neural networks, such as their supposed highly non-linear nature. Our hypothesis based on linearity is simpler, and can also explain why softmax regression is vulnerable to adversarial examples."
+
         Args:
         -   x : Original input image.
         -   y : Original input label.
@@ -42,7 +45,7 @@ class Adversarial():
         -   $\theta$ : Model parameters.
         -   $J$ : Loss.
 
-        Returns: adv_x e.g. adversarial image with perturbations with respect to adversarial optimization.
+        Returns: adv_x e.g. adversarial image with perturbations with respect to adversarial optimization. The computational efficiency of computing gradient descent with backpropagation is not affected.
 
         References:
             - https://github.com/gongzhitaao/tensorflow-adversarial/blob/master/attacks/fast_gradient.py
@@ -53,7 +56,7 @@ class Adversarial():
         perturbations = Adversarial.create_adversarial_pattern(input_image, input_image_label)
         for i in enumerate(1):
             adv_x = input_image + perturbation_epsilon*perturbations # matmul with perturbation epsilon
-            adv_x = tf.clip_by_value(adv_x, -1, 1)
+            adv_x = tf.clip_by_value(adv_x, -1, 1) # clip Tensor values between tuple [-1,1]
             i+=1
 
         return adv_x

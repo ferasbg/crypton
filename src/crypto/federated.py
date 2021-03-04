@@ -146,6 +146,11 @@ def preprocess(dataset):
     ===> BATCH_SIZE).map(batch_format_fn).prefetch(PREFETCH_BUFFER)
 
     There's a difference between passing callable as param, calling member function of object/callable, nesting functions for recursion or iteration, referencing to Callable[] like `obj.next` instead of `obj.member_function()`
+
+    References:
+        - https://cs230.stanford.edu/blog/datapipeline/
+        - https://www.tensorflow.org/api_docs/python/tf/data/Dataset
+
     """
     return collections.OrderedDict(
         x=tf.reshape(element['pixels'], [-1, 784]),
