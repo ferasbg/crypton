@@ -24,11 +24,13 @@ class Adversarial():
 
     @staticmethod
     def compute_norm_bounded_perturbation(input_image, norm_type, perturbation_epsilon):
-        '''Reuse for each additive perturbation type for all norm-bounded variants.'''
+        '''Reuse for each additive perturbation type for all norm-bounded variants. Note that this is a norm-bounded ball e.g. additive and iterative perturbation attack.'''
         if (norm_type == 'l-inf'):
-            return None
+            for pixel in input_image:
+                pixel*=perturbation_epsilon + 0.5 # additive perturbation given vector norm
         elif (norm_type == 'l-2'):
-            return None
+            for pixel in input_image:
+                pixel*=perturbation_epsilon + 0.5
           
 
     @staticmethod
@@ -73,17 +75,16 @@ class Adversarial():
     def create_adversarial_pattern(input_image, input_label):
         with tf.GradientTape() as tape:
             tape.watch(input_image) # map gradients
-            prediction = (input_image) # given x to VGG-Net # rework model design
+            prediction = (input_image) # given x to VGG-Net 
             loss_object = tf.keras.losses.CategoricalCrossentropy()
             loss = loss_object(input_label, prediction) # total error
 
         gradient = tape.gradient(loss, input_image)
-
         signed_grad = tf.sign(gradient)
         return signed_grad
 
     @staticmethod
-    def compute_projected_gradient_descent_attack(conv2d_gradients, netwrork_loss, l_infinity_norm=0.2, l2_norm=2.0):
+    def compute_projected_gradient_descent_attack(conv2d_gradients, network_loss, l_infinity_norm=0.2, l2_norm=2.0):
         # converge to max loss to create adversarial example
         # to get layer_gradient: tape.gradient(loss, linear_layer.trainable_weights)
         raise NotImplementedError

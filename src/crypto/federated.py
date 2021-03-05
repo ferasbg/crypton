@@ -29,6 +29,7 @@ from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
+from tensorflow.python.keras.utils.data_utils import Sequence
 
 from crypto_network import CryptoNetwork
 from crypto_utils import model_fn
@@ -129,47 +130,59 @@ NUM_ROUNDS = 5
 CLIENTS_PER_ROUND = 2
 CLIENT_EPOCHS_PER_ROUND = 1
 # helper constants for data preprocessing given tf.data.Dataset to tff native transformations
-SHUFFLE_BUFFER = 100
-PREFETCH_BUFFER = 10
+SHUFFLE_BUFFER = 100 # shuffling
+PREFETCH_BUFFER = 10 # data to prefetch in cache for training
 
 # federated cifar-100 dataset: 500 train clients, 100 test clients
 cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
 
-# this code is very convoluted, fix
-def preprocess(dataset):
-  # for element in dataset
-  def batch_format_fn(element):
-    """Flatten a batch `pixels` and return the features as an `OrderedDict`.
+'''
+"""Flatten a batch `pixels` and return the features as an `OrderedDict`.
 
-    ===> Datset.from_tensors(train_image_set, train_label_set)
-    ===> return dataset.repeat(NUM_EPOCHS).shuffle(SHUFFLE_BUFFER).batch(
-    ===> BATCH_SIZE).map(batch_format_fn).prefetch(PREFETCH_BUFFER)
+===> Datset.from_tensors(train_image_set, train_label_set)
+===> return dataset.repeat(NUM_EPOCHS).shuffle(SHUFFLE_BUFFER).batch(
+===> BATCH_SIZE).map(batch_format_fn).prefetch(PREFETCH_BUFFER)
 
-    There's a difference between passing callable as param, calling member function of object/callable, nesting functions for recursion or iteration, referencing to Callable[] like `obj.next` instead of `obj.member_function()`
+There's a difference between passing callable as param, calling member function of object/callable, nesting functions for recursion or iteration, referencing to Callable[] like `obj.next` instead of `obj.member_function()`
 
-    References:
-        - https://cs230.stanford.edu/blog/datapipeline/
-        - https://www.tensorflow.org/api_docs/python/tf/data/Dataset
+References:
+    - https://cs230.stanford.edu/blog/datapipeline/
+    - https://www.tensorflow.org/api_docs/python/tf/data/Dataset
+'''
 
-    """
+
+def preprocess_dataset(dataset):
+  def map_fn(element):
     return collections.OrderedDict(
         x=tf.reshape(element['pixels'], [-1, 784]),
         y=tf.reshape(element['label'], [-1, 1]))
 
-  # stack method calls instead and improve setup of nested function for tf and tff data preprocessing
-  dataset = dataset.repeat(NUM_EPOCHS)
-  dataset = dataset.shuffle(SHUFFLE_BUFFER)
-  dataset = dataset.batch(BATCH_SIZE)
-  dataset = dataset.prefetch(PREFETCH_BUFFER)
-  dataset = dataset.map(batch_format_fn)
-  return dataset
+  return dataset.batch(BATCH_SIZE).map(map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE).take(1000)
 
+# pass callable to preprocess
+preprocessed_client_data = cifar_test.preprocess(preprocess_dataset) 
+client_dataset = []
+
+def generate_clients():
+  for i in range(10):
+    client_test_set = preprocessed_client_data.create_tf_dataset_for_client(cifar_test.client_ids[i])
+    print(client_test_set.element_spec)
+    assert cifar_test.element_type_structure == client_test_set.element_spec
+    client_dataset.append(client_test_set)
+
+
+def preprocess_and_shuffle(dataset):
+  preprocessed = preprocess_dataset(dataset)
+  return preprocessed.shuffle(SHUFFLE_BUFFER)
+
+preprocessed_and_shuffled = cifar_test.preprocess(preprocess_and_shuffle)
+selected_client_ids = preprocessed_and_shuffled.client_ids[:10] # 10 clients
+
+# setup preprocessed data for each client
+preprocessed_data_for_clients = [preprocessed_and_shuffled.create_tf_dataset_for_client(selected_client_ids[i]) for i in range(10)]
 
 # setup clients with cifar-100 train
 client_ids = np.random.choice(cifar_train.client_ids, size=NUM_CLIENTS, replace=False)
-
-# creating federated train dataset for each client
-federated_train_data = [preprocess(cifar_train.create_tf_dataset_for_client(x) for x in client_ids)]
 
 
 def build_uncompiled_plaintext_keras_model():
@@ -270,7 +283,7 @@ def server_update_fn(mean_client_weights):
 def next_fn(server_weights, federated_dataset):
   '''Compute client-to-server update and server-to-client update between nodes.
 
-  Note, theserver state stores the global model's gradients and its weights respectively given tff model state dict and optimizer_state e.g. vars of optimizer
+  Note, the server state stores the global model's gradients and its weights respectively given tff model state dict and optimizer_state e.g. vars of optimizer
   '''
   # broadcast server weights to client nodes for local model set
   server_weights_at_client = tff.federated_broadcast(server_weights)
@@ -285,6 +298,7 @@ def next_fn(server_weights, federated_dataset):
 
 # setup IterativeProcess and federated_eval for Federated Evaluation and Federated Averaging
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, CryptoNetwork.client_optimizer_fn, CryptoNetwork.server_optimizer_fn)
+print(federated_algorithm.next.type_signature)
 
 # note that federated_eval returns the federated_output_computation, which computes federated aggregation of the model's local_inputs e.g. compute function federated network over its input for client node
 federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
@@ -292,12 +306,9 @@ print(str(federated_eval.type_signature))
 
 
 # accept server model and client data given client models, and then return an updated server model with defined with federated averaging process
-federated_algorithm = tff.templates.IterativeProcess(initialize_fn=initialize_fn, next_fn=next_fn)
-
+federated_algorithm = tff.templates.IterativeProcess(initialize_fn, next_fn)
 # define federated eval on given server_state given weights and gradients and model architecture
 central_cifar_test = cifar_test.create_tf_dataset_from_all_clients().take(1000) # 1000 images for test
-central_cifar_test = preprocess(central_cifar_test)
-
 
 # custom eval given server_state
 def evaluate(server_state):
@@ -307,34 +318,39 @@ def evaluate(server_state):
   network.set_weights(server_state) # vectorized state of network in server
   network.evaluate(central_cifar_test) # pass data to keras model
 
-
 # define ServerState and ClientState, initialize state of tff computation
 server_state = federated_algorithm.initialize()
-evaluate(server_state)
+
+orchestrate_federated_accepting_ids = tff.simulation.compose_dataset_computation_with_iterative_process(preprocessed_and_shuffled.dataset_computation, iterative_process)
+
+for round in range(NUM_ROUNDS):
+  server_state, metrics = orchestrate_federated_accepting_ids.next(server_state, selected_client_ids)
+  evaluate(server_state)  
 
 # RUN ITERATIVE PROCESS TO COMPUTE FEDERATED EVALUATION WITH FEDERATED AVERAGING
 
-# iterate over all clients per round
 # assign server model state and its metrics to the abstract tff computation to compute tff state transition
-for round_iter in range(NUM_ROUNDS):
+# for round_iter in range(NUM_ROUNDS):
     # for round n, client k is on epoch M iterating over batch size B
     # train local models for each client sequentially/concurrently, then take the average of all of the clients' gradients to then update the global model stored in the server
-    server_state, metrics = federated_algorithm.next(server_state, federated_train_data)
-    print("Federated Metrics: {}".format(metrics))
-    evaluate(server_state)
+    # server_state, metrics = federated_algorithm.next(server_state) # next is an attribute, and not callable
+    # print("Federated Metrics: {}".format(metrics))
+    # evaluate(server_state)
 
-    '''
-        EXPECTED OUTPUT:
-        round  2, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.941014), ('accuracy', 0.14218107)]))])
-        round  3, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.9052832), ('accuracy', 0.14444445)]))])
-        round  4, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.7491086), ('accuracy', 0.17962962)]))])
-        round  5, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.5129666), ('accuracy', 0.19526748)]))])
-        round  6, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4175923), ('accuracy', 0.23600823)]))])
-        round  7, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4273515), ('accuracy', 0.24176955)]))])
-        round  8, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.2426176), ('accuracy', 0.2802469)]))])
-        round  9, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1567981), ('accuracy', 0.295679)]))])
-        round 10, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1092515), ('accuracy', 0.30843621)]))])
 
-    '''
+
+'''
+    EXPECTED OUTPUT:
+    round  2, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.941014), ('accuracy', 0.14218107)]))])
+    round  3, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.9052832), ('accuracy', 0.14444445)]))])
+    round  4, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.7491086), ('accuracy', 0.17962962)]))])
+    round  5, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.5129666), ('accuracy', 0.19526748)]))])
+    round  6, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4175923), ('accuracy', 0.23600823)]))])
+    round  7, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.4273515), ('accuracy', 0.24176955)]))])
+    round  8, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.2426176), ('accuracy', 0.2802469)]))])
+    round  9, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1567981), ('accuracy', 0.295679)]))])
+    round 10, metrics=OrderedDict([('broadcast', ()), ('aggregation', OrderedDict([('value_sum_process', ()), ('weight_sum_process', ())])), ('train', OrderedDict([('num_examples', 4860.0), ('loss', 2.1092515), ('accuracy', 0.30843621)]))])
+
+'''
 
 

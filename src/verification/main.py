@@ -34,27 +34,7 @@ class BoundedNetworkSolver():
         
         Store some static variable state to indicate satisfiability in order to update the respective trace state to verify against specification given model checker.
         
-        Args:
-            - network_precondition | Type := image_label_element isinstance tf.float32)
-            - network_postcondition | Type := output_class isinstance int (corresponding to label in image_label_set) 
-
-        Returns: Propositional Logic Formula Given Relationship Between Variable States 
-        """
-        # if any adversarial attack state is true, then check for network's classification e.g. output state is it's output_class
-        if (Adversarial.pgd_attack_state == True and RobustnessTrace.smt_satisfiability_state == True):
-            return True
-        
-        elif (Adversarial.fgsm_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
-            return True
-        
-        elif (Adversarial.norm_perturbation_attack_state == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
-            return True
-
-        else:
-            return False
-
-    def propositional_satisfiability_formula(self):
-        """Synthesize logical formula translated through encoding convolutional network as a constraint-satisfaction problem with respect to pre-condition and post-condition after network state-transition e.g. forwardpropagation. 
+        Synthesize logical formula translated through encoding convolutional network as a constraint-satisfaction problem with respect to pre-condition and post-condition after network state-transition e.g. forwardpropagation. 
         
         Note, the implication is satisfied given the network_postcondition e.g. output_state given perturbation norm and input_image as network_precondition
 
@@ -64,15 +44,30 @@ class BoundedNetworkSolver():
 
         Formally written as: Network ⊢ SAT ⟺ P(x,y) ⇒ Q(x,y) | P | ∀ x ∧ ∀ y     
 
+        Args:
+            - network_precondition | Type := image_label_element isinstance tf.float32)
+            - network_postcondition | Type := output_class isinstance int (corresponding to label in image_label_set)
+
+        Returns: Propositional Logic Formula Given Relationship Between Variable States 
         """
+        # if any adversarial attack state is true, then check for network's classification e.g. output state is it's output_class
+        if (Adversarial.pgd_attack_state == True and RobustnessTrace.pgd_correctness_state == True):
+            return True
         
-        return None
+        elif (Adversarial.fgsm_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
+            return True
         
+        # let's state that l_p that is either l2 or l-infinity
+        elif (Adversarial.l2_norm_perturbation_attack_state == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
+            return True
+
+        elif (Adversarial.l_infinity_norm_perturbation_attack_state == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
+            return True
 
 
 class BoundedCryptoNetworkSolver(BoundedNetworkSolver):
     '''
-        Compute Model Checker on Local Models in Federated Environment.
+        Compute Model Checker on Local Models in Federated Environment. We can just compute given the pre-condition and post-condition of each client network's accuracy and performance under the constraint of some adversarial attack / perturbation of some form.
         Args:
         Returns:
         Raises:
@@ -98,7 +93,12 @@ class VerifyTrace():
         Verify given the updated state of the Kripke node/world of output state given the variable state of 'RobustnessTrace.smt_satisfiability_state'
 
         '''
-        raise NotImplementedError
+        if (RobustnessTrace.smt_satisfiability_state == True):
+            return True
+
+        else:
+            return False
+        
 
     @staticmethod
     def verify_adversarial_example_not_created():
@@ -113,17 +113,34 @@ class VerifyTrace():
     @staticmethod
     def verify_brightness_perturbation_robustness():
         '''Verify robustness given brightness perturbation norm-bounded attack against each input_image passed to network. '''
-        raise NotImplementedError
+        if (RobustnessTrace.brightness_perturbation_status == True and RobustnessTrace.correctness_under_brightness_perturbation == True):
+            return True
+        
+        else:
+            return False
 
     @staticmethod
     def verify_norm_perturbation_robustness():
         '''Verify robustness given l-norm (l^2, l-infinity, l-1) bounded perturbation attack against each input_image passed to network. '''
-        raise NotImplementedError
+        if (RobustnessTrace.lp_perturbation_status == True and RobustnessTrace.correctness_under_lp_perturbation_status == True):
+            return True
+
+        else:
+            return False
 
     @staticmethod
     def verify_fgsm_attack_robustness():
-        raise NotImplementedError
+        '''Model is considered robust given that under the pre-condition of fast sign gradient method attack, the model maintains the post-condition of correctness.'''
+        if (RobustnessTrace.fgsm_perturbation_attack_state == True and RobustnessTrace.fgsm_perturbation_correctness_state == True):
+            return True
+        
+        else:
+            return False
 
     @staticmethod
     def verify_pgd_attack_robustness():
-        raise NotImplementedError
+        if (RobustnessTrace.pgd_attack_state == True and RobustnessTrace.pgd_correctness_state == True):
+            return True
+        
+        else:
+            return False
