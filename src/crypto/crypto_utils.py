@@ -41,6 +41,7 @@ warnings.filterwarnings('ignore')
 '''
 Algorithm for Federated Averaging
 
+
 # for round_iter in range(NUM_ROUNDS):
     # for round n, client k is on epoch M iterating over batch size B
     # train local models for each client sequentially/concurrently, then take the average of all of the clients' gradients to then update the global model stored in the server
@@ -205,3 +206,19 @@ def next_fn(server_weights, federated_dataset):
   # server updates its model with average of the clients' updated gradients
   server_weights = tff.federated_map(server_update_fn, mean_client_weights)
   return server_weights
+
+def client_optimizer_fn():
+    return tf.keras.optimizers.SGD(learning_rate=0.02)
+
+def server_optimizer_fn():
+    return tf.keras.optimizers.SGD(learning_rate=1.0)
+
+iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=client_optimizer_fn, server_optimizer_fn=server_optimizer_fn)
+print(iterative_process.next.type_signature)
+
+'''
+# iterative_process type signature
+# maybe float32 tuple args should be [1024,10] for 1024 total dimensions and 10 output classes
+<server_state=<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,federated_dataset={<x=float32[?,32,32,3],y=int32[?,1]>*}@CLIENTS> -> <<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,<broadcast=<>,aggregation=<mean_value=<>,mean_weight=<>>,train=<sparse_categorical_accuracy=float32,loss=float32>,stat=<num_examples=int64>>@SERVER>)
+
+'''
