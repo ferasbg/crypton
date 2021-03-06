@@ -106,7 +106,8 @@ def preprocess_dataset(dataset):
   return dataset.repeat(NUM_EPOCHS).shuffle(SHUFFLE_BUFFER).batch(BATCH_SIZE).map(map_fn).prefetch(PREFETCH_BUFFER)
   
 
-def make_federated_data(client_data, client_ids, federated_train_data=[]):
+def setup_federated_data(client_data, client_ids, federated_train_data=[]):
+  # change the way the data is processed in terms of collections.abc
   # void function that generates federated data, the return was creating problems because iterator was being passed in .next()
   for x in client_ids:
     client_node_data = preprocess_dataset(client_data.create_tf_dataset_for_client(x))
@@ -114,23 +115,43 @@ def make_federated_data(client_data, client_ids, federated_train_data=[]):
   # return a list of all the client datasets created for federated_train_data to iterate for each client in next()  
   return federated_train_data 
 
+# decouple preprocessing so that generator invocations don't generate AttributeError
+def make_federated_data(client_data, client_ids):
+  # this will be an iterator and we know that the preprocess_dataset() function also invokes the generator to iterate over each image in the client_dataset while make_federated_data iterates over all of the client_datasets
+  return [preprocess_dataset(client_data.create_tf_dataset_for_client(x) for x in client_ids)]
+
 
 # pass entire cifar train dataset and 10 client ids for dataset generation and pre-processing, note that it's a list to prevent generator error 
-federated_train_data = make_federated_data(cifar_train, sample_clients)
+fed_train_data = setup_federated_data(cifar_train, sample_clients)
+# ok so federated train data is properly stored as a list, but somehow is not the correct type...
+
+federated_train_data = setup_federated_data(cifar_train, sample_clients)
+print(federated_train_data)
+
+
+# # get example element from one client
+example_dataset = cifar_train.create_tf_dataset_for_client(cifar_train.client_ids[0])
+example_element = next(iter(example_dataset)) # this is to get each individual image in the client dataset
+print(example_element)
+
+pped = preprocess_dataset(example_dataset)
+sample_batch = tf.nest.map_structure(lambda x: x.numpy(), next(iter(pped)))
+print("sample batch")
+print(sample_batch)
+
 
 # client optimizer_fn updates local client model while server_optimizer_fn applies the averaged update to the global model in the server
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=CryptoNetwork.client_optimizer_fn, server_optimizer_fn=CryptoNetwork.server_optimizer_fn)
 # note that federated_eval returns the federated_output_computation, which computes federated aggregation of the model's local_inputs e.g. compute function federated network over its input for client node
-federated_eval = tff.learning.build_federated_evaluation(model_fn, use_experimental_simulation_loop=False) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
-print(str(federated_eval.type_signature))
+federated_eval = tff.learning.build_federated_evaluation(model_fn) #  takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+# print(str("FEDERATED EVAL TYPE SIGNATURE", federated_eval.type_signature))
 # accept server model and client data given client models, and then return an updated server model with defined with federated averaging process
 federated_algorithm = tff.templates.IterativeProcess(initialize_fn, next_fn)
 print(federated_algorithm.next.type_signature)
 # define ServerState and ClientState, initialize state of tff computation
 server_state = federated_algorithm.initialize()# IterativeProcess.Computation -> self
 
-# next isn't callable, yet each code sample passes args
-print(iterative_process.next.type_signature)
+# print(iterative_process.next.type_signature)
 
 # eval server_state
 def evaluate(server_state):
@@ -138,28 +159,25 @@ def evaluate(server_state):
   network = build_uncompiled_plaintext_keras_model()
   network.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
   network.set_weights(server_state) # vectorized state of network in server
-  network.evaluate(federated_train_data) # pass data to keras model
+  network.evaluate() # pass data to keras model
 
 # convert to next() iterator e.g. iteratively return objects given object list
 # generate callable that acts as iterator
-
-print(federated_train_data)
-print(len(federated_train_data)) # there are 10 PrefetchDataset shapes for each client's dataset
-
 # convert generator into iterator, then pass into next()
 def federated_train_gen():
   return [(federated_train_data[x] for x in federated_train_data)]
 
 # callable iterator, why is next function not reading it as iterator?
-generator = iter(federated_train_gen, len(sample_clients))
+generator = next(iter(federated_train_gen, len(sample_clients)))
 
-# i need iterator to pass into this training process!
+# pass collections.abc.Sized as dataset list type for next param
+state, metrics = federated_algorithm.next(server_state, fed_train_data)
 
-for round_num in range(NUM_ROUNDS):
-  # federated train data is a list but invokes an iterator which can't be passed even as tff-native .next() function per PEP standards
-  # "declarative functional representation of the entire decentralized computation - some of the inputs are provided by the server (SERVER_STATE), but each participating device contributes its own local dataset."
-  # the assigned types for the Tensor shape in map_fn() were functionally correct but they do not map to the types defined in the images in each client dataset for all the client datasets
-  # error with iterative_process.next() and prior iterator creating generator problems
-  server_state, metrics = next_fn(server_state, generator) # wrong code but let's see how it reacts
-  print(metrics)
-  # evaluate(server_state)
+# for round_num in range(NUM_ROUNDS):
+#   # federated train data is a list but invokes an iterator which can't be passed even as tff-native .next() function per PEP standards
+#   # "declarative functional representation of the entire decentralized computation - some of the inputs are provided by the server (SERVER_STATE), but each participating device contributes its own local dataset."
+#   # the assigned types for the Tensor shape in map_fn() were functionally correct but they do not map to the types defined in the images in each client dataset for all the client datasets
+#   # error with iterative_process.next() and prior iterator creating generator problems
+#   server_state, metrics = federated_algorithm.next(server_state, fed_train_data) # wrong code but let's see how it reacts
+#   print(metrics)
+#   # evaluate(server_state)

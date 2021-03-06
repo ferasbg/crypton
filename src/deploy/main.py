@@ -21,7 +21,6 @@ import tensorflow_privacy as tpp # diff privacy for noising input layer for clie
 def main():
 
     '''
-    
     Compute adversarial attack variant (e.g. for adv_attack in adv_attacks) to perturb image_set with perturbation (δ) or attack P for each client k in a set of clients K, where the binary matrix of input_image x_i for the summation of xi and the dot product with the perturbation epsilon and a constant linear value. Compute this attack for each image for all images in the image_set (for image in image_set), and iterate attack for all clients, and then compute federated evaluation while passing perturbed inputs to tff-wrapped keras network, and compute robustness specifications with abstraction-based verification defined with propositional / hoare logic for various robustness properties of the neural network. Compute federated evaluation metrics, and evaluate with respect to each round for each client, so iterating over the given NUM_EPOCHS and using BATCH_SIZE for each epoch. The average of the clients can be evaluated for the performance metrics.
     
     # states to update 
@@ -64,10 +63,6 @@ def main():
     'image': a tf.Tensor with dtype=tf.uint8 and shape [32, 32, 3], corresponding to the pixels of the handwritten digit, with values in the range [0, 255].
     'label': a tf.Tensor with dtype=tf.int64 and shape [1], the class label of the corresponding image. Labels are in the range [0-99].    
     
-
-    '''
-
-
     '''
     # initialize dataset for each client, and for each perturbation_attack
     cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
@@ -94,7 +89,6 @@ def main():
     
     # evaluating if postconditions e.g. "worlds" or output states that satisfy specification within some bound to satisfy the specification
     model_checker.symbolically_encode_network(network_precondition={}, network_postcondition={}) # perhaps iteratively given dataset of images and their labels
-    model_checker.propositional_satisfiability_formula()
 
 
 if __name__ == '__main__':
