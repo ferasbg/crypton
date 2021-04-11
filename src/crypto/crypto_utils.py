@@ -39,8 +39,7 @@ warnings.filterwarnings('ignore')
 # client_ids = np.random.choice(cifar_train.client_ids, size=NUM_CLIENTS, replace=False)
 
 '''
-Algorithm for Federated Averaging
-
+Helper Functions for Federated Averaging
 
 # for round_iter in range(NUM_ROUNDS):
     # for round n, client k is on epoch M iterating over batch size B
@@ -219,6 +218,6 @@ print(iterative_process.next.type_signature)
 '''
 # iterative_process type signature
 # maybe float32 tuple args should be [1024,10] for 1024 total dimensions and 10 output classes
-<server_state=<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,federated_dataset={<x=float32[?,32,32,3],y=int32[?,1]>*}@CLIENTS> -> <<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,<broadcast=<>,aggregation=<mean_value=<>,mean_weight=<>>,train=<sparse_categorical_accuracy=float32,loss=float32>,stat=<num_examples=int64>>@SERVER>)
+# server_state.type_signature: <server_state=<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,federated_dataset={<x=float32[?,32,32,3],y=int32[?,1]>*}@CLIENTS> -> <<model=<trainable=<float32[3,3,3,32],float32[32],float32[32],float32[32],float32[3,3,32,64],float32[64],float32[3,3,64,64],float32[64],float32[3,3,64,128],float32[128],float32[3,3,128,128],float32[128],float32[3,3,128,256],float32[256],float32[4096,128],float32[128],float32[128,10],float32[10]>,non_trainable=<float32[32],float32[32]>>,optimizer_state=<int64>,delta_aggregate_state=<value_sum_process=<>,weight_sum_process=<>>,model_broadcast_state=<>>@SERVER,<broadcast=<>,aggregation=<mean_value=<>,mean_weight=<>>,train=<sparse_categorical_accuracy=float32,loss=float32>,stat=<num_examples=int64>>@SERVER>)
 
 '''

@@ -126,13 +126,12 @@ class Network():
         
 class CryptoNetwork(Network):
     """
-        Deep Convolutional Neural Network With Federated Computation 
+        Deep Convolutional Neural Network With Federated Computation with wrapped tff.Computation. 
 
-        Note that in real-world production scenario, we would have to analyze the states of our clients such that local training is possible since on-prem only works when their devices are on. Also note that data in the real-world is always messy and not clean as the datasets being used for this process.
-
-        "There is a fixed set of K clients, each with a fixed local dataset. At the beginning of each round, a random fraction C of clients is selected, and the server sends the current global algorithm state to each of these clients (e.g., the current model parameters). We only select a fraction of clients for efficiency, as our experiments show diminishing returns for adding more clients beyond a certain point. Each selected client then performs local computation based on the global state and its local dataset, and sends an update to the server. The server then applies these updates to its global state, and the process repeats." (McMahan et. al)
-
-        "The key consequence of this is that federated computations, by design, are expressed in a manner that is oblivious to the exact set of participants; all processing is expressed as aggregate operations on an abstract group of anonymous clients, and that group might vary from one round of training to another. The actual binding of the computation to the concrete participants, and thus to the concrete data they feed into the computation, is thus modeled outside of the computation itself."
+        Context:
+            - Possible experimental bias can be true given that in real-world production scenario, we would have to analyze the states of our clients such that local training is possible since on-prem only works when their devices are on. Also note that data in the real-world is always messy and not clean as the datasets being used for this process.
+            - There is a fixed set of K clients, each with a fixed local dataset. At the beginning of each round, a random fraction C of clients is selected, and the server sends the current global algorithm state to each of these clients (e.g., the current model parameters). We only select a fraction of clients for efficiency, as our experiments show diminishing returns for adding more clients beyond a certain point. Each selected client then performs local computation based on the global state and its local dataset, and sends an update to the server. The server then applies these updates to its global state, and the process repeats. (McMahan et. al)
+            - The key consequence of this is that federated computations, by design, are expressed in a manner that is oblivious to the exact set of participants; all processing is expressed as aggregate operations on an abstract group of anonymous clients, and that group might vary from one round of training to another. The actual binding of the computation to the concrete participants, and thus to the concrete data they feed into the computation, is thus modeled outside of the computation itself.
 
         Raises:
         Returns:
@@ -172,25 +171,17 @@ class CryptoNetwork(Network):
         return tf.keras.optimizers.SGD(learning_rate=1.0)
 
     @staticmethod
-
     def make_federated_eval():
         # takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
         federated_eval = tff.learning.build_federated_evaluation(model_fn) 
         return federated_eval
 
     @staticmethod
-    def evaluate(server_state):
+    def evaluate(server_state, federated_dataset):
         network = build_uncompiled_plaintext_keras_model()
         network.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
         network.set_weights(server_state) # vectorized state of network in server
-        network.evaluate() # pass data to keras model
-
+        network.evaluate(federated_dataset) # pass data to keras model
 
 if __name__ == '__main__':
-    # setup crypto_network, federated_dataset, federated_clients, setup federated_eval() 
     crypto_network = CryptoNetwork()
-    cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
-    print(len(cifar_train.client_ids)) # 500 client ids for cifar-100
-    print(cifar_train.element_type_structure) # (32,32,3)
-
-    

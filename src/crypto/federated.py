@@ -50,6 +50,8 @@ Description:
     # print(str("FEDERATED EVAL TYPE SIGNATURE", federated_eval.type_signature))
     # print(iterative_process.next.type_signature)
     # print(federated_algorithm.next.type_signature)
+    # print(len(cifar_train.client_ids)) # 500 client ids for cifar-100
+    # print(cifar_train.element_type_structure) # (32,32,3)
 
   - Federated Averaging Algorithm:
     1. initialize algo, get initial server state, which stores necessary type and information to perform computation
@@ -97,24 +99,22 @@ def setup_federated_data(client_data, client_ids, federated_train_data=[]):
   for x in client_ids:
     client_node_data = preprocess_dataset(client_data.create_tf_dataset_for_client(x))
     federated_train_data.append(client_node_data)
-  # return a list of all the client datasets created for federated_train_data to iterate for each client in next()  
   return federated_train_data 
 
 def make_federated_data(client_data, client_ids):
   return [preprocess_dataset(client_data.create_tf_dataset_for_client(x) for x in client_ids)]
 
-def federated_train_gen():
+def federated_train_generator():
   return [(federated_train_data[x] for x in federated_train_data)]
 
+# i did not follow the by-the-book approach of using make_federated_data such that it returns the iterable because it was having problems with understanding the generator param passed in the .next() method. Instead I just stored it in a list, and need to convert it into an iterable through some function of some sort when accessing the data.
 federated_train_data = setup_federated_data(cifar_train, sample_clients)
+federated_train_data = [preprocess_dataset(federated_train_data) for x in federated_train_data]
+
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=CryptoNetwork.client_optimizer_fn, server_optimizer_fn=CryptoNetwork.server_optimizer_fn)
 federated_eval = tff.learning.build_federated_evaluation(model_fn) 
 federated_algorithm = tff.templates.IterativeProcess(initialize_fn, next_fn)
 server_state = federated_algorithm.initialize()
 
-# one round
-generator = next(iter(federated_train_gen, len(sample_clients)))
-state, metrics = federated_algorithm.next(server_state, federated_train_data)
-CryptoNetwork.evaluate(server_state)
-
-# multiple rounds
+# state, metrics = iterative_process.next(server_state, federated_train_data)
+# CryptoNetwork.evaluate(server_state, federated_train_data) 
