@@ -30,17 +30,16 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
-from crypto_utils import model_fn
+from crypto_utils import model_fn, build_uncompiled_plaintext_keras_model, server_init, server_update, client_update_fn, server_update_fn, next_fn, initialize_fn
+
 
 warnings.filterwarnings('ignore')
 
 
 
 class Network():
-    classification_state = False
     dataset_labels = ['airplane', 'automobile', 'bird',
                       'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
 
     def __init__(self):
 
@@ -125,11 +124,6 @@ class Network():
         self.model.save_weights('network.h5')
         print(history)
         
-
-    @staticmethod
-    def getClassificationState():
-        return Network.classification_state
-
 class CryptoNetwork(Network):
     """
         Deep Convolutional Neural Network With Federated Computation 
@@ -148,7 +142,7 @@ class CryptoNetwork(Network):
     """
 
     def __init__(self):
-        '''Build federated variant of convolutional network.'''
+        '''Creates convolutional network that is wrapped with Tensorflow Federated.'''
         super(CryptoNetwork, self).__init__()
         # get plaintext layers for network architecture, focus primarily on heavy dp and federated e.g. iterate on data processing to ImageDataGenerator and model.fit_generator() or model.fit()
         self.public_network = super().build_compile_model()
@@ -157,7 +151,7 @@ class CryptoNetwork(Network):
             y=tf.TensorSpec(shape=[None, None], dtype=tf.int64, name='label')  
         )
         # tff wants new tff network created upon instantiation or invocation of method call
-        self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=[tf.keras.metrics.CategoricalAccuracy()])
+        self.crypto_network =  tff.learning.from_keras_model(self.public_network, input_spec=self.input_spec, loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
 
     def getTrainingData(self):
         (x_train, y_train), (x_test, y_test) = tff.simulation.datasets.cifar100.load_data()
@@ -170,11 +164,26 @@ class CryptoNetwork(Network):
 
     @staticmethod
     def client_optimizer_fn():
+        # client optimizer_fn updates local client model while server_optimizer_fn applies the averaged update to the global model in the server
         return tf.keras.optimizers.SGD(learning_rate=0.02)
 
     @staticmethod
     def server_optimizer_fn():
         return tf.keras.optimizers.SGD(learning_rate=1.0)
+
+    @staticmethod
+
+    def make_federated_eval():
+        # takes a model function and returns a single federated computation for federated evaluation of models, since evaluation is not stateful.
+        federated_eval = tff.learning.build_federated_evaluation(model_fn) 
+        return federated_eval
+
+    @staticmethod
+    def evaluate(server_state):
+        network = build_uncompiled_plaintext_keras_model()
+        network.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+        network.set_weights(server_state) # vectorized state of network in server
+        network.evaluate() # pass data to keras model
 
 
 if __name__ == '__main__':
