@@ -1,2 +1,2 @@
-# Crypton: Adversarial Robustness Verification for Privacy-Preserving, Decentralized Deep Convolutional Neural Networks 
-The purpose of this work is to build a system that can formally verify the safety and robustness properties of a deep convolutional neural network in a privacy-preserving approach against formal specifications with abstract interpretation and bounded model checking, while maintaining precision, scalability, and computational efficiency.
+# Federated Adversarial Robustness Verification for Deep Convolutional Neural Networks
+The purpose of this work is to build a system that can formally verify the safety and robustness properties of a federated deep convolutional neural network (FDCNN), using a bounded model checking technique specifically designed for compositional-semantic abstraction and dual optimization.
