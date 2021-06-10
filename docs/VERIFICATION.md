@@ -8,7 +8,7 @@ Compute finite-state abstractions for formal verification and specification of d
 - `src.verification.reachability`: setup reachability analysis to access reachable states of network and perform property inference on de-coupled network, define functions to symbolically represent network state and member variable state of tensor objects relating to network with respect to layers, process state when required at specified timesteps and steps of workflow, check against written property formalisms in `verification.specification` and client node that stores stl in `verification.stl`
 
 
-## RESEARCH AND FORMULATION
+## VERIFICATION RESEARCH AND FORMULATION
 - "Decision Formulation of Local Robustness: The decision version of this optimization problem states that, given a bound β and input x, the adversarial analysis problem is to find a perturbation δ such that the following formula is satisfied: [µ(δ) < β∧δ ∈ ∆] ⇒ [ fw(x+δ) 6∈ T(x)]. "
 - Global Robustness: One can generalize the previous notion of robustness by universally quantifying over all inputs x, to get the following formula, for a fixed β ∀x. ∀δ. ¬ϕ(δ)
 - DNN verification amounts to answering the following question: given a DNN N , which maps input vector x to output vector y, and predicates P and Q, does there exist an input x 0 such that P (x 0 ) and Q(N (x 0 )) both hold? In other words, the verification process determines whether there exists a particular input that meets the input criterion P , and that is mapped to an output that meets the output criterion Q.

@@ -30,8 +30,8 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
-from crypto_network import CryptoNetwork
-from crypto_utils import model_fn, build_uncompiled_plaintext_keras_model, server_init, server_update, client_update_fn, server_update_fn, next_fn, initialize_fn
+from crypto.crypto_network import CryptoNetwork
+from crypto.crypto_utils import model_fn, build_uncompiled_plaintext_keras_model, server_init, server_update, client_update_fn, server_update_fn, next_fn, initialize_fn
 
 '''
 Purpose: Compute Federated Evaluation and Federated Averaging.
@@ -56,7 +56,7 @@ Description:
   - Federated Averaging Algorithm:
     1. initialize algo, get initial server state, which stores necessary type and information to perform computation
     2. given functional types, state includes optimizer state its using e.g. tf.keras.optimizers.SGD(lr=1e-3, momentum=0.9) as well as the model params, passed as args
-    3. execute algorithm in terms of rounds, where for each round, a new server state will be returned as the result of each client training the model on its data. 
+    3. execute algorithm in terms of rounds, where for each round, a new server state will be returned as the result of each client training the model on its data.
       a. server broadcast the model to all the participating client nodes
       b. each client performs work based on the model and its own data
       c. server aggregates all the models to produce a server state which contains a new model, taking the average of the updated gradients of all the participant client nodes
@@ -80,8 +80,8 @@ NUM_EXAMPLES_PER_CLIENT = 500
 CIFAR_SHAPE = (32,32,3)
 TOTAL_FEATURE_SIZE = 32 * 32 * 3
 CLIENT_EPOCHS_PER_ROUND = 1
-SHUFFLE_BUFFER = 100 
-PREFETCH_BUFFER = 10 
+SHUFFLE_BUFFER = 100
+PREFETCH_BUFFER = 10
 client_dataset = []
 cifar_train, cifar_test = tff.simulation.datasets.cifar100.load_data()
 sample_clients = cifar_train.client_ids[0:NUM_CLIENTS]
@@ -92,14 +92,14 @@ def preprocess_dataset(dataset):
         x=tf.cast(tf.reshape(element['image'], shape=(-1, 32, 32, 3)), tf.float32),
         y=tf.cast(tf.reshape(element['label'], shape=(-1, 1)), tf.int32),
     )
-  
+
   return dataset.repeat(NUM_EPOCHS).shuffle(SHUFFLE_BUFFER).batch(BATCH_SIZE).map(map_fn).prefetch(PREFETCH_BUFFER)
 
 def setup_federated_data(client_data, client_ids, federated_train_data=[]):
   for x in client_ids:
     client_node_data = preprocess_dataset(client_data.create_tf_dataset_for_client(x))
     federated_train_data.append(client_node_data)
-  return federated_train_data 
+  return federated_train_data
 
 def make_federated_data(client_data, client_ids):
   return [preprocess_dataset(client_data.create_tf_dataset_for_client(x) for x in client_ids)]
@@ -112,9 +112,10 @@ federated_train_data = setup_federated_data(cifar_train, sample_clients)
 federated_train_data = [preprocess_dataset(federated_train_data) for x in federated_train_data]
 
 iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=CryptoNetwork.client_optimizer_fn, server_optimizer_fn=CryptoNetwork.server_optimizer_fn)
-federated_eval = tff.learning.build_federated_evaluation(model_fn) 
+federated_eval = tff.learning.build_federated_evaluation(model_fn)
 federated_algorithm = tff.templates.IterativeProcess(initialize_fn, next_fn)
 server_state = federated_algorithm.initialize()
 
 # state, metrics = iterative_process.next(server_state, federated_train_data)
-# CryptoNetwork.evaluate(server_state, federated_train_data) 
+# CryptoNetwork.evaluate(server_state, federated_train_data)
+

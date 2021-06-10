@@ -31,14 +31,6 @@ Graphs:
 - PGD accuracy, FGSM accuracy
 """
 
-class Metrics():
-    '''
-    Functions to compute natural/nominal/convential evaluation metrics, crypto-specific metrics, verification/certification metrics, and robustness metrics given adversarial attacks to network variant (public/crypto) under the state of being verified with certification checkers and defined formal trace properties.
-    '''
-    @staticmethod
-    def getEpsilonNormAdversaryGraph(epoch_set, norm_set):
-        raise NotImplementedError
+# graph perturbation epsilon over a graph; 1 attack per client?
 
-    @staticmethod
-    def perturbation_type_and_accuracy_under_perturbation():
-        raise NotImplementedError
+

@@ -33,7 +33,7 @@ from tensorflow import keras
 warnings.filterwarnings('ignore')
 
 # preprocessed_client_data = cifar_test.preprocess(preprocess_fn) 
-# preprocessed_and_shuffled = cifar_test.preprocess(preprocess_and_shuffle)
+# preprocessed_and_shuffled = cifar_test.preprocess(preprocess_and_shuffle).
 # selected_client_ids = preprocessed_and_shuffled.client_ids[:10] # 10 clients
 # preprocessed_data_for_clients = [preprocessed_and_shuffled.create_tf_dataset_for_client(selected_client_ids[i]) for i in range(10)]
 # client_ids = np.random.choice(cifar_train.client_ids, size=NUM_CLIENTS, replace=False)
