@@ -25,28 +25,24 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 from keras.applications.vgg16 import preprocess_input
-# import tensorflow_datasets as tfds
-# tfds.image_classification.Cifar100
+import tensorflow_datasets as tfds
 
 class Network():
     '''
-        Description: Create keras model instance. Use build_and_compile_model() object function to append model layers and to initialize network for base/plaintext training.
-
-        Note that a convolutional neural network is generally defined by a function F(x, θ) = Y which takes an input (x) and returns a probability vector (Y = [y1, · · · , ym] s.t. P i yi = 1) representing the probability of the input belonging to each of the m classes. The input is assigned to the class with maximum probability (Rajabi et. al, 2021).
-
-
+        Description: 
+            - Create keras model instance. Use build_and_compile_model() object function to append model layers and to initialize network for base/plaintext training.
+            - Note that a convolutional neural network is generally defined by a function F(x, θ) = Y which takes an input (x) and returns a probability vector (Y = [y1, · · · , ym] s.t. P i yi = 1) representing the probability of the input belonging to each of the m classes. The input is assigned to the class with maximum probability (Rajabi et. al, 2021).
+        
         Args: None
-
+        
         Returns: keras.models.Model
-
+        
         Raises:
             ValueError: if model_layers not correctly appended (args, schema)and initialized (sanity check), if assert ObjectType = False
-
+        
         References:
             - https://arxiv.org/abs/1409.1556
     '''
-
-    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
     dataset_labels = ['airplane', 'automobile', 'bird',
                       'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
@@ -109,8 +105,7 @@ class Network():
         return model
 
     def build_uncompiled_model(self):
-        # build layers, do not compile model since federated evaluation will use optimizer through their own custom decorators
-        # build layers of public neural network
+        # building uncompiled plaintext model
         model = Sequential()
         # feature layers
         model.add(Conv2D(32, (3, 3), activation='relu',
