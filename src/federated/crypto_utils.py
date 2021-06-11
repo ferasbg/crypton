@@ -32,7 +32,7 @@ from tensorflow import keras
 
 warnings.filterwarnings('ignore')
 
-# preprocessed_client_data = cifar_test.preprocess(preprocess_fn) 
+# preprocessed_client_data = cifar_test.preprocess(preprocess_fn)
 # preprocessed_and_shuffled = cifar_test.preprocess(preprocess_and_shuffle).
 # selected_client_ids = preprocessed_and_shuffled.client_ids[:10] # 10 clients
 # preprocessed_data_for_clients = [preprocessed_and_shuffled.create_tf_dataset_for_client(selected_client_ids[i]) for i in range(10)]
@@ -62,7 +62,7 @@ Helper Functions for Federated Averaging
 '''
 
 def model_fn():
-    # build layers of public neural network to pass into tff constructor as plaintext model, do in function since it's static 
+    # build layers of public neural network to pass into tff constructor as plaintext model, do in function since it's static
     model = Sequential()
     # feature layers
     model.add(tf.keras.Input(shape=(32,32,3)))
@@ -89,7 +89,7 @@ def model_fn():
                     kernel_initializer='he_uniform'))
     # 10 output classes possible
     model.add(Dense(10, activation='softmax'))
-    
+
     input_spec = collections.OrderedDict(
         x=tf.TensorSpec([None, 32, 32, 3], tf.float32),
         y=tf.TensorSpec([None, 1], tf.int32)
@@ -153,13 +153,11 @@ def client_update(model, dataset, server_weights, client_optimizer):
     with tf.GradientTape() as tape:
       # Compute a forward pass on the batch of data
       outputs = model.forward_pass(batch)
-
-    # Compute the corresponding gradient
-    grads = tape.gradient(outputs.loss, client_weights)
-    grads_and_vars = zip(grads, client_weights)
-
-    # Apply the gradient using a client optimizer.
-    client_optimizer.apply_gradients(grads_and_vars)
+      # Compute the corresponding gradient
+      grads = tape.gradient(outputs.loss, client_weights)
+      grads_and_vars = zip(grads, client_weights)
+      # Apply the gradient using a client optimizer.
+      client_optimizer.apply_gradients(grads_and_vars)
 
   return client_weights
 
