@@ -25,7 +25,8 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 from keras.applications.vgg16 import preprocess_input
-
+# import tensorflow_datasets as tfds
+# tfds.image_classification.Cifar100
 
 class Network():
     '''
@@ -33,20 +34,21 @@ class Network():
 
         Note that a convolutional neural network is generally defined by a function F(x, θ) = Y which takes an input (x) and returns a probability vector (Y = [y1, · · · , ym] s.t. P i yi = 1) representing the probability of the input belonging to each of the m classes. The input is assigned to the class with maximum probability (Rajabi et. al, 2021).
 
+
         Args: None
 
-        Returns: keras.Model
+        Returns: keras.models.Model
 
         Raises:
-            ValueError: if model_layers not correctly appended and initialized (sanity check), if assert ObjectType = False
+            ValueError: if model_layers not correctly appended (args, schema)and initialized (sanity check), if assert ObjectType = False
 
         References:
             - https://arxiv.org/abs/1409.1556
     '''
-    classification_state = False
+
+    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
     dataset_labels = ['airplane', 'automobile', 'bird',
                       'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-    # list of ints that represent the labels given self.dataset_labels so basically index the list of dataset_labels given y_train[i] with Network.dataset_labels[i]
 
     def __init__(self):
 
@@ -70,7 +72,6 @@ class Network():
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
         # self.model_grads = (k.gradients(self.model.layers[0].output, self.model.trainable_weights[0])) # get Conv2d grads to perturb the network for PGD
-
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -138,15 +139,14 @@ class Network():
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         return model
 
-    def train(self):
+    def train_model(self):
         '''
-        Train network on nominal multi-label classification problem. Make sure to allocate images for each test variation e.g. mpc_network, certified_mpc_network, certified_nominal_network
-
         x_test, y_test = load_batch(fpath)
         y_train = np.reshape(y_train, (len(y_train), 1))
         y_test = np.reshape(y_test, (len(y_test), 1))
 
-        # partitioning dataset for different tests.
+        partitioning dataset for different tests.
+
         x_val = x_train[-10000:]
         y_val = y_train[-10000:]
         x_train = x_train[:-10000]
@@ -176,11 +176,6 @@ class Network():
         self.model.evaluate(x=image_set, y=label_set, verbose=0)
         return self.model
 
-    @staticmethod
-    def getClassificationState():
-        return Network.classification_state
-
-
 if __name__ == '__main__':
     # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
     graph = tf.compat.v1.get_default_graph()
@@ -190,7 +185,7 @@ if __name__ == '__main__':
     network.build_compile_model()
     network.train()
 
-    # evaluate model
+    # evaluate model with cifar-10 data 
     (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
     x_train = x_train.reshape((-1, 32, 32, 3))
     x_test = x_test.reshape((-1, 32, 32, 3))

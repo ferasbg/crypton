@@ -30,8 +30,13 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
-from crypto.crypto_network import CryptoNetwork
 from crypto.crypto_utils import model_fn, build_uncompiled_plaintext_keras_model, server_init, server_update, client_update_fn, server_update_fn, next_fn, initialize_fn
+
+def fed_avg():
+  pass
+
+def fed_eval():
+  pass
 
 '''
 Purpose: Compute Federated Evaluation and Federated Averaging.
@@ -111,11 +116,10 @@ def federated_train_generator():
 federated_train_data = setup_federated_data(cifar_train, sample_clients)
 federated_train_data = [preprocess_dataset(federated_train_data) for x in federated_train_data]
 
-iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=CryptoNetwork.client_optimizer_fn, server_optimizer_fn=CryptoNetwork.server_optimizer_fn)
+iterative_process = tff.learning.build_federated_averaging_process(model_fn, client_optimizer_fn=client_optimizer_fn, server_optimizer_fn=server_optimizer_fn)
 federated_eval = tff.learning.build_federated_evaluation(model_fn)
 federated_algorithm = tff.templates.IterativeProcess(initialize_fn, next_fn)
 server_state = federated_algorithm.initialize()
 
 # state, metrics = iterative_process.next(server_state, federated_train_data)
 # CryptoNetwork.evaluate(server_state, federated_train_data)
-
