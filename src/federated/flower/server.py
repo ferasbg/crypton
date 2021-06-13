@@ -264,8 +264,12 @@ def main():
     configure_training_process()
     configure_testing_process()
     # core computation
+
+    # uncompiled keras layers meet configurable federated optimizer and aggregation method(s)
+    federated_averaging_strategy = federated_averaging()
+    federated_adagrad = adaptive_federated_optimization_adagrad()
     fl.server.start_server("0.0.0.0:8080", config={
-                           "num_rounds": NUM_ROUNDS}, strategy=setup_strategy())
+                           "num_rounds": NUM_ROUNDS}, strategy=federated_averaging_strategy)
 
     # get metrics (nominal --> formal; write setters)
 
