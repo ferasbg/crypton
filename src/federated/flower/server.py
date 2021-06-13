@@ -193,32 +193,39 @@ def get_eval_fn(model, test_image_dataset, test_label_dataset):
         return loss, {"accuracy:": accuracy}
     return evaluate
 
-# configurable strategies so FedAvg, FedAdagrad, FTFed; client_side_lr is not 0.02 which is interesting; need 100 clients to "simulate" how much data each user is expected to generally have; a more realistic situation would be 1000-10000 clients with 10-50 to 1-5 images each respectively per client size
-def federated_averaging(model : Sequential, fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110):
+
+
+def federated_averaging(model: Sequential, fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110):
     eval_fn = get_eval_fn(model)
     on_fit_config_fn = fit_config
     on_evaluate_config_fn = evaluate_config
     initial_parameters = model.get_weights()  # initial server parameters
-    
-def adaptive_federated_optimization_adagrad(model : Sequential, fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110, adaptability_rate=1e-9, accept_failures=False, server_side_lr=1e-1, client_side_lr=1e-1):
-    strategy = FedAdagrad(
-            fraction_fit=fraction_fit,
-            fraction_eval=fraction_eval,
-            min_fit_clients=min_fit_clients,
-            min_eval_clients=min_eval_clients,
-            min_available_clients=min_available_clients,
-            # require function
-            eval_fn=get_eval_fn(model),
-            # callable methods
-            on_fit_config_fn=fit_config,
-            on_evaluate_config_fn=evaluate_config,
-            accept_failures=accept_failures,
-            initial_parameters=model.get_weights(),
-            tau=adaptability_rate,
-            eta=server_side_lr,
-            eta_l=client_side_lr
-        )
+
+    strategy = FedAvg(fraction_fit=0.3, fraction_eval=fraction_eval, min_fit_clients=min_fit_clients, min_eval_clients=min_eval_clients, min_available_clients=min_available_clients,
+                      eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
     return strategy
+
+
+def adaptive_federated_optimization_adagrad(model: Sequential, fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110, adaptability_rate=1e-9, accept_failures=False, server_side_lr=1e-1, client_side_lr=1e-1):
+    strategy = FedAdagrad(
+        fraction_fit=fraction_fit,
+        fraction_eval=fraction_eval,
+        min_fit_clients=min_fit_clients,
+        min_eval_clients=min_eval_clients,
+        min_available_clients=min_available_clients,
+        # require function
+        eval_fn=get_eval_fn(model),
+        # callable methods
+        on_fit_config_fn=fit_config,
+        on_evaluate_config_fn=evaluate_config,
+        accept_failures=accept_failures,
+        initial_parameters=model.get_weights(),
+        tau=adaptability_rate,
+        eta=server_side_lr,
+        eta_l=client_side_lr
+    )
+    return strategy
+
 
 def fit_config(rnd: int):
     """Return training configuration dict for each round.
@@ -231,6 +238,7 @@ def fit_config(rnd: int):
     }
     return config
 
+
 def evaluate_config(rnd: int):
     """Return evaluation configuration dict for each round.
     Perform five local evaluation steps on each client (i.e., use five
@@ -240,13 +248,14 @@ def evaluate_config(rnd: int):
     val_steps = 5 if rnd < 4 else 10
     return {"val_steps": val_steps}
 
+
 def main():
     '''
-    
+
     Todo:
         - measure for how adaptive federated optimizers help improve model convergence and consequently their robustness to adversarial examples in a federated setting
         - test different federated strategies and optimizers and configure them as such because fitting the optimizer to the type of data given that we have solved adversarial overfitting contributes to even greater robustness; here we can create all the relationships between what really formulates the model's expected behavior and we can measure for these changes by popping out particular components in the layer stack of the client network itself; nominal metrics against adversarial examples are a leading indicator of how they map to formal robustness
-    
+        - test given configurable strategies so FedAvg, FedAdagrad, FTFed; client_side_lr is not 0.02 which is interesting; need 100 clients to "simulate" how much data each user is expected to generally have; a more realistic situation would be 1000-10000 clients with 10-50 to 1-5 images each respectively per client size
     '''
 
     # setup experiment
@@ -255,9 +264,11 @@ def main():
     configure_training_process()
     configure_testing_process()
     # core computation
-    fl.server.start_server("0.0.0.0:8080", config={"num_rounds": NUM_ROUNDS}, strategy=setup_strategy())
+    fl.server.start_server("0.0.0.0:8080", config={
+                           "num_rounds": NUM_ROUNDS}, strategy=setup_strategy())
 
     # get metrics (nominal --> formal; write setters)
+
 
 if __name__ == '__main__':
     main()
