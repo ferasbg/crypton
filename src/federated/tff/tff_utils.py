@@ -210,6 +210,10 @@ def server_update_fn(mean_client_weights):
     model = model_fn()
     return server_update(model, mean_client_weights)
 
+def create_crypto_network():
+    public_network = Network().build_compile_model()
+    tff_network = tff.learning.from_keras_model(public_network, input_spec=get_input_spec(), loss=tf.keras.losses.SparseCategoricalCrossentropy(), metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+    return tff_network
 
 @tff.federated_computation(federated_server_type, federated_dataset_type)
 def next_fn(server_weights, federated_dataset):

@@ -12,7 +12,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras import optimizers, regularizers
 from keras.applications.vgg16 import VGG16
-from keras.datasets import cifar10
+from keras.datasets import cifar100
 from keras.datasets.cifar10 import load_data
 from keras.layers import (Activation, BatchNormalization, Conv2D,
                           Conv2DTranspose, Dense, Dropout, Flatten,
@@ -38,13 +38,11 @@ class Network():
         Returns: keras.models.Model
         
         Raises:
-            ValueError: if model_layers not correctly appended (args, schema)and initialized (sanity check), if assert ObjectType = False
+            ValueError: mismatch of model layer stack
         
         References:
             - https://arxiv.org/abs/1409.1556
     '''
-    dataset_labels = ['airplane', 'automobile', 'bird',
-                      'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
     def __init__(self):
 
@@ -147,12 +145,14 @@ class Network():
         x_train = x_train[:-10000]
         y_train = y_train[:-10000]
 
+        There's 2-3 line bits everywhere in this codebase that will be re-used in the context of the federated training. Re-write it if you need. Be patient with the overlaps.
+
         Add dataset, and dataset_labels as parameter (overload this method or make re-write)
 
         '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         # get cifar10-data first, and assign data and categorical labels as such
-        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
 
         x_train = x_train.reshape((-1, 32, 32, 3))
         x_test = x_test.reshape((-1, 32, 32, 3))
@@ -171,9 +171,10 @@ class Network():
         self.model.evaluate(x=image_set, y=label_set, verbose=0)
         return self.model
 
-if __name__ == '__main__':
+def main():
     # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
     graph = tf.compat.v1.get_default_graph()
+    # do we use session = tf.Session() to instantiate a graph to execute our computation?
     # train network
     network = Network()
     # print(network.model.summary())
@@ -181,10 +182,9 @@ if __name__ == '__main__':
     network.train()
 
     # evaluate model with cifar-10 data 
-    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
     x_train = x_train.reshape((-1, 32, 32, 3))
     x_test = x_test.reshape((-1, 32, 32, 3))
     y_train = tf.keras.utils.to_categorical(y_train, 10)
     y_test = tf.keras.utils.to_categorical(y_test, 10)
-
     network.evaluate(x_test, y_test)

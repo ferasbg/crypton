@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Copyright (c) 2021 Feras Baig
+
 import argparse
 import collections
 import logging
@@ -30,9 +33,6 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
-from federated.crypto_utils import *
-from federated.crypto_network import *
-
 '''
 Definition 1:
 
@@ -54,8 +54,13 @@ Finally, the Target Behavior Constraint (3) captures the target behavior of the 
 the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as
 opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
 
-
 Typically, the problem of finding an adversarial example x ∗ for a model f at a given input x ∈ X as formulated above, can be formulated as an optimization problem in one of two ways: • Minimizing perturbation: find the closest x ∗ that alters f’s prediction. This can be encoded in constraint (2) as µ(x, x∗ ) ≤ α; • Maximizing the loss: find x ∗ which maximizes false classification. This can be encoded in the constraint (3) as L(f(x), f(x ∗ )) ≥ β.
   - is it more relevant to certify robustness of the model to a set of perturbed/adversarial inputs than to focus on whether adversarial examples exist?
 
+
+Todo:
+  - take definitions and properties to check from "Formalization of Robustness" paper
+  - I would read papers and emulate the aspects of their experimental processes that are worth emulating.
+  - implement the formalization of "solving the inner maximization problem" if relevant, else ignore
+  - test both l-inf and l-2 perturbations to measure robustness separately (e.g. L-2 Robust, L-Inf Robust)
 '''
