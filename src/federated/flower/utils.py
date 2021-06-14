@@ -42,12 +42,7 @@ from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.engine.sequential import Sequential
 
-def apply_random_image_transformations(image : np.ndarray):
-    # this is specific to the image data rather than how the image data is processed, so it will be used on the cifar-100 dataset in main.main
-    pass
-
-def apply_image_corruptions(image : np.ndarray):
-    return image
-
-def fault_tolerant_federated_averaging():
+class Dataset:
+    # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
+    # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
     pass

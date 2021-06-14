@@ -17,9 +17,11 @@ import torch
 class FederatedMetrics:
     def __init__(self):
         '''
-        Update the state of variables for particular computations that can be graphed and stored into a table of use for the whitepaper.
+        - Update the state of variables for particular computations that can be graphed and stored into a table of use for the whitepaper.
+        - parse_args, config, dev/run.sh, code cleanup/repo cleanup
         
         '''
+        # get metrics (nominal --> formal; write setters)
         # get analytics per round per client set and iteration per configuration
         self.federated_accuracy_under_attack = 0
         self.natural_accuracy = 0
@@ -50,6 +52,22 @@ class FederatedMetrics:
         pass
 
     def create_plot(x_axis, y_axis, x_data: list, y_data: list):
-        # epsilon vs l^2-bounded norm adversary; changing l-inf
-        # epsilon vs l-infinity-bounded norm adversary; changing l-inf
+        ## nominal
+            # communication rounds against test accuracy
+            # communication rounds against train loss
+            # communication rounds against changing client learning rate
+
+        ## robustness
+            # epsilon vs l^2-bounded norm adversary; changing l-inf
+            # epsilon vs l-infinity-bounded norm adversary; changing l-inf
+
+        ## tables
+            # compare federated strategies by their robustness, nominal metrics
+
+        ## formal
+            #
+            #
+            #
+
+
         pass

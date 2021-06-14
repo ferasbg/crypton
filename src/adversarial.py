@@ -51,35 +51,61 @@ from tensorflow.python.keras.engine.sequential import Sequential
 
 from model import Network
 
+class Perturbation():
+    '''
+        Usage: 
+            image_set : partition of image data per client # check if there's anything diff to do btwn. cifar-100 and cifar-10
+            perturbation_dataset = Perturbation(image_set)            
 
-# tigher distribution
-def get_larger_perturbation_epsilons():
-    larger_perturbation_epsilons = [
-        0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
-    return larger_perturbation_epsilons
-
-# "looser" distribution
-
-
-def get_smaller_perturbation_epsilons():
-    smaller_perturbation_epsilons = [
+        Discussion:
+            - If we a train a network to fit to noise-like perturbations based on the gaussian-distribution, is our adversarial example "robust" such that our network can evaluate with greater robustness when given other perturbation types differentiated by norms. 
+            - Should we have a changing perturbation applied to the elements in our dataset even if we know that our model will converge either way?
+            - What conditions of the perturbation with respect to lp norm and its type (affect the process of the network)
+            - Could perturbations create "adversarial" overfitting, so how is this avoided?
+            - Things get fun here where we scope down our perturbations to types we can evaluate other than their norm (distance metric: l-inf, l-2) and epsilon value 
+            - Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
+    '''
+    def __init__(self, image_set : Tuple, norm_type : str):
+        self.dataset = image_set
+        self.norm_type = norm_type
+        self.l2_eps = [
         0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    return smaller_perturbation_epsilons
+        self.l_inf_eps = [
+        0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
+        # compute all the perturbation types at the same time upon instantiation
+        self.norm_bounded_perturbation_dataset = [] # self.create_norm_bounded_perturbation_dataset()
+        self.hamiltonian_perturbation_dataset = []
+        self.brightness_perturbation_dataset = []
+        self.mixed_perturbation_dataset = [] # different perturbation types
 
+    @staticmethod
+    def brightness_perturbation_norm(input_image):
+        # applying image perturbations isn't in a layer, but rather before data is processed into the InputSpec and Input layer of the tff model
+        sigma = 0.085
+        brightness_threshold = 1 - sigma
+        input_image = tf.math.scalar_mul(brightness_threshold, input_image)
+        return input_image
 
-def compute_norm_bounded_perturbation(input_image, norm_type, perturbation_epsilon):
-    '''Reuse for each additive perturbation type for all norm-bounded variants. Note that this is a norm-bounded ball e.g. additive and iterative perturbation attack. Specify the norm_type : l-2, l-inf, l-1'''
-    if (norm_type == 'l-inf'):
-        for pixel in input_image:
-            pixel *= perturbation_epsilon + 0.5  # additive perturbation given vector norm
-    elif (norm_type == 'l-2'):
-        for pixel in input_image:
-            pixel *= perturbation_epsilon + 0.5
+    @staticmethod
+    def apply_random_image_transformations(image : np.ndarray):
+        # this is specific to the image data rather than how the image data is processed, so it will be used on the cifar-100 dataset in main.main
+        pass
 
+    @staticmethod
+    def apply_image_corruptions(image : np.ndarray):
+        return image
 
-def brightness_perturbation_norm(input_image):
-    # applying image perturbations isn't in a layer, but rather before data is processed into the InputSpec and Input layer of the tff model
-    sigma = 0.085
-    brightness_threshold = 1 - sigma
-    input_image = tf.math.scalar_mul(brightness_threshold, input_image)
-    return input_image
+    @staticmethod
+    def apply_image_degradation(image : np.ndarray):
+        # image degradation WITH gaussian distribution acts as approach to dynamically adapt to chaos/randomness relating to realistic scenarios with image data
+        # u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
+        # apply image corruption, perturbation, compression loss; if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
+        image = Perturbation.apply_image_corruptions(image)
+        image = Perturbation.apply_random_image_transformations(image)
+        image = Perturbation.apply_resolution_loss(image)
+        return image
+
+    @staticmethod
+    def apply_resolution_loss(image : np.ndarray):
+        return image
+

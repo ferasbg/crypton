@@ -44,10 +44,9 @@ class Network():
             - https://arxiv.org/abs/1409.1556
     '''
 
-    def __init__(self):
+    def __init__(self, num_classes):
 
-        # labels
-        self.num_classes = 20
+        self.num_classes = num_classes
         self.epochs = 1000
         self.batch_size = 64  # maybe 128
         self.learning_rate = 1e-4
@@ -62,7 +61,7 @@ class Network():
         self.image_size = [32, 32]
         self.bias = False
         # stabilize convergence to local minima for gradient descent
-        self.weight_decay_regularization = 0.003
+        self.weight_decay_regularization = 0.003# batch norm, weight decay reg., fed optimizer, momentum for SGD --> how do they affect model given robust adversarial example
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
         # self.model_grads = (k.gradients(self.model.layers[0].output, self.model.trainable_weights[0])) # get Conv2d grads to perturb the network for PGD
@@ -92,8 +91,7 @@ class Network():
         # classification layers
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
-        # 10 output classes possible
-        model.add(Dense(10, activation='softmax'))
+        model.add(Dense(self.num_classes, activation='softmax'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
         # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
@@ -127,9 +125,8 @@ class Network():
         # classification layers
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
-        # 10 output classes possible
-        model.add(Dense(10, activation='softmax'))
-         # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
+        model.add(Dense(self.num_classes, activation='softmax'))
+        # sgd(momentum=0.9), adam(lr=1e-2) -> helps weight regularization
         return model
 
     def train_model(self):

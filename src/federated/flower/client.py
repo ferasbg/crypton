@@ -42,39 +42,43 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from typing import Dict, List, Tuple
 
 class Client(flwr.client.NumPyClient):
-    def __init__(self, model : Sequential):
+    def __init__(self, model : Sequential, defense_state : bool):
         super(Client, self).__init__()
-        # can it be assumed that param order or count is negligible if they are optional
-        self.model = model # model = Network().build_compile_model()
+        self.model = model 
         self.model_parameters = self.network.get_weights() 
         self.device_spec = tf.DeviceSpec(job="predict", device_type="GPU", device_index=0).to_string()
         self.uncompiled_gaussian_network = []
         self.compiled_gaussian_network = []
-        self.defense_state = False
+        self.defense_state = defense_state
         if (self.defense_state == True):
-            # apply all defenses, which are configurable to assess what defenses directly relate to more robust adversarial examples and robust generalization and model convergence with respect to adaptive federated optimizer
             self.apply_defenses()
         
     def get_parameters(self, model: Sequential) -> List[np.ndarray]:
         return model.get_weights()
 
-    # model.fit() 
     def fit(self, parameters, model: Sequential, x_train: list, y_train: list):
-        # # set the weights of the Dense layer
-        # model.set_weights(parameters)
-        model.fit(x_train, y_train, epochs=1, batch_size=32, steps_per_epoch=5)
-        # model.get_weights() == self.get_parameters()
+        # x_train and y_train are are the partitioned train image/label sets for the CLIENT; it's not the entire CIFAR-10(0) dataset 
+        self.model.set_weights(parameters)        
+        # hyper-parameters of round; can we keep batch_size and epochs per round constant? Check fit_config to see what specs they have given the round number
+        # would we use categorical cross entropy given that a super class and sub-class correspond to course and fine grained labels, so there's 2 labels per image? Ignore.
+
+        history = model.fit(x_train, y_train, epochs=1, batch_size=32, steps_per_epoch=5, validation_split=0.1)
+        self.model.save_weights('client_network.h5')
+        # return updated model parameters (weights) and results
+        train_loss =   
         return model.get_weights(), len(x_train)
 
-    # model.evaluate()
     def evaluate(self, parameters, model, x_test, y_test):
+        # the given image/label set is the defined partition rather than the entire dataset, since we iterate over client models with defined x_train, y_train, x_test, y_test sets
         self.model.set_weights(parameters)
         loss, accuracy = model.evaluate(x_test, y_test)
         return len(x_test), loss, accuracy
 
-    def set_defense_state(gaussian_state : bool) -> None:
-        defense_state = gaussian_state
-    
+    def train_model(self):
+        # solve iterative train process (per client)
+        pass
+
+
     def apply_defenses(self):
         # this function exists so we can write more defenses to modify both our model and the data passed to it
         # apply these transformations to modify the uncompiled plaintext model that will be passed into the crypto_network object inherited from CryptoNetwork. 
