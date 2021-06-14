@@ -110,6 +110,12 @@ class Client(flwr.client.NumPyClient):
         history = model.fit(x_train, y_train, epochs=1, batch_size=32, steps_per_epoch=5, validation_split=0.1)
         self.model.save_weights('client_network.h5')
         # return updated model parameters (weights) and results
+        # results = {
+        #     "loss": history.history["loss"][0],
+        #     "accuracy": history.history["accuracy"][0],
+        #     "val_loss": history.history["val_loss"][0],
+        #     "val_accuracy": history.history["val_accuracy"][0],
+        # }
         return self.model.get_weights(), len(x_train)
 
     def evaluate(self, parameters, model, x_test, y_test):
