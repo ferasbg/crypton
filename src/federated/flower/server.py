@@ -65,9 +65,10 @@ def main():
     strategy = FedAvg(fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110,
                         eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
     
+    num_rounds = 3
     # before specifying partitions and state of the network in training and test mode, let's first make this code functional
     flwr.server.start_server("[::]:8080", config={
-                           "num_rounds": NUM_ROUNDS}, strategy=strategy)
+                           "num_rounds": num_rounds}, strategy=strategy)
 
 if __name__ == '__main__':
     main()
