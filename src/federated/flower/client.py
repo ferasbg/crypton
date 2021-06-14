@@ -75,7 +75,7 @@ client_train_label_dataset = []
 client_test_image_dataset = []
 client_test_label_dataset = []
 uncompiled_client_networks = []
-num_classes = 0
+num_classes = 100
 
 class Client(flwr.client.NumPyClient):
     def __init__(self, model : Sequential, gaussian_state : bool, x_train, y_train, x_test, y_test):
@@ -191,14 +191,17 @@ class Client(flwr.client.NumPyClient):
 
 def load_partition(idx : int):
     # setup load_partition to load the train/test set such that there's 500 train, 100 test images stored for the client rather than the entire dataset; this iterative process is managed by flwr
-    x_train, y_train = tf.keras.datasets.cifar100.load_data()
-    x_test, y_test = x_train[50000:60000], y_train[50000:60000]
+    pass
 
 def main() -> None:
     # create a client
-    model = Network()
+    model = Network(num_classes=num_classes)
     model = model.build_compile_model()
-    client = Client(model, gaussian_state=False)
+    # dataset
+    x_train, y_train = tf.keras.datasets.cifar100.load_data()
+    x_test, y_test = x_train[50000:60000], y_train[50000:60000]
+
+    client = Client(model, gaussian_state=False, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
    
     eval_fn = client.get_eval_fn()
     on_fit_config_fn = client.fit_config
@@ -211,4 +214,4 @@ def main() -> None:
     flwr.client.start_numpy_client("[::]:8080", client=client)
 
 if __name__ == '__main__':
-    main(client_defense_state=False)
+    main()

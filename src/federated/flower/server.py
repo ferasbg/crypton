@@ -45,9 +45,9 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
-from client import Client, FederatedClient
-from flower.client import *
-from flower.utils import *
+from client import Client
+from client import *
+from utils import *
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -65,6 +65,7 @@ def main():
     strategy = FedAvg(fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110,
                         eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
     
+    # hardcoded for testing
     num_rounds = 3
     # before specifying partitions and state of the network in training and test mode, let's first make this code functional
     flwr.server.start_server("[::]:8080", config={

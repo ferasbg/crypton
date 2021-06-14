@@ -49,8 +49,6 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
-from model import Network
-
 class Perturbation():
     '''
         Usage: 
