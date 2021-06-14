@@ -78,19 +78,17 @@ uncompiled_client_networks = []
 num_classes = 0
 
 class Client(flwr.client.NumPyClient):
-    def __init__(self, model : Sequential, gaussian_state : bool, dataset : int, x_train, y_train, x_test, y_test):
+    def __init__(self, model : Sequential, gaussian_state : bool, x_train, y_train, x_test, y_test):
         '''
         @model : pass model to flwr client.
         @gaussian_state : define if the network should have a keras.layers.GaussianNoise layer during training. Pop the layer during evaluation, so check for this.
-        @param dataset : 0 is CIFAR 100, 1 is CIFAR 10. Define the specified CIFAR dataset to be used and assigned to the Client object.
-        
+     
         '''
         
         super(Client, self).__init__()
         self.model = model 
-        self.model_parameters = self.network.get_weights() 
+        self.model_parameters = self.model.get_weights() 
         self.device_spec = tf.DeviceSpec(job="predict", device_type="GPU", device_index=0).to_string()
-        self.uncompiled_gaussian_network = []
         self.compiled_gaussian_network = []
         self.gaussian_state = gaussian_state
         if (self.gaussian_state == True):
@@ -156,10 +154,7 @@ class Client(flwr.client.NumPyClient):
         client_model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
         client_model.add(Dense(10, activation='softmax'))
-        # have an uncompiled copy for custom (and adaptive -> to the heterogeneous data) federated optimizer
-        self.uncompiled_gaussian_network = client_model
-        
-        optimizer = Adam(learning_rate=0.001) # lr=1e-2; general purpose 
+        optimizer = Adam(learning_rate=0.001) # lr=1e-2 
         # compile network with GaussianNoise layer
         client_model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                       optimizer=optimizer, metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
@@ -199,12 +194,12 @@ def load_partition(idx : int):
     x_train, y_train = tf.keras.datasets.cifar100.load_data()
     x_test, y_test = x_train[50000:60000], y_train[50000:60000]
 
-def main(client_defense_state) -> None:
+def main() -> None:
     # create a client
     model = Network()
     model = model.build_compile_model()
-    client = Client(model, gaussian_state=client_defense_state)
-    
+    client = Client(model, gaussian_state=False)
+   
     eval_fn = client.get_eval_fn()
     on_fit_config_fn = client.fit_config
     on_evaluate_config_fn = client.evaluate_config
