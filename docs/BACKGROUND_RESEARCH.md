@@ -28,11 +28,6 @@ in a non-obvious way.
     - signed 32-bit integers for defining types for variables relating to computing each respective function part of each class of a module, the integers themselves represent some member variable like $$\epsilon$$, weight_decay, momentum (optimize local minima convergence), checking neuron states, etc.
     - secure computational graph representation of tf.Network
 
-## notes on cnns and verification
-- the disparity of time and self-deception
-    - the disparity of timelines shall not impede the way of growth and consistency
-    - looking back at things, i spent so much time convincing myself with vanity metrics that I was being productive, when I was only going 5% of what I am capable of doing, and I ended up stagnating my growth in terms of translating ideas into code. I do understand the conceptual knowledge, but theory means nothing in the face of practice and execution. And I basically never swallowed the pain necessary to make substantial progress because I retarded my growth continuously in predictable behavioral cycles
-
 ## langrangian duality and convex optimization applied to the context of constraint-satisfaction problems
     - setup a policy and then reduce the execution state to a constraint-satisfaction problem
 
