@@ -49,28 +49,6 @@ from client import Client, FederatedClient
 from flower.client import *
 from flower.utils import *
 
-# ENVIRONMENT VARIABLES
-NUM_CLIENTS = 100
-BATCH_SIZE = 32
-NUM_EPOCHS = 10
-CLIENT_LEARNING_RATE = 0.1
-SERVER_LEARNING_RATE = 0.1
-NUM_ROUNDS = 10
-CLIENTS_PER_ROUND = 10
-NUM_EXAMPLES_PER_CLIENT = 500
-CIFAR_SHAPE = (32, 32, 3)
-TOTAL_FEATURE_SIZE = 32 * 32 * 3
-CLIENT_EPOCHS_PER_ROUND = 1
-NUM_CLIENT_TRAIN_DATA = 500
-NUM_CLIENT_TEST_DATA = 100
-CLIENT_GAUSSIAN_STATE = False
-FEDERATED_OPTIMIZATION_STATE = False
-PERTURBATION_STATE = False
-TRAIN_STATE = False
-TEST_STATE = False
-CIFAR_10_STATE = False  
-CIFAR_100_STATE = True
-IMAGE_TRANSFORMATION_STATE = False # assess configuration combinations of gaussian-distribution perturbation, image transformation/corruptions during training
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 def main():
