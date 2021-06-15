@@ -101,26 +101,32 @@ class Client(flwr.client.NumPyClient):
     def get_parameters(self) -> List[np.ndarray]:
         return self.model.get_weights()
 
-    def fit(self, parameters, model: Sequential, x_train: list, y_train: list):
+    def fit(self, parameters, config):
         # x_train and y_train are are the partitioned train image/label sets for the CLIENT; it's not the entire CIFAR-10(0) dataset 
-        self.model.set_weights(parameters)        
+        parameters = self.model.set_weights(parameters) 
+        batch_size : int = config["batch_size"]
+        epochs : int = config["local epochs"]       
         # hyper-parameters of round; can we keep batch_size and epochs per round constant? Check fit_config to see what specs they have given the round number
-        history = model.fit(x_train, y_train, epochs=1, batch_size=32, steps_per_epoch=5, validation_split=0.1)
-        self.model.save_weights('client_network.h5')
+        history = self.model.fit(self.x_train, self.y_train, epochs=1, batch_size=32, steps_per_epoch=5, validation_split=0.1)
         # return updated model parameters (weights) and results
-        # results = {
-        #     "loss": history.history["loss"][0],
-        #     "accuracy": history.history["accuracy"][0],
-        #     "val_loss": history.history["val_loss"][0],
-        #     "val_accuracy": history.history["val_accuracy"][0],
-        # }
-        return self.model.get_weights(), len(x_train)
+        results = {
+            "loss": history.history["loss"][0],
+            "accuracy": history.history["accuracy"][0],
+            "val_loss": history.history["val_loss"][0],
+            "val_accuracy": history.history["val_accuracy"][0],
+        }
 
-    def evaluate(self, parameters, model, x_test, y_test):
+        num_examples_train = len(self.x_train)
+
+        return parameters, num_examples_train, results
+
+    def evaluate(self, parameters, config):
         # the given image/label set is the defined partition rather than the entire dataset, since we iterate over client models with defined x_train, y_train, x_test, y_test sets
         self.model.set_weights(parameters)
-        loss, accuracy = model.evaluate(x_test, y_test)
-        return len(x_test), loss, accuracy
+        steps : int = config["val_steps"]
+        loss, accuracy = self.model.evaluate(self.x_test, self.y_test, 32, steps=steps)
+        num_examples_test = len(self.x_test)
+        return loss, num_examples_test, {"accuracy": accuracy}
 
     def apply_defenses(self):
         # this function exists so we can write more defenses to modify both our model and the data passed to it
@@ -159,58 +165,32 @@ class Client(flwr.client.NumPyClient):
         client_model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                       optimizer=optimizer, metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
         self.compiled_gaussian_network = client_model # Adam
+    
 
-    def get_eval_fn(model, test_image_dataset, test_label_dataset):
-        # return evaluation function for server-side evaluation
-        def evaluate(weights: Weights):
-            model.set_weights(weights)
-            loss, accuracy = model.evaluate(test_image_dataset, test_label_dataset)
-            return loss, {"accuracy:": accuracy}
-        return evaluate
-
-    def fit_config(rnd: int):
-        """Return training configuration dict for each round.
-        Keep batch size fixed at 32, perform two rounds of training with one
-        local epoch, increase to two local epochs afterwards.
-        """
-        config = {
-            "batch_size": 32,
-            "local_epochs": 1 if rnd < 2 else 2,
-        }
-        return config
-
-    def evaluate_config(rnd: int):
-        """Return evaluation configuration dict for each round.
-        Perform five local evaluation steps on each client (i.e., use five
-        batches) during rounds one to three, then increase to ten local
-        evaluation steps.
-        """
-        # batches in validation/eval
-        val_steps = 5 if rnd < 4 else 10
-        return {"val_steps": val_steps}
-
-def load_partition(idx : int):
-    # setup load_partition to load the train/test set such that there's 500 train, 100 test images stored for the client rather than the entire dataset; this iterative process is managed by flwr
-    pass
+def load_partition(idx: int):
+    """Load 1/10th of the training and test data to simulate a partition."""
+    assert idx in range(10)
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    return (
+        x_train[idx * 5000 : (idx + 1) * 5000],
+        y_train[idx * 5000 : (idx + 1) * 5000],
+    ), (
+        x_test[idx * 1000 : (idx + 1) * 1000],
+        y_test[idx * 1000 : (idx + 1) * 1000],
+    )
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Flower")
+    parser.add_argument("--partition", type=int, choices=range(0, 10), required=True)
+    args = parser.parse_args()
+
     # create a client
     model = Network(num_classes=num_classes)
     model = model.build_compile_model()
     # dataset
-    x_train, y_train = tf.keras.datasets.cifar100.load_data()
-    x_test, y_test = x_train[50000:60000], y_train[50000:60000]
+    (x_train, y_train), (x_test, y_test) = load_partition(args.partition)
 
     client = Client(model, gaussian_state=False, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
-   
-    eval_fn = client.get_eval_fn()
-    on_fit_config_fn = client.fit_config
-    on_evaluate_config_fn = client.evaluate_config
-    initial_parameters = model.get_weights()  # initial server parameters
-
-    strategy = FedAvg(fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110,
-                        eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
-
     flwr.client.start_numpy_client("[::]:8080", client=client)
 
 if __name__ == '__main__':

@@ -46,16 +46,46 @@ from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
 from client import Client
-from client import *
-from utils import *
+from model import Network
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+def get_eval_fn(model):
+    (x_train, y_train), _ = tf.keras.datasets.cifar100.load_data()
+    x_val, y_val = x_train[45000:50000], y_train[45000:50000]
+
+    # return evaluation function for server-side evaluation
+    def evaluate(weights: Weights):
+        model.set_weights(weights)
+        loss, accuracy = model.evaluate(x_val, y_val)
+        return loss, {"accuracy:": accuracy}
+    return evaluate
+
+def fit_config(rnd: int):
+    """Return training configuration dict for each round.
+    Keep batch size fixed at 32, perform two rounds of training with one
+    local epoch, increase to two local epochs afterwards.
+    """
+    config = {
+        "batch_size": 32,
+        "local_epochs": 1 if rnd < 2 else 2,
+    }
+    return config
+
+def evaluate_config(rnd: int):
+    """Return evaluation configuration dict for each round.
+    Perform five local evaluation steps on each client (i.e., use five
+    batches) during rounds one to three, then increase to ten local
+    evaluation steps.
+    """
+    # batches in validation/eval
+    val_steps = 5 if rnd < 4 else 10
+    return {"val_steps": val_steps}
 
 def main():
     # setup client
     num_classes = 100
     model = Network(num_classes=num_classes).build_compile_model()
-    client = Client(model, defense_state=False)
     eval_fn = get_eval_fn(model)
     on_fit_config_fn = fit_config
     on_evaluate_config_fn = evaluate_config
