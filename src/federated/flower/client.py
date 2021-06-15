@@ -81,7 +81,7 @@ class Client(flwr.client.NumPyClient):
     def __init__(self, model : Sequential, gaussian_state : bool, x_train, y_train, x_test, y_test):
         '''
         @model : pass model to flwr client.
-        @gaussian_state : define if the network should have a keras.layers.GaussianNoise layer during training. Pop the layer during evaluation, so check for this.
+        @gaussian_state : define if self.model should have a keras.layers.GaussianNoise layer during training. Pop the layer during evaluation, so check for this.
      
         '''
         
@@ -89,7 +89,6 @@ class Client(flwr.client.NumPyClient):
         self.model = model 
         self.model_parameters = self.model.get_weights() 
         self.device_spec = tf.DeviceSpec(job="predict", device_type="GPU", device_index=0).to_string()
-        self.compiled_gaussian_network = []
         self.gaussian_state = gaussian_state
         if (self.gaussian_state == True):
             self.apply_gaussian_layer()
@@ -128,16 +127,10 @@ class Client(flwr.client.NumPyClient):
         num_examples_test = len(self.x_test)
         return loss, num_examples_test, {"accuracy": accuracy}
 
-    def apply_defenses(self):
-        # this function exists so we can write more defenses to modify both our model and the data passed to it
-        # apply these transformations to modify the uncompiled plaintext model that will be passed into the crypto_network object inherited from CryptoNetwork. 
-        self.apply_gaussian_layer()
-
     def apply_gaussian_layer(self):
         # the goal is to prevent adversarial over-fitting during this form of "augmentation"
-        # note that if u rebuild the model and apply the gaussian noise layer, it MUST be done before it trains and makes inference in a federated/non-federated environment
-        client_model = Sequential()
         gaussian_layer = tf.keras.layers.GaussianNoise(stddev=0.2)
+        client_model = Sequential()
         client_model.add(gaussian_layer)
         client_model.add(Conv2D(32, (3, 3), activation='relu',
                          kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
@@ -159,13 +152,12 @@ class Client(flwr.client.NumPyClient):
         client_model.add(Flatten())
         client_model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
-        client_model.add(Dense(10, activation='softmax'))
+        client_model.add(Dense(num_classes, activation='softmax'))
         optimizer = Adam(learning_rate=0.001) # lr=1e-2 
         # compile network with GaussianNoise layer
         client_model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
                       optimizer=optimizer, metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
-        self.compiled_gaussian_network = client_model # Adam
-    
+        self.model = client_model 
 
 def load_partition(idx: int):
     """Load 1/10th of the training and test data to simulate a partition."""
@@ -187,7 +179,7 @@ def main() -> None:
     # create a client
     model = Network(num_classes=num_classes)
     model = model.build_compile_model()
-    # dataset
+    # make partition smaller after this is functional
     (x_train, y_train), (x_test, y_test) = load_partition(args.partition)
 
     client = Client(model, gaussian_state=False, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)

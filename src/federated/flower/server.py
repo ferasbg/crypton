@@ -49,6 +49,7 @@ from client import Client
 from model import Network
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+num_rounds = 3
 
 def get_eval_fn(model):
     (x_train, y_train), _ = tf.keras.datasets.cifar100.load_data()
@@ -96,7 +97,6 @@ def main():
                         eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
     
     # hardcoded for testing
-    num_rounds = 3
     # before specifying partitions and state of the network in training and test mode, let's first make this code functional
     flwr.server.start_server("[::]:8080", config={
                            "num_rounds": num_rounds}, strategy=strategy)
