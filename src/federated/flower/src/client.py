@@ -76,7 +76,7 @@ if __name__ == '__main__':
             self.x_train, self.y_train = x_train, y_train
             self.x_test, self.y_test = x_test, y_test
             
-        def get_weights(self) -> Weights:
+        def get_parameters(self) -> Weights:
             return cast(Weights, self.model.get_weights())
 
         def fit(self, parameters, config):
