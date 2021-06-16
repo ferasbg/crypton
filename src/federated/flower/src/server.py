@@ -45,7 +45,6 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
-from client import Client
 from model import Network
 
 os.environ["TF_CPP_MIN_LG_LEVEL"] = "3"

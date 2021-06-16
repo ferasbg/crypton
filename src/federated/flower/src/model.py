@@ -138,8 +138,6 @@ class Network():
 
         partitioning dataset for different tests.
 
-        x_val = x_train[-10000:]
-        y_val = y_train[-10000:]
         x_train = x_train[:-10000]
         y_train = y_train[:-10000]
 
