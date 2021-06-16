@@ -44,14 +44,14 @@ from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
-
-from client import Client
 from model import Network
+from client import FederatedClient
+from utils import *
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-num_rounds = 3
+os.environ["TF_CPP_MIN_LG_LEVEL"] = "3"
 
 def get_eval_fn(model):
+    # not based on partitions but rather the train/test split
     (x_train, y_train), _ = tf.keras.datasets.cifar100.load_data()
     x_val, y_val = x_train[45000:50000], y_train[45000:50000]
 
@@ -83,23 +83,21 @@ def evaluate_config(rnd: int):
     val_steps = 5 if rnd < 4 else 10
     return {"val_steps": val_steps}
 
-def main():
-    # setup client
-    num_classes = 100
-    model = Network(num_classes=num_classes).build_compile_model()
-    eval_fn = get_eval_fn(model)
-    on_fit_config_fn = fit_config
-    on_evaluate_config_fn = evaluate_config
-    initial_parameters = model.get_weights()  # initial server parameters
-    
-    # hardcode strategy for now
-    strategy = FedAvg(fraction_fit=0.3, fraction_eval=0.2, min_fit_clients=101, min_eval_clients=101, min_available_clients=110,
-                        eval_fn=eval_fn, on_fit_config_fn=on_fit_config_fn, on_evaluate_config_fn=on_evaluate_config_fn, initial_parameters=initial_parameters)
-    
-    # hardcoded for testing
-    # before specifying partitions and state of the network in training and test mode, let's first make this code functional
+if __name__ == '__main__':
+    # server-side parameter initialization + evaluation
+    model = Network(num_classes=100).build_compile_model()
+    num_rounds = 10
+    strategy = flwr.server.strategy.FedAvg(
+            fraction_fit=0.3,
+            fraction_eval=0.2,
+            min_fit_clients=3,
+            min_eval_clients=2,
+            min_available_clients=10,
+            eval_fn=get_eval_fn(model),
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=model.get_weights(),
+        )
+
     flwr.server.start_server("[::]:8080", config={
                            "num_rounds": num_rounds}, strategy=strategy)
-
-if __name__ == '__main__':
-    main()

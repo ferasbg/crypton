@@ -46,10 +46,14 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
-from client import Client
+from client import FederatedClient
 from model import Network
 from server import evaluate_config, fit_config, get_eval_fn
 
+class Dataset:
+    # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
+    # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
+    pass
 
 def create_clients(num_classes : int, num_clients : int, client_networks : list, clients : list):
     '''
@@ -61,10 +65,9 @@ def create_clients(num_classes : int, num_clients : int, client_networks : list,
         # setup base (unconfigured, compiled) client models (default configs)
         client_network = Network(num_classes=num_classes).build_compile_model() 
         client_networks.append(client_network)
-        client = Client(client_network, defense_state=False)
+        client = FederatedClient(client_network, defense_state=False)
         clients.append(client)
         assert len(client_networks) == 100
-   
 
 def adaptive_federated_adagrad(client_model : Sequential):
     federated_adagrad_strategy = FedAdagrad(

@@ -64,7 +64,6 @@ class Network():
         self.weight_decay_regularization = 0.003# batch norm, weight decay reg., fed optimizer, momentum for SGD --> how do they affect model given robust adversarial example
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
-        # self.model_grads = (k.gradients(self.model.layers[0].output, self.model.trainable_weights[0])) # get Conv2d grads to perturb the network for PGD
 
     def build_compile_model(self):
         # build layers of public neural network
@@ -91,7 +90,7 @@ class Network():
         # classification layers
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
-        model.add(Dense(self.num_classes, activation='softmax'))
+        model.add(Dense(self.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
         optimizer = Adam(learning_rate=0.001)
         # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
@@ -125,63 +124,69 @@ class Network():
         # classification layers
         model.add(Dense(128, activation='relu',
                         kernel_initializer='he_uniform'))
-        model.add(Dense(self.num_classes, activation='softmax'))
+        model.add(Dense(self.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros'))
         # sgd(momentum=0.9), adam(lr=1e-2) -> helps weight regularization
         return model
 
     def train_model(self):
-        '''
-        x_test, y_test = load_batch(fpath)
-        y_train = np.reshape(y_train, (len(y_train), 1))
-        y_test = np.reshape(y_test, (len(y_test), 1))
-
-        partitioning dataset for different tests.
-
-        x_val = x_train[-10000:]
-        y_val = y_train[-10000:]
-        x_train = x_train[:-10000]
-        y_train = y_train[:-10000]
-
-        There's 2-3 line bits everywhere in this codebase that will be re-used in the context of the federated training. Re-write it if you need. Be patient with the overlaps.
-
-        Add dataset, and dataset_labels as parameter (overload this method or make re-write)
-
-        '''
         # x_train stores all of the train_images and y_train stores all the respective categories of each image, in the same order.
         # get cifar10-data first, and assign data and categorical labels as such
         (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
-
-        x_train = x_train.reshape((-1, 32, 32, 3))
-        x_test = x_test.reshape((-1, 32, 32, 3))
-
-        y_train = tf.keras.utils.to_categorical(y_train, 10)
-        y_test = tf.keras.utils.to_categorical(y_test, 10)
-
         history = self.model.fit(x_train, y_train, batch_size=32, epochs=20, validation_data=(x_test, y_test))
-        self.model.evaluate(x=x_test, y=y_test, verbose=0)
-
-        self.model.save_weights('network.h5')
         print(history)
+        return self.model
 
-    def evaluate(self, image_set, label_set):
+    def evaluate_model(self, image_set, label_set):
         '''Evaluate with test set, generally isolated to one client node for tensorflow-specific custom evaluation. Given we want to pass in custom image_set and custom image_labels.'''
         self.model.evaluate(x=image_set, y=label_set, verbose=0)
         return self.model
 
-def main():
-    # note that for each epoch_set we will iterate over each perturbation_epsilon and attack_type, defined in deploy.main
-    graph = tf.compat.v1.get_default_graph()
-    # do we use session = tf.Session() to instantiate a graph to execute our computation?
-    # train network
-    network = Network()
-    # print(network.model.summary())
-    network.build_compile_model()
-    network.train()
+# parser = argparse.ArgumentParser(description="Flower")
+# parser.add_argument("--partition", type=int,
+#                     choices=range(0, NUM_CLIENTS), required=True)
+# args = parser.parse_args()
+# create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
+# partition data (for a client) and pass to model
 
-    # evaluate model with cifar-10 data 
+def load_partition_for_100_clients(idx: int):
+    # 500/100 train/test split per partition e.g. per client
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+    assert idx in range(100)
+
+    return (
+        # 5000/50000 --> 500/50000
+        x_train[idx * 500: (idx + 1) * 500],
+        y_train[idx * 500: (idx + 1) * 500],
+    ), (
+        x_test[idx * 100: (idx + 1) * 100],
+        y_test[idx * 100: (idx + 1) * 100],
+    )
+
+def load_partition_for_10_clients(idx: int):
+    # 500/100 train/test split per partition e.g. per client
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+    assert idx in range(10)
+
+    return (
+        # 5000/50000 --> 500/50000
+        x_train[idx * 5000: (idx + 1) * 5000],
+        y_train[idx * 5000: (idx + 1) * 5000],
+    ), (
+        x_test[idx * 1000: (idx + 1) * 1000],
+        y_test[idx * 1000: (idx + 1) * 1000],
+    )
+
+def main():
+    graph = tf.compat.v1.get_default_graph()
+    network = Network(num_classes=100)
+    model = network.build_compile_model()
+    print(network.model.summary())
+    network.train_model()
+    # evaluate with test data
     (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
-    x_train = x_train.reshape((-1, 32, 32, 3))
-    x_test = x_test.reshape((-1, 32, 32, 3))
-    y_train = tf.keras.utils.to_categorical(y_train, 10)
-    y_test = tf.keras.utils.to_categorical(y_test, 10)
-    network.evaluate(x_test, y_test)
+    # partition data (for a client) and pass to model
+    x_val, y_val = x_train[45000:50000], y_train[45000:50000]
+    network.evaluate_model(x_val, y_val)
+    
+if __name__ == '__main__':
+    main()

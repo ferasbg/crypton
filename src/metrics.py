@@ -19,7 +19,7 @@ class FederatedMetrics:
         '''
         - Update the state of variables for particular computations that can be graphed and stored into a table of use for the whitepaper.
         - parse_args, config, dev/run.sh, code cleanup/repo cleanup
-        
+
         '''
         # get metrics (nominal --> formal; write setters)
         # get analytics per round per client set and iteration per configuration
@@ -47,27 +47,30 @@ class FederatedMetrics:
         self.CIFAR_10_STATE = False  # not right now
         self.CIFAR_100_STATE = True
 
-    @staticmethod
-    def create_table(header: list, csv):
-        pass
+federated_metrics = FederatedMetrics()
 
-    def create_plot(x_axis, y_axis, x_data: list, y_data: list):
-        ## nominal
-            # communication rounds against test accuracy
-            # communication rounds against train loss
-            # communication rounds against changing client learning rate
+def create_table(header: list, csv):
+    # compare federated strategies by their robustness, nominal metrics
+    pass
 
-        ## robustness
-            # epsilon vs l^2-bounded norm adversary; changing l-inf
-            # epsilon vs l-infinity-bounded norm adversary; changing l-inf
+def create_plot(x_axis, y_axis, x_data: list, y_data: list):
+    # nominal metrics
+    # federated metrics
+        # communication rounds against test accuracy
+        # communication rounds against train loss
+        # communication rounds against changing client learning rate (possibly)
 
-        ## tables
-            # compare federated strategies by their robustness, nominal metrics
+    # robustness metrics
+        # epsilon vs l^2-bounded norm adversary; changing l-inf
+        # epsilon vs l-infinity-bounded norm adversary; changing l-inf
+        # measure for the change in loss sensitivity based on the increasing change of perturbation norm value (loss sensitivty vs epsilon norm values), again have both norm types defined as two lines
+        # graph the l-2 norm and l-inf norm based on federated accuracy-under-attack (x-axis) and epsilon value (two lines)
+        # (server-side trusted aggregator model comparison): client model set --> server-side model convergence/evaluation comparison against gaussian model and non-gaussian model (training with gaussian in training makes model fitted well to adversarial examples without overfitting, albeit slightly unclear how overfitting relates to fitting to more perturbed data)
+        # FedAdagrad vs FedAvg comparison against hetereogeneous data (convergence, federated accuracy-under-attack)
+        # dataset optimizations may be held constant for models with gaussian/non-gaussian changes
 
-        ## formal
-            #
-            #
-            #
+    # formal robustness metrics
+        # specifications passed per configuration essentially (adversarial robustness properties satisfied)
+        # specific variables within each formulation (comparison against each experiment setup)
 
-
-        pass
+    pass
