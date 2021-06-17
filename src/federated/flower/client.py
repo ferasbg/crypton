@@ -60,30 +60,35 @@ class FederatedClient(flwr.client.NumPyClient):
         @model : pass model to flwr client.
         @gaussian_state : define if self.model should have a keras.layers.GaussianNoise layer during training. Pop the layer during evaluation, so check for this.
         '''
-        super(FederatedClient, self).__init__()
         self.model = model
         # pass a loaded partition to be stored for the client
         self.x_train, self.y_train = x_train, y_train
         self.x_test, self.y_test = x_test, y_test
 
-    def get_weights(self) -> Weights:
-        # return cast(Weights, self.model.get_weights())
-        raise Exception("Not implemented.")
+    def get_parameters(self):
+        # return cast(Weights, server_model.get_weights())
+        raise Exception("Not implemented (server-side parameter initialization)")
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
-        history = self.model.fit(self.x_train, self.y_train, batch_size=32, epochs=20)
+        history = self.model.fit(self.x_train, self.y_train, batch_size=32, epochs=20, validation_split=0.1)
         num_examples_train = len(self.x_train)
-        weights = cast(Weights, self.model.get_weights())
-        return weights, num_examples_train, history
+        results = {
+            "loss": history.history["loss"][0],
+            "accuracy": history.history["accuracy"][0],
+            "val_loss": history.history["val_loss"][0],
+            "val_accuracy": history.history["val_accuracy"][0],
+        }
+
+        return self.model.get_weights(), num_examples_train, results
 
     def evaluate(self, parameters, config):
         # the given image/label set is the defined partition rather than the entire dataset, since we iterate over client models with defined x_train, y_train, x_test, y_test sets
         self.model.set_weights(parameters)
         # define evaluation
-        loss, accuracy = self.model.evaluate(self.x_test, self.y_test, batch_size=32, steps=5, verbose=1)
+        loss, accuracy = self.model.evaluate(self.x_test, self.y_test)
         num_examples_test = len(self.x_test)
-        return num_examples_test, loss, {"accuracy": accuracy}
+        return loss, num_examples_test, {"accuracy": accuracy}
 
 if __name__ == '__main__':
     model = Network(num_classes=num_classes).model

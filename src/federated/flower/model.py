@@ -92,10 +92,8 @@ class Network():
                         kernel_initializer='he_uniform'))
         model.add(Dense(self.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros'))
          # stochastic gd has momentum, optimizer doesn't use momentum for weight regularization
-        optimizer = Adam(learning_rate=0.001)
-        # use sparse categorical cross entropy since each image corresponds to one label given only 1 scalar node valid given output one-hot vector in output layer
-        model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                      optimizer=optimizer, metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
+        # optimizer = Adam(learning_rate=0.001) 
+        model.compile("adam", "sparse_categorical_crossentropy", metrics=["accuracy"])
 
         return model
 

@@ -23,7 +23,7 @@ import tensorflow_federated as tff
 import tensorflow_privacy as tpp
 import tensorflow_probability as tpb
 import tqdm
-from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
+from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes, weights_to_parameters
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import (  # FedProx; FedAdagrad helps convergence behavior which in turn helps optimize model robustness; fedOpt is configurable Adagrad for server-side optimizations for the server model e.g. trusted aggregator
     FaultTolerantFedAvg, FedAdagrad, FedAvg, FedFSv1, Strategy, fedopt)
@@ -86,7 +86,10 @@ def evaluate_config(rnd: int):
 if __name__ == '__main__':
     # server-side parameter initialization + evaluation
     model = Network(num_classes=100).build_compile_model()
+    print(model.summary())
+
     num_rounds = 10
+
     strategy = flwr.server.strategy.FedAvg(
             fraction_fit=0.3,
             fraction_eval=0.2,
@@ -96,8 +99,8 @@ if __name__ == '__main__':
             eval_fn=get_eval_fn(model),
             on_fit_config_fn=fit_config,
             on_evaluate_config_fn=evaluate_config,
-            initial_parameters=model.get_weights(),
-        )
+            initial_parameters=weights_to_parameters(model.get_weights()),
+    )
 
     flwr.server.start_server("[::]:8080", config={
                            "num_rounds": num_rounds}, strategy=strategy)
