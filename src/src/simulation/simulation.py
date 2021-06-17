@@ -141,4 +141,4 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
         p.join()
 
 if __name__ == "__main__":
-    run_simulation(num_rounds=1000, num_clients=100, fraction_fit=0.5)
+    run_simulation(num_rounds=100, num_clients=10, fraction_fit=0.5)
