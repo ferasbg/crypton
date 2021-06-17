@@ -32,16 +32,13 @@ class Network():
         Description: 
             - Create keras model instance. Use build_and_compile_model() object function to append model layers and to initialize network for base/plaintext training.
             - Note that a convolutional neural network is generally defined by a function F(x, θ) = Y which takes an input (x) and returns a probability vector (Y = [y1, · · · , ym] s.t. P i yi = 1) representing the probability of the input belonging to each of the m classes. The input is assigned to the class with maximum probability (Rajabi et. al, 2021).
-        
-        Args: None
-        
-        Returns: keras.models.Model
-        
-        Raises:
-            ValueError: mismatch of model layer stack
-        
+            - Write a model for adversarial regularization with GaussianNoise AND training against adversarial examples
+            - And write another model that acts as the base model without adv. regularization
+            - Relate adversarial regularization to adaptive federated optimization during evaluation
+
         References:
             - https://arxiv.org/abs/1409.1556
+
     '''
 
     def __init__(self, num_classes):
@@ -61,7 +58,7 @@ class Network():
         self.image_size = [32, 32]
         self.bias = False
         # stabilize convergence to local minima for gradient descent
-        self.weight_decay_regularization = 0.003# batch norm, weight decay reg., fed optimizer, momentum for SGD --> how do they affect model given robust adversarial example
+        self.weight_decay_regularization = 0.003 # batch norm, weight decay reg., fed optimizer, momentum for SGD --> how do they affect model given robust adversarial example
         self.momentum = 0.05  # gradient descent convergence optimizer
         self.model = self.build_compile_model()
 
@@ -139,15 +136,9 @@ class Network():
         self.model.evaluate(x=image_set, y=label_set, verbose=0)
         return self.model
 
-# parser = argparse.ArgumentParser(description="Flower")
-# parser.add_argument("--partition", type=int,
-#                     choices=range(0, NUM_CLIENTS), required=True)
-# args = parser.parse_args()
-# create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
-# partition data (for a client) and pass to model
-
 def load_partition_for_100_clients(idx: int):
     # 500/100 train/test split per partition e.g. per client
+    # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
     assert idx in range(100)
 
@@ -161,7 +152,7 @@ def load_partition_for_100_clients(idx: int):
     )
 
 def load_partition_for_10_clients(idx: int):
-    # 500/100 train/test split per partition e.g. per client
+    # 5000/1000 train/test split per partition e.g. per client
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
     assert idx in range(10)
 

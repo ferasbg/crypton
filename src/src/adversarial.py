@@ -48,12 +48,19 @@ from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
+from neural_structured_learning import nsl
 
 class Perturbation():
     '''
         Usage: 
             image_set : partition of image data per client # check if there's anything diff to do btwn. cifar-100 and cifar-10
             perturbation_dataset = Perturbation(image_set)            
+
+        Todo:
+            - setup model for adversarial regularization
+            - setup perturbations and functions to apply them to the data sent before batch
+            - setup the perturbation types and the set of norm values, and the grad norm e.g. linf and l2
+            - Besides creating a "robust" adversarial example, simulate the dataset in the federated scenario e.g. apply image degradation other than perturbations
 
         Discussion:
             - If we a train a network to fit to noise-like perturbations based on the gaussian-distribution, is our adversarial example "robust" such that our network can evaluate with greater robustness when given other perturbation types differentiated by norms. 
@@ -63,9 +70,7 @@ class Perturbation():
             - Things get fun here where we scope down our perturbations to types we can evaluate other than their norm (distance metric: l-inf, l-2) and epsilon value 
             - Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
     '''
-    def __init__(self, image_set : Tuple, norm_type : str):
-        self.dataset = image_set
-        self.norm_type = norm_type
+    def __init__(self):
         self.l2_eps = [
         0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         self.l_inf_eps = [
@@ -76,7 +81,6 @@ class Perturbation():
         self.brightness_perturbation_dataset = []
         self.mixed_perturbation_dataset = [] # different perturbation types
 
-    @staticmethod
     def brightness_perturbation_norm(input_image):
         # applying image perturbations isn't in a layer, but rather before data is processed into the InputSpec and Input layer of the tff model
         sigma = 0.085
@@ -84,26 +88,22 @@ class Perturbation():
         input_image = tf.math.scalar_mul(brightness_threshold, input_image)
         return input_image
 
-    @staticmethod
     def apply_random_image_transformations(image : np.ndarray):
         # this is specific to the image data rather than how the image data is processed, so it will be used on the cifar-100 dataset in main.main
         pass
 
-    @staticmethod
     def apply_image_corruptions(image : np.ndarray):
         return image
 
-    @staticmethod
     def apply_image_degradation(image : np.ndarray):
-        # image degradation WITH gaussian distribution acts as approach to dynamically adapt to chaos/randomness relating to realistic scenarios with image data
+        # the goal is to regularize and fit to an adversarial example regardless of its norm (mathematically fixed distribution)
         # u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
-        # apply image corruption, perturbation, compression loss; if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
+        # if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
         image = Perturbation.apply_image_corruptions(image)
         image = Perturbation.apply_random_image_transformations(image)
         image = Perturbation.apply_resolution_loss(image)
         return image
 
-    @staticmethod
     def apply_resolution_loss(image : np.ndarray):
         return image
 
