@@ -97,4 +97,4 @@ if __name__ == '__main__':
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     client = FederatedClient(model, x_train=x_train,
                              y_train=y_train, x_test=x_test, y_test=y_test)
-    flwr.client.start_numpy_client(server_address="[::]:8080", client=client)
+    flwr.client.start_numpy_client("[::]:8080", client=client)
