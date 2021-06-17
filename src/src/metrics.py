@@ -17,14 +17,15 @@ import torch
 class FederatedMetrics:
     def __init__(self):
         '''
-        
+        Notes:
+            - federated setting involves parent and child models e.g. server-side trusted aggregator and client-side models that are distillations of the parent model; understanding adv. regularization and fed. optimization to improve the server-side model as much as possible (which IS formalized through its adv. robustness) is crucial for a robust federated ML system in general 
+
         Todo:
 
             - Nominal Robustness: loss sensitivity (sigma), empirical robustness (unknown), test error, kl-divergence (mu), pristine/natural federated accuracy (alpha), federated accuracy-under-attack, perturbation norm (p_adv-e), time_per_round
             - Formal Robustness: Admissibility Constraint, Distance Constraint, Target Behavior Constraint, Perturbation Minimization, Loss Maximization, Allowed L-Inf Perturbations (Maximization Problem, possibly)
 
             - task: Update the state of variables for particular computations that can be graphed and stored into a table of use for the whitepaper.
-            - note: parse_args, config, dev/run.sh, code cleanup/repo cleanup
             - note: formalizations are meant to assert or certify specific adversarial robustness properties of the client models and the trusted aggregator model (server model), so we'd fit these same equations in the context of client networks and client-specific hyper-parameters etc (L = (theta, x,y)), and the value is in fitting the optimization formulations of adversarial robustness to the federated setup (as stated many times before)
         
         '''
@@ -70,16 +71,19 @@ def create_plot(x_axis, y_axis, x_data: list, y_data: list):
     
 
     # robustness metrics
-        # epsilon vs l^2-bounded norm adversary; changing l-inf
-        # epsilon vs l-infinity-bounded norm adversary; changing l-inf
-        # measure for the change in loss sensitivity based on the increasing change of perturbation norm value (loss sensitivty vs epsilon norm values), again have both norm types defined as two lines
-        # graph the l-2 norm and l-inf norm based on federated accuracy-under-attack (x-axis) and epsilon value (two lines)
-        # (server-side trusted aggregator model comparison): client model set --> server-side model convergence/evaluation comparison against gaussian model and non-gaussian model (training with gaussian in training makes model fitted well to adversarial examples without overfitting, albeit slightly unclear how overfitting relates to fitting to more perturbed data)
-        # FedAdagrad vs FedAvg comparison against hetereogeneous data (convergence, federated accuracy-under-attack)
-        # dataset optimizations may be held constant for models with gaussian/non-gaussian changes
-        # loss sensitivity vs increasing norm value
-        # lowest perturbation norm that doesn't damage the model (measure increasing norms against accuracy-under-attack for both adv. regularized model and base model, note the diffs)
-
+        # grad norm type and increasing epsilon comparison graph
+            # task: epsilon vs l^2-bounded norm adversary; changing l-inf
+            # task: epsilon vs l-infinity-bounded norm adversary; changing l-inf
+        # task: measure for the change in loss sensitivity based on the increasing change of perturbation norm value (loss sensitivty vs epsilon norm values), again have both norm types defined as two lines
+        # task: graph the l-2 norm and l-inf norm based on federated accuracy-under-attack (x-axis) and epsilon value (two lines)
+        # note: (server-side trusted aggregator model comparison): client model set --> server-side model convergence/evaluation comparison against gaussian model and non-gaussian model (training with gaussian in training makes model fitted well to adversarial examples without overfitting, albeit slightly unclear how overfitting relates to fitting to more perturbed data)
+        # task: FedAdagrad vs FedAvg comparison against hetereogeneous data (convergence, federated accuracy-under-attack)
+        # note: dataset optimizations may be held constant for models with gaussian/non-gaussian changes
+        # task: lowest perturbation norm that doesn't damage the model (measure increasing norms against accuracy-under-attack for both adv. regularized model and base model, note the diffs)
+        # task: measure for what models adapt the best to an increasing perturbation grad norm
+        # task: formalize robustness at the client-level and at the federated strategy level along with the server-model level
+        # note: We are executing a distributed perturbation / model spoofing (threat model) across a distributed set of client models with heterogeneous, corrupted data and other real-world scenarios regarding limited and unreliable data. Note how behavior changes as perturbation norm increases and distance between its max l-2/l-inf radius decreases (as epsilon goes up).
+    
     # adversarial metrics
         # we will need to test whether perturbations both satisfy the optimization formulation as it increases per iteration, since we will use a set of norm-bounded perturbations and will assess what perturbations are "allowed" e.g. satisfy specification of formulation
         # we know the perturbation element (a subset of all the allowed and unallowed norms around the l-2/l-inf radius) will try to maximize the loss when the goal is to minimize loss during evaluation 
