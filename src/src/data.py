@@ -52,7 +52,7 @@ from tensorflow.python.keras.engine.sequential import Sequential
 
 from model import Network
 
-def apply_random_image_transformations(image: np.ndarray):
+def apply_pseudorandom_image_transformations(image: np.ndarray):
     return image
 
 def apply_image_corruptions(image: np.ndarray):
@@ -68,6 +68,15 @@ def apply_image_degradation(image: np.ndarray):
         - if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
     '''
     image = apply_image_corruptions(image)
-    image = apply_random_image_transformations(image)
+    image = apply_pseudorandom_image_transformations(image)
     image = apply_resolution_loss(image)
     return image
+
+def cast_data_to_float32(x_set):
+    '''
+        Usage:
+            x_train, x_test = cast_data_to_float32(x_train), cast_data_to_float32(x_test)
+
+    '''
+    x_set = tf.cast(x_set, dtype=tf.float32)
+    return x_set

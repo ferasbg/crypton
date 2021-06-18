@@ -33,34 +33,34 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
-'''
-Definition 1:
+def compute_admissibility_constraint(x):
+  '''
+  The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed inputs.
+  
+  Eq: x∗ ∈ X˜
 
-  1. Admissibility Constraint: x
-∗ ∈ X˜;
+  '''
 
-  2. Distance Constraint: D(µ(x, x∗
-  ), α), and
+  return x
 
-  3. Target Behavior Constraint: A(x, x∗
-  , β).
+def compute_distance_constraint(adv_step_size, adv_grad_norm):
+  '''
+  The Distance Constraint (2) constrains x∗ to be no more distant from x than α. 
 
-The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed
-inputs. 
+  Eq: D(µ(x, x∗), α)
 
-The Distance Constraint (2) constrains x∗ to be no more distant from x than α. 
+  '''
+  x = []
+  return x
 
-Finally, the Target Behavior Constraint (3) captures the target behavior of the adversary as a predicate A(x, x∗, β) which is true if the adversary changes the behavior of the ML model by at least β modifying x to x∗. If the three constraints hold, then we say that
-the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as
-opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
+def compute_target_behavior_constraint(a, x, x_prime, beta):
+  '''
+  The Target Behavior Constraint (3) captures the target behavior of the adversary as a predicate A(x, x∗, β) which is true if the adversary changes the behavior of the ML model by at least β modifying x to x∗. If the three constraints hold, then we say that
+  the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as
+  opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
 
-Typically, the problem of finding an adversarial example x ∗ for a model f at a given input x ∈ X as formulated above, can be formulated as an optimization problem in one of two ways: • Minimizing perturbation: find the closest x ∗ that alters f’s prediction. This can be encoded in constraint (2) as µ(x, x∗ ) ≤ α; • Maximizing the loss: find x ∗ which maximizes false classification. This can be encoded in the constraint (3) as L(f(x), f(x ∗ )) ≥ β.
-  - is it more relevant to certify robustness of the model to a set of perturbed/adversarial inputs than to focus on whether adversarial examples exist?
+  Eq: A(x, x∗, β)
 
-
-Todo:
-  - take definitions and properties to check from "Formalization of Robustness" paper
-  - I would read papers and emulate the aspects of their experimental processes that are worth emulating.
-  - implement the formalization of "solving the inner maximization problem" if relevant, else ignore
-  - test both l-inf and l-2 perturbations to measure robustness separately (e.g. L-2 Robust, L-Inf Robust)
-'''
+  '''
+  x = []
+  return x

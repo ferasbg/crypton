@@ -2,22 +2,49 @@
 # Copyright (c) 2021 Feras Baig
 
 import argparse
+import collections
 import logging
+import multiprocessing
 import os
+import pickle
 import random
+import sys
+import threading
 import time
+import traceback
+from utils import build_compile_client_model
+import warnings
 from multiprocessing import Process
-from typing import Tuple
+from typing import Dict, List, Tuple
 
+import art
+import cleverhans
 import flwr as fl
+import keras
+import matplotlib.pyplot as plt
+import neural_structured_learning as nsl
+import numpy
 import numpy as np
+import scipy
+import sympy
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from flwr.server.strategy import FedAvg
+import tensorflow_federated as tff
+import tensorflow_privacy as tpp
+import tensorflow_probability as tpb
+import tqdm
+from adversarial_regularization import (AdversarialRegularizationWrapper,
+                                        HParams, build_adv_reg_model,
+                                        build_uncompiled_nsl_model)
+from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
+from flwr.server.client_proxy import ClientProxy
+# FedAvg (Baseline); FedAdagrad (Comparable), FedOpt (Optimized FedAdagrad and Comparable)
+from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
+                                  FedFSv1, Strategy, fedopt)
 from keras import backend as K
 from keras import optimizers, regularizers
 from keras.applications.vgg16 import VGG16, preprocess_input
-from keras.datasets import cifar100
+from keras.datasets import cifar10, cifar100
 from keras.datasets.cifar10 import load_data
 from keras.layers import (Activation, BatchNormalization, Conv2D,
                           Conv2DTranspose, Dense, Dropout, Flatten,
@@ -29,9 +56,12 @@ from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.python.keras.backend import update
+from tensorflow.python.keras.engine.sequential import Sequential
+from tensorflow.python.ops.gen_batch_ops import Batch
 
 import dataset
-
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -52,37 +82,19 @@ def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
 def start_client(dataset: DATASET) -> None:
     """Start a single client with the provided dataset."""
 
-    # Load and compile a Keras model for CIFAR-10
+    # abstract this out into its own function and check if simulation.py is functional before setting up functions for adv_reg and non adv_reg "client" models
+    # define all client-level configurations within the model passed to the Client wrapper
+    # adv. reg. model --> ClientWrapper(AdvWrapper(model))
     num_classes = 10
-    model = Sequential()
-    # feature layers
-    model.add(Conv2D(32, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same', input_shape=(32, 32, 3)))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
-    model.add(Conv2D(64, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same'))
-    model.add(MaxPool2D((2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same'))
-    model.add(MaxPool2D((2, 2)))
-    model.add(Conv2D(128, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same'))
-    model.add(Conv2D(256, (3, 3), activation='relu',
-                     kernel_initializer='he_uniform', padding='same'))
-    model.add(MaxPool2D((2, 2)))
-    model.add(Flatten())
-    # classification layers
-    model.add(Dense(128, activation='relu',
-                    kernel_initializer='he_uniform'))
-    model.add(Dense(num_classes, activation='softmax',
-                    kernel_initializer='random_normal', bias_initializer='zeros'))
-    model.compile("adam", "sparse_categorical_crossentropy",
-                  metrics=["accuracy"])
+    # conflict between Sequential/Functional model object passed to CifarClient, or is it agnostic to this difference? A conflict of types is possible here.
+    model = build_compile_client_model(adversarial_regularization_state=True, num_classes=10) 
+    # model.fit(x_train, y_train, batch_size=parameters.batch_size, epochs=parameters.epochs)
+    # results = model.evaluate(x_test, y_test, verbose=1)
+
+
 
     # Unpack the CIFAR-10 dataset partition
+    # write function to apply image transformations directly to the cifar_data stored in x_train and x_test before it's perturbed during adv. regularization
     (x_train, y_train), (x_test, y_test) = dataset
 
     # Define a Flower client
@@ -97,6 +109,8 @@ def start_client(dataset: DATASET) -> None:
             model.set_weights(parameters)
             # Remove steps_per_epoch if you want to train over the full dataset
             # https://keras.io/api/models/model_training_apis/#fit-method
+            # configure epochs, batch_size config based on HParams
+            # x={'image': x_train, 'label': y_train} for fit param given model is adv_model
             model.fit(x_train, y_train, epochs=1,
                       batch_size=32, steps_per_epoch=3)
             return model.get_weights(), len(x_train), {}
@@ -139,6 +153,7 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
     # Block until all processes are finished
     for p in processes:
         p.join()
+
 
 if __name__ == "__main__":
     run_simulation(num_rounds=100, num_clients=10, fraction_fit=0.5)
