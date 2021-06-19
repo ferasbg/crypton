@@ -62,6 +62,7 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
 
 import dataset
+from data import *
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -88,6 +89,8 @@ def start_client(dataset: DATASET) -> None:
     num_classes = 10
     # conflict between Sequential/Functional model object passed to CifarClient, or is it agnostic to this difference? A conflict of types is possible here.
     model = build_compile_client_model(adversarial_regularization_state=True, num_classes=10)
+    
+    # iterate over entire dataset before it's casted and partitioned to apply image corruptions
 
     # Unpack the CIFAR-10 dataset partition
     # write function to apply image transformations directly to the cifar_data stored in x_train and x_test before it's perturbed during adv. regularization

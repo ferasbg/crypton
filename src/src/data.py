@@ -91,11 +91,7 @@ class Data:
 
     '''
 
-    # divide each corruption name as its own function for simplicity
-    # to simplify: categorize into compression, blur, noise, misc_corruption
-        # use conditionals to process "iterable" param updated based on the parse arg in run.sh
     # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
-    # for image in x_train: apply_imperceptible_pseudorandom_image_corruption(image, corruption_name)
     # non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
     
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
