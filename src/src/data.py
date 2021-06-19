@@ -80,3 +80,4 @@ def cast_data_to_float32(x_set):
     '''
     x_set = tf.cast(x_set, dtype=tf.float32)
     return x_set
+

@@ -136,10 +136,11 @@ def build_uncompiled_nsl_model(parameters: HParams, num_classes: int):
 
 model = build_uncompiled_nsl_model(parameters, num_classes=10)
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+
 adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
 adv_model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
 adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
+# adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
 
 # wrap adversarial loss, apply perturbations to data; seems like nsl is agnostic to how data is formatted
 results = adv_model.evaluate(x_test, y_test, verbose=1)

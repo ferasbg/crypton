@@ -33,6 +33,9 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
+# the relationship between generating robust adversarial examples and developing adversarially robust models is that both conditions help each other
+# referencee: https://people.eecs.berkeley.edu/~sseshia/pubdir/vnn19.pdf
+
 def compute_admissibility_constraint(x):
   '''
   The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed inputs.
@@ -64,3 +67,5 @@ def compute_target_behavior_constraint(a, x, x_prime, beta):
   '''
   x = []
   return x
+
+

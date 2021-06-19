@@ -87,11 +87,7 @@ def start_client(dataset: DATASET) -> None:
     # adv. reg. model --> ClientWrapper(AdvWrapper(model))
     num_classes = 10
     # conflict between Sequential/Functional model object passed to CifarClient, or is it agnostic to this difference? A conflict of types is possible here.
-    model = build_compile_client_model(adversarial_regularization_state=True, num_classes=10) 
-    # model.fit(x_train, y_train, batch_size=parameters.batch_size, epochs=parameters.epochs)
-    # results = model.evaluate(x_test, y_test, verbose=1)
-
-
+    model = build_compile_client_model(adversarial_regularization_state=True, num_classes=10)
 
     # Unpack the CIFAR-10 dataset partition
     # write function to apply image transformations directly to the cifar_data stored in x_train and x_test before it's perturbed during adv. regularization

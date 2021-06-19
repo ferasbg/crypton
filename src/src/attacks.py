@@ -44,24 +44,52 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from neural_structured_learning import nsl
+import neural_structured_learning as nsl
 from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
+import cv2
 from model import Network
 
-l2_eps = [
-    0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-l_inf_eps = [
-    0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
-norm_bounded_perturbation_dataset = []
-hamiltonian_perturbation_dataset = []
-brightness_perturbation_dataset = []
+'''
+
+Generate adversarial examples.
+
+Methods will include:
+    -  imperceptible ASR attack
+    - universal perturbation attack (norm)
+    - deepfool
+    - PixelAttack
+    - target universal perturbation attack
+    - projected gradient descent attack
+    - fast gradient sign method
+    - hamiltonian pixelwise perturbations
+
+'''
+
+# setup dataset and store input image to test
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+# take first image from train set
+image = x_train[-1:]
+image = keras.preprocessing.image.array_to_img(image)
+cv2.imread(image)
+# read in image first, then setup attacks to test per image before iterating over batches and rounds
+
+
 
 def brightness_perturbation_norm(input_image):
     sigma = 0.085
     brightness_threshold = 1 - sigma
     input_image = tf.math.scalar_mul(brightness_threshold, input_image)
     return input_image
+
+def hamiltonian_perturbation(input_image):
+    return input_image
+
+def additive_perturbation(input_image, norm_type, norm_value):
+    return input_image
+
+def apply_eval_perturbation(x_test):
+    return x_test
