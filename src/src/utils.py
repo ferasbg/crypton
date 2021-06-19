@@ -83,7 +83,7 @@ def create_clients(num_classes : int, num_clients : int, client_networks : list,
     # creates 100 client models and adds the sequential models into a list, the flwr.client objects in their own list
     for i in range(num_clients):
         # setup base (unconfigured, compiled) client models (default configs)
-        client_network = Network(num_classes=num_classes).build_compile_model() 
+        client_network = Network(num_classes=num_classes).build_compile_model()
         client_networks.append(client_network)
         client = FederatedClient(client_network, defense_state=False)
         clients.append(client)
@@ -115,15 +115,15 @@ def build_compile_client_model(adversarial_regularization_state : bool, num_clas
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
         adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
         adv_model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
-        
+
         adv_model.compile(
             optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
         return adv_model
-    
+
     elif (adversarial_regularization_state == False):
         # change norm type and adv_step_size iteratively as its own config per exp
-        parameters = HParams(num_classes=10, adv_multiplier=0.2,
+        parameters = HParams(num_classes=num_classes, adv_multiplier=0.2,
                             adv_step_size=0.05, adv_grad_norm="infinity")
         model = build_uncompiled_nsl_model(parameters, num_classes=num_classes)
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])

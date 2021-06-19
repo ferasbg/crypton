@@ -69,15 +69,12 @@ Methods will include:
 
 '''
 
-# setup dataset and store input image to test
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
-# take first image from train set
-image = x_train[-1:]
-image = keras.preprocessing.image.array_to_img(image)
-cv2.imread(image)
-# read in image first, then setup attacks to test per image before iterating over batches and rounds
-
-
+def setup_sample_data_for_file():
+    # setup dataset and store input image to test
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+    # take first image from train set
+    image = x_train[-1:]
+    return image, image.shape, tf.keras.preprocessing.image.array_to_img(image)
 
 def brightness_perturbation_norm(input_image):
     sigma = 0.085
@@ -93,3 +90,9 @@ def additive_perturbation(input_image, norm_type, norm_value):
 
 def apply_eval_perturbation(x_test):
     return x_test
+
+
+if __name__ == '__main__':
+    # setup data for testing each function
+    setup_sample_data_for_file()
+    # apply specified perturbation to use during evaluation (inference time, so to speak)

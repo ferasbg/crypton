@@ -143,5 +143,5 @@ adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metr
 # adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
 
 # wrap adversarial loss, apply perturbations to data; seems like nsl is agnostic to how data is formatted
-results = adv_model.evaluate(x_test, y_test, verbose=1)
+results = adv_model.evaluate(x={'image': x_test, 'label': y_test})
 print(results)
