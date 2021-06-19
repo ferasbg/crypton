@@ -64,7 +64,7 @@ class Data:
     - note: Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
     - note: u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
     - note: if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
-    - note: use np.random.seed() to generate a seed value for noise vector to apply 
+    - note: use np.random.seed() to generate a seed value for noise vector to apply
     - note: image degradation and corruptions ARE perturbations/transformations etc. (perhaps by the means of distortion, blur, etc)
     - question: how do ppl generally map the gradients of the network with its image data processed to maximize its loss? fgsm
     - question: how do ppl tell the difference between how model architecture affects robustness ? under an attack of course and assuming adv. reg. in training
@@ -75,11 +75,11 @@ class Data:
 
     References:
         @article{michaelis2019dragon,
-        title={Benchmarking Robustness in Object Detection: 
+        title={Benchmarking Robustness in Object Detection:
             Autonomous Driving when Winter is Coming},
-        author={Michaelis, Claudio and Mitzkus, Benjamin and 
-            Geirhos, Robert and Rusak, Evgenia and 
-            Bringmann, Oliver and Ecker, Alexander S. and 
+        author={Michaelis, Claudio and Mitzkus, Benjamin and
+            Geirhos, Robert and Rusak, Evgenia and
+            Bringmann, Oliver and Ecker, Alexander S. and
             Bethge, Matthias and Brendel, Wieland},
         journal={arXiv preprint arXiv:1907.07484},
         year={2019}
@@ -91,21 +91,52 @@ class Data:
 
     '''
 
-    @staticmethod
-    def apply_imperceptible_pseudorandom_image_corruption(image: np.ndarray, corruption_name):
-        corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
+    # divide each corruption name as its own function for simplicity
+    # to simplify: categorize into compression, blur, noise, misc_corruption
+        # use conditionals to process "iterable" param updated based on the parse arg in run.sh
+    # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
+    # for image in x_train: apply_imperceptible_pseudorandom_image_corruption(image, corruption_name)
+    # non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+    
+    corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
-        # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
-        # if corruption_name explicitly defined and specified from parse_args() (later, rn it'll be explicitly defined), then apply that specific corruption iteratively on all the data (iteration defined in simulation.py)
-        # 1 corruption per exp config
-            # for image in x_train: apply_imperceptible_pseudorandom_image_corruption(image, corruption_name)
-        # non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+
+    @staticmethod
+    def apply_imperceptible_pseudorandom_image_corruption(image: np.ndarray, corruption_name):
         return image
 
     @staticmethod
-    def apply_noise(image : np.ndarray, noise_sigma : float):
+    def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
+        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
+
+        return image
+
+    @staticmethod
+    def apply_blur_corruption(image : np.ndarray, blur_corruption_name : str) -> np.ndarray:
+        # iter over blur corruptions
+        # support a subset that is relevant to imperceptible fidelity change from source np.ndarray matrix distribution
+        blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+        return image
+
+
+    @staticmethod
+    def apply_data_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_data_corruptions --> jpeg_compression
+        data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+        return image
+
+    @staticmethod
+    def apply_noise_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_noise_corruptions --> gaussian noise (omit and figure out nsl backend implementation with tf.GradientTape as tape), shot noise, impulse noise, etc
+        # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
+        noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
+        return image
+
+    @staticmethod
+    def apply_noise_for_image_degradation(image : np.ndarray, noise_sigma : float):
         # noise_sigma specifies gaussian_noise_stdev
         image = imagedegrade.np.noise(image, noise_sigma)
         return image
