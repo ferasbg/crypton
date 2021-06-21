@@ -109,6 +109,8 @@ def adaptive_federated_adagrad(client_model : Sequential):
     return federated_adagrad_strategy
 
 def build_compile_client_model(adversarial_regularization_state : bool, num_classes : int):
+    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+    # keras makes complexity mapping assumptions of developer when generating graph
     if (adversarial_regularization_state == True):
         parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
         model = build_uncompiled_nsl_model(parameters=parameters, num_classes=num_classes)

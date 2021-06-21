@@ -55,23 +55,11 @@ from model import Network
 
 
 class AdversarialRegularizationWrapper():
-    '''
-    Purpose:
-        - wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
-
-    Discussion:
-        - formalize relationship between adversarial input generation for a client and its server-side evaluation-under-attack.
-        - adversarial regularization is very useful for defining an explicit structure e.g. structural signals rather than single samples.
-        - nsl-ar structured signals provides more fine-grained information not available in feature inputs.
-        - We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
-        - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
-
-    '''
 
     def __init__(self, num_classes: int, model: Sequential):
         super(AdversarialRegularizationWrapper, self).__init__()
         self.model = model
-        self.gaussian_layer = keras.layers.GaussianNoise(stdev=0.2)
+        self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.num_classes = num_classes
 
     def create_adversarial_regularization_model(num_classes: int):
@@ -87,6 +75,13 @@ class HParams(object):
 
     Notes:
         - there are different regularization techniques, but keep technique constant
+        - formalize relationship between adversarial input generation for a client and its server-side evaluation-under-attack.
+        - adversarial regularization is very useful for defining an explicit structure e.g. structural signals rather than single samples.
+        - nsl-ar structured signals provides more fine-grained information not available in feature inputs.
+        - We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
+        - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
+        - wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
+
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):

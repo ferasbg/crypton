@@ -61,10 +61,23 @@ import dataset
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-
 DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
+
+
+class HParams(object):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
+        self.input_shape = [32, 32, 3]
+        self.num_classes = num_classes
+        self.conv_filters = [32, 64, 64, 128, 128, 256]
+        self.kernel_size = (3, 3)
+        self.pool_size = (2, 2)
+        self.num_fc_units = [64]
+        self.batch_size = 32
+        self.epochs = 5
+        self.adv_multiplier = adv_multiplier
+        self.adv_step_size = adv_step_size
+        self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity"
 
 def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
     """Start the server with a slightly adjusted FedAvg strategy."""
@@ -74,32 +87,38 @@ def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
     fl.server.start_server(strategy=strategy, config={
                            "num_rounds": num_rounds})
 
-
 def start_client(dataset: DATASET) -> None:
     """Start a single client with the provided dataset."""
-    # define all client-level configurations within the model passed to the Client wrapper
+    # manually hardcode configs before extending to fixing import errors, parse_args for customization, etc just to see if there's function
     num_classes = 10
+    gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
+    parameters = HParams(num_classes=num_classes, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
     input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") 
-    conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
+    conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(dropout)
-    maxpool1 = layers.MaxPool2D((2,2))(conv2)
-    conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
-    maxpool2 = layers.MaxPool2D((2,2))(conv4)
-    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
-    maxpool3 = layers.MaxPool2D((2,2))(conv6)
+    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D(parameters.pool_size)(conv2)
+    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D(parameters.pool_size)(conv4)
+    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
     flatten = layers.Flatten()(maxpool3)
     dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
     output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
+    
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
+    model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-    # iterate over entire dataset before it's casted and partitioned to apply image corruptions
-    # Unpack the CIFAR-10 dataset partition
+    # iterate over entire dataset before it's casted and partitioned to apply image corruptions; apply dataset partition
     (x_train, y_train), (x_test, y_test) = dataset
+    x_train = tf.cast(x_train, dtype=tf.float32)
+    x_test = tf.cast(x_test, dtype=tf.float32)
 
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -113,20 +132,19 @@ def start_client(dataset: DATASET) -> None:
             model.set_weights(parameters)
             # https://keras.io/api/models/model_training_apis/#fit-method
             # configure epochs, batch_size config based on HParams
-            # x={'image': x_train, 'label': y_train} for fit param given model is adv_model
-            model.fit(x_train, y_train, epochs=1,
+            model.fit(x={"image": x_train, "label": y_train}, epochs=1,
                       batch_size=32, steps_per_epoch=3)
             return model.get_weights(), len(x_train), {}
 
         def evaluate(self, parameters, config):
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
-            loss, accuracy = model.evaluate(x_test, y_test)
+            # error: too many to unpack, adv_reg error
+            loss, accuracy = model.evaluate(x={"image": x_test, "label": y_test})
             return loss, len(x_test), {"accuracy": accuracy}
 
     # Start Flower client
     fl.client.start_numpy_client("0.0.0.0:8080", client=CifarClient())
-
 
 def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
     """Start a FL simulation."""

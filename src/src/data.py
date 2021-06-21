@@ -104,6 +104,7 @@ class Data:
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
 
+    # applying image corruptions is less of a priority than setting up adv. reg client and seeing errors there and ironing vs. dataset specific reg.
     # the goal here is categorized corruptions; rather than just ad-hoc using every corruption there is
     @staticmethod
     def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
