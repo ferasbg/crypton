@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple
 import art
 import cleverhans
 import flwr as fl
+import imagecorruptions
 import keras
 import matplotlib.pyplot as plt
 import numpy
@@ -93,21 +94,26 @@ class Data:
 
     # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
     # non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
-    
+    # each config has 1 specific corruption applied along with structured signals for adv. regularization
+    # each config also has 1 specific federated strategy of course
+    # either way test all permutations iteratively
+    # first get base config working before extending to parse_args
+    # also define the setup so that parse_args can process correctly with simulation.py
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
 
-    @staticmethod
-    def apply_imperceptible_pseudorandom_image_corruption(image: np.ndarray, corruption_name):
-        return image
-
+    # the goal here is categorized corruptions; rather than just ad-hoc using every corruption there is
     @staticmethod
     def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
         misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
-        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
+        for corruption_str in misc_corruption_set:
+            if (corruption_name == corruption_str):
+                image = imagecorruptions.corrupt(image, corruption_name=corruption_str, severity=1)
 
+        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
+        # implement each corruption or parameterize if possible; based on corruption name, apply that specific corruption
         return image
 
     @staticmethod
@@ -119,26 +125,27 @@ class Data:
 
 
     @staticmethod
-    def apply_data_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+    def apply_data_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
         # apply_data_corruptions --> jpeg_compression
         data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
         return image
 
     @staticmethod
-    def apply_noise_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+    def apply_noise_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
         # apply_noise_corruptions --> gaussian noise (omit and figure out nsl backend implementation with tf.GradientTape as tape), shot noise, impulse noise, etc
         # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
         noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
         return image
 
     @staticmethod
-    def apply_noise_for_image_degradation(image : np.ndarray, noise_sigma : float):
+    def apply_noise_image_degrade(image : np.ndarray, noise_sigma : float):
         # noise_sigma specifies gaussian_noise_stdev
         image = imagedegrade.np.noise(image, noise_sigma)
         return image
 
     @staticmethod
     def image_compression_distortion(image : np.ndarray, intensity_range=0.1):
+        # either process per batch or the entire dataset before it's processed into network's input layer
         # distortion is not the same as data/resolution loss
         jpeg_quality = 85 # 85% distortion
         image = imagedegrade.np.jpeg(input=image, jpeg_quality=jpeg_quality, intensity_range=intensity_range)

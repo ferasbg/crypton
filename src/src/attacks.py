@@ -91,7 +91,6 @@ def additive_perturbation(input_image, norm_type, norm_value):
 def apply_eval_perturbation(x_test):
     return x_test
 
-
 if __name__ == '__main__':
     # setup data for testing each function
     setup_sample_data_for_file()

@@ -82,18 +82,12 @@ def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
 
 def start_client(dataset: DATASET) -> None:
     """Start a single client with the provided dataset."""
-
-    # abstract this out into its own function and check if simulation.py is functional before setting up functions for adv_reg and non adv_reg "client" models
     # define all client-level configurations within the model passed to the Client wrapper
-    # adv. reg. model --> ClientWrapper(AdvWrapper(model))
     num_classes = 10
     # conflict between Sequential/Functional model object passed to CifarClient, or is it agnostic to this difference? A conflict of types is possible here.
     model = build_compile_client_model(adversarial_regularization_state=True, num_classes=10)
-    
     # iterate over entire dataset before it's casted and partitioned to apply image corruptions
-
     # Unpack the CIFAR-10 dataset partition
-    # write function to apply image transformations directly to the cifar_data stored in x_train and x_test before it's perturbed during adv. regularization
     (x_train, y_train), (x_test, y_test) = dataset
 
     # Define a Flower client
@@ -106,7 +100,6 @@ def start_client(dataset: DATASET) -> None:
             """Fit model and return new weights as well as number of training
             examples."""
             model.set_weights(parameters)
-            # Remove steps_per_epoch if you want to train over the full dataset
             # https://keras.io/api/models/model_training_apis/#fit-method
             # configure epochs, batch_size config based on HParams
             # x={'image': x_train, 'label': y_train} for fit param given model is adv_model
@@ -152,7 +145,6 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
     # Block until all processes are finished
     for p in processes:
         p.join()
-
 
 if __name__ == "__main__":
     run_simulation(num_rounds=100, num_clients=10, fraction_fit=0.5)
