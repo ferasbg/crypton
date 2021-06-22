@@ -50,11 +50,13 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
+import warnings
+warnings.filterwarnings("ignore")
 
 from model import Network
 
 
-class AdversarialRegularizationWrapper():
+class AdversarialRegularizationWrapper(object):
 
     def __init__(self, num_classes: int, model: Sequential):
         super(AdversarialRegularizationWrapper, self).__init__()
@@ -97,11 +99,16 @@ class HParams(object):
         self.adv_step_size = adv_step_size
         self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity"
 
-# preprocess data
+def load_simulation_data():
+    # process data the same way simulation.py does in order to make it work for adv_model (independent of client wrapper)
+    pass
+
+# simulation-based data processing; independent of client wrapper and partitions
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 x_test, y_test = x_train[-10000:], y_train[-10000:]
 x_train = tf.cast(x_train, dtype=tf.float32)
 x_test = tf.cast(x_test, dtype=tf.float32)
+DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
 # configure params object
 parameters = HParams(num_classes=10, adv_multiplier=0.2,
@@ -129,14 +136,21 @@ def build_uncompiled_nsl_model(parameters: HParams, num_classes: int):
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
     return model
 
-model = build_uncompiled_nsl_model(parameters, num_classes=10)
+def process_data():
+    batch_size = parameters.batch_size
+    train_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_train, 'label': y_train}).batch(batch_size)
+    val_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_test, 'label': y_test}).batch(batch_size)
+    val_steps = x_test.shape[0] / batch_size
+    adv_model.fit(train_data, validation_data=val_data,
+                validation_steps=val_steps, epochs=2, verbose=1)
+
+model = build_uncompiled_nsl_model(parameters=parameters, num_classes=10)
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-
 adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-adv_model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
+adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
 adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-# adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
-
-# wrap adversarial loss, apply perturbations to data; seems like nsl is agnostic to how data is formatted
+adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
 results = adv_model.evaluate(x={'image': x_test, 'label': y_test})
 print(results)

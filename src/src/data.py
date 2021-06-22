@@ -74,6 +74,14 @@ class Data:
     - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
     - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
 
+    - iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
+    - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+    - each config has 1 specific corruption applied along with structured signals for adv. regularization
+    - each config also has 1 specific federated strategy of course
+    - either way test all permutations iteratively
+    - first get base config working before extending to parse_args
+    - also define the setup so that parse_args can process correctly with simulation.py
+
     References:
         @article{michaelis2019dragon,
         title={Benchmarking Robustness in Object Detection:
@@ -91,14 +99,6 @@ class Data:
     "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
     '''
-
-    # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
-    # non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
-    # each config has 1 specific corruption applied along with structured signals for adv. regularization
-    # each config also has 1 specific federated strategy of course
-    # either way test all permutations iteratively
-    # first get base config working before extending to parse_args
-    # also define the setup so that parse_args can process correctly with simulation.py
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
@@ -108,13 +108,12 @@ class Data:
     # the goal here is categorized corruptions; rather than just ad-hoc using every corruption there is
     @staticmethod
     def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
         misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
         for corruption_str in misc_corruption_set:
             if (corruption_name == corruption_str):
                 image = imagecorruptions.corrupt(image, corruption_name=corruption_str, severity=1)
 
-        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
-        # implement each corruption or parameterize if possible; based on corruption name, apply that specific corruption
         return image
 
     @staticmethod

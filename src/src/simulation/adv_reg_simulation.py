@@ -59,11 +59,13 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 
 import dataset
 
+# TODO: configure epochs, batch_size config based on HParams
+
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+# Tuple[np.ndarray, np.ndarray] --> [x_train, y_train]
+# they store both train and test
 DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
-
-
 
 class HParams(object):
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
@@ -91,9 +93,10 @@ def start_client(dataset: DATASET) -> None:
     """Start a single client with the provided dataset."""
     # manually hardcode configs before extending to fixing import errors, parse_args for customization, etc just to see if there's function
     num_classes = 10
+    # setup conditional to handle appending gaussian layer to base network; default=perturbations, next=gaussian noise + perturbations, ....
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
     parameters = HParams(num_classes=num_classes, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") 
+    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") # 32,32,1
     conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -109,16 +112,12 @@ def start_client(dataset: DATASET) -> None:
     dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
     output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
-    
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-    model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
+    adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-    # iterate over entire dataset before it's casted and partitioned to apply image corruptions; apply dataset partition
     (x_train, y_train), (x_test, y_test) = dataset
-    x_train = tf.cast(x_train, dtype=tf.float32)
-    x_test = tf.cast(x_test, dtype=tf.float32)
 
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -131,7 +130,8 @@ def start_client(dataset: DATASET) -> None:
             examples."""
             model.set_weights(parameters)
             # https://keras.io/api/models/model_training_apis/#fit-method
-            # configure epochs, batch_size config based on HParams
+            # why is it that FitRes can process fit param of dict map but EvaluateRes cannot??
+            # x_train is a set of np.ndarrays
             model.fit(x={"image": x_train, "label": y_train}, epochs=1,
                       batch_size=32, steps_per_epoch=3)
             return model.get_weights(), len(x_train), {}
@@ -139,8 +139,15 @@ def start_client(dataset: DATASET) -> None:
         def evaluate(self, parameters, config):
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
-            # error: too many to unpack, adv_reg error
-            loss, accuracy = model.evaluate(x={"image": x_test, "label": y_test})
+            # x_test : <class 'tensorflow.python.framework.ops.EagerTensor'>
+            # processing dict keys; or non-iterable "Tensor"
+            # both of type np.ndarray; error with non-iterable EagerTensor given tuple of dict keys??
+            # expected 2 e.g. the two variables to distribute the outputs to
+            # dataset element processed and evaluate() function
+            # this problem has to do with preprocessing of data and fitting it to the DATASET config in simulation
+            # label_keys: A tuple of strings denoting which keys in the input features (a dict mapping keys to tensors) represent labels. This list should be 1-to-1 corresponding to the output of the base_model.
+            loss, accuracy = model.evaluate(x_test, y_test)
+
             return loss, len(x_test), {"accuracy": accuracy}
 
     # Start Flower client
@@ -167,6 +174,7 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
 
     # Start all the clients
     for partition in partitions:
+        # method callable target arg start_client
         client_process = Process(target=start_client, args=(partition,))
         client_process.start()
         processes.append(client_process)

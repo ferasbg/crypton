@@ -59,10 +59,11 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 
 import dataset
 
+# TODO: iterate over entire dataset before it's casted and partitioned to apply image corruptions
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-
+# a fixed list of lists (numpy arrays for both)
 DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
 
@@ -79,7 +80,7 @@ def start_client(dataset: DATASET) -> None:
     """Start a single client with the provided dataset."""
     # define all client-level configurations within the model passed to the Client wrapper
     num_classes = 10
-    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") 
+    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -97,9 +98,14 @@ def start_client(dataset: DATASET) -> None:
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-    # iterate over entire dataset before it's casted and partitioned to apply image corruptions
     # Unpack the CIFAR-10 dataset partition
     (x_train, y_train), (x_test, y_test) = dataset
+    print()
+    print("printing type signatures for tuple params for dataset : DATASET")
+    # np.ndarray (cast or process type tf...EagerTensor to np.ndarray?? for adv. reg)
+    print(type(x_train))
+    print(type(x_test))
+
 
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -121,6 +127,7 @@ def start_client(dataset: DATASET) -> None:
         def evaluate(self, parameters, config):
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
+            # when model is adv_model, how is eval different? with respect to dataset : DATASET eg tuple of tuples
             loss, accuracy = model.evaluate(x_test, y_test)
             return loss, len(x_test), {"accuracy": accuracy}
 

@@ -19,7 +19,9 @@ from typing import List, Tuple, cast
 import numpy as np
 import tensorflow as tf
 
+# XY is (x_train, y_train) or (x_test, y_test)
 XY = Tuple[np.ndarray, np.ndarray]
+# then it seems like they take the tuple and make it into a list?
 XYList = List[XY]
 PartitionedDataset = List[Tuple[XY, XY]]
 
@@ -56,4 +58,5 @@ def load(
     xy_train_partitions = create_partitions(xy_train, num_partitions)
     xy_test_partitions = create_partitions(xy_test, num_partitions)
 
+    # list(zip) is the format of partition data; perhaps it's not able to unpack a dict when it's partitioned with list(zip(dataset_partition based on clients))
     return list(zip(xy_train_partitions, xy_test_partitions))
