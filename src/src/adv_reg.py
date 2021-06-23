@@ -18,7 +18,6 @@ from typing import Dict, List, Tuple
 import art
 import cleverhans
 import flwr as fl
-import keras
 import matplotlib.pyplot as plt
 import neural_structured_learning as nsl
 import numpy
@@ -35,25 +34,18 @@ from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
                                   FedFSv1, Strategy, fedopt)
-from keras import backend as K
-from keras import optimizers, regularizers
+from tensorflow import keras
+from keras import layers, optimizers, regularizers
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.datasets import cifar10, cifar100
 from keras.datasets.cifar10 import load_data
-from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
-from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.python.keras.backend import update
-from tensorflow.python.keras.engine.sequential import Sequential
-from tensorflow.python.ops.gen_batch_ops import Batch
-import warnings
-warnings.filterwarnings("ignore")
 
 from model import Network
+
+warnings.filterwarnings("ignore")
 
 
 class AdversarialRegularizationWrapper(object):
@@ -136,39 +128,20 @@ def build_uncompiled_nsl_model(parameters: HParams, num_classes: int):
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
     return model
 
-def get_val():
-    # val_data = (x_test, y_test) --> the way that dataset : DATASET is processed creates the error as well
-    val_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_test, 'label': y_test}).batch(parameters.batch_size)
-
-    return val_data
-
-def fit_opt():
-
+def formatted_fit():
+    batch_size = parameters.batch_size
     train_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_train, 'label': y_train}).batch(parameters.batch_size)
-    
-    val_data = get_val()
-    val_steps = x_test.shape[0] / parameters.batch_size
-    
-    # BatchDataset != Feature Tuple
-    history = adv_model.fit(train_data, validation_data=val_data,
-                validation_steps=val_steps, epochs=parameters.epochs, verbose=1)
-
-    return history
+        {'image': x_train, 'label': y_train}).batch(batch_size)
+    val_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_test, 'label': y_test}).batch(batch_size)
+    val_steps = x_test.shape[0] / batch_size
+    history =  adv_model.fit(train_data, validation_data=val_data, validation_steps=val_steps, epochs=parameters.epochs, verbose=1)
+    print(history)
 
 model = build_uncompiled_nsl_model(parameters=parameters, num_classes=10)
 model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
 adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
 adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
 adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-# process the dicts with train_data and validation_data --> independent of simulation.py; then process with custom file that re-implements simulation.py (either it works with existing code or I re-implement, doesn't matter either way)
-# adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
-history = fit_opt()
-print(history)
-val_data = get_val()
-results = adv_model.evaluate(val_data, batch_size=parameters.batch_size, epochs=parameters.epochs)
-print(results)
-
-# the features  dict_keys(['label'] creates unpacking error and even with [image, label]
+formatted_fit()
+#results = adv_model.evaluate(x={'image': x_test, 'label': y_test})

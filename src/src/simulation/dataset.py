@@ -54,6 +54,12 @@ def load(
 ) -> PartitionedDataset:
     """Create partitioned version of CIFAR-10."""
     xy_train, xy_test = tf.keras.datasets.cifar10.load_data()
+    # normalize the data that partitions are iteratively created from
+    # xy_train = (xy_train/255)-0.5
+    # xy_test = (xy_test/255)-0.5
+    # # one-hot encoded labels
+    # y_train = tf.keras.utils.to_categorical(xy_train, 10)
+    # y_test = tf.keras.utils.to_categorical(xy_test, 10)
 
     xy_train_partitions = create_partitions(xy_train, num_partitions)
     xy_test_partitions = create_partitions(xy_test, num_partitions)

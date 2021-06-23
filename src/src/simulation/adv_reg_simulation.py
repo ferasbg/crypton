@@ -56,10 +56,11 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
-
+from tensorflow.keras.utils import plot_model
 import dataset
 
 # TODO: configure epochs, batch_size config based on HParams
+# plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -140,15 +141,20 @@ def start_client(dataset: DATASET) -> None:
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
             # x_test : <class 'tensorflow.python.framework.ops.EagerTensor'>
-            # processing dict keys; or non-iterable "Tensor"
-            # both of type np.ndarray; error with non-iterable EagerTensor given tuple of dict keys??
-            # expected 2 e.g. the two variables to distribute the outputs to
-            # dataset element processed and evaluate() function
-            # this problem has to do with preprocessing of data and fitting it to the DATASET config in simulation
-            # label_keys: A tuple of strings denoting which keys in the input features (a dict mapping keys to tensors) represent labels. This list should be 1-to-1 corresponding to the output of the base_model.
+            # convert x_test data; remove dict key, perturb images during train and test
+            x_test, val_steps = CifarClient.process_test_data(batch_size=32)
             loss, accuracy = model.evaluate(x_test, y_test)
-
             return loss, len(x_test), {"accuracy": accuracy}
+        
+        @staticmethod
+        def process_test_data(batch_size : int):
+            # train_data = tf.data.Dataset.from_tensor_slices(
+            #     {'image': x_train, 'label': y_train}).batch(batch_size)
+            val_data = tf.data.Dataset.from_tensor_slices(
+                {'image': x_test, 'label': y_test}).batch(batch_size)
+            # are val steps necessary for .evaluate()
+            val_steps = x_test.shape[0] / batch_size # 1024/32 (excluding channels)
+            return val_data, val_steps
 
     # Start Flower client
     fl.client.start_numpy_client("0.0.0.0:8080", client=CifarClient())
@@ -169,7 +175,7 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
     # Optionally block the script here for a second or two so the server has time to start
     time.sleep(2)
 
-    # Load the dataset partitions
+    # Load the dataset partitions; how is the data itself processed? e.g. input features of train/test set
     partitions = dataset.load(num_partitions=num_clients)
 
     # Start all the clients
