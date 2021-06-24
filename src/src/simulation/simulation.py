@@ -106,7 +106,6 @@ def start_client(dataset: DATASET) -> None:
     print(type(x_train))
     print(type(x_test))
 
-
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
         def get_parameters(self):
@@ -126,8 +125,10 @@ def start_client(dataset: DATASET) -> None:
 
         def evaluate(self, parameters, config):
             """Evaluate using provided parameters."""
+            # change to results instead, and return history (exactly how other examples work)
             model.set_weights(parameters)
-            # when model is adv_model, how is eval different? with respect to dataset : DATASET eg tuple of tuples
+            
+            
             loss, accuracy = model.evaluate(x_test, y_test)
             return loss, len(x_test), {"accuracy": accuracy}
 
@@ -167,3 +168,4 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
 
 if __name__ == "__main__":
     run_simulation(num_rounds=100, num_clients=10, fraction_fit=0.5)
+

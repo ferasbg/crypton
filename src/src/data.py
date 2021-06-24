@@ -30,7 +30,7 @@ import tensorflow_probability as tpb
 import tqdm
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import (  # FedProx; FedAdagrad helps convergence behavior which in turn helps optimize model robustness; fedOpt is configurable Adagrad for server-side optimizations for the server model e.g. trusted aggregator
+from flwr.server.strategy import (  
     FaultTolerantFedAvg, FedAdagrad, FedAvg, FedFSv1, Strategy, fedopt)
 from keras import backend as K
 from keras import optimizers, regularizers
@@ -52,7 +52,6 @@ from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 import imagedegrade
 from imagedegrade import np as degrade
-from model import Network
 from imagecorruptions import corrupt
 
 class Data:
@@ -73,6 +72,7 @@ class Data:
     - surface variations within corruptions for adv. reg. via data
     - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
     - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
+    - FedAdagrad helps server model converge on heteregeneous data better; that's all
 
     - iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
     - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
