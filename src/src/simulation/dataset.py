@@ -42,6 +42,7 @@ def create_partitions(
     num_partitions: int,
 ) -> XYList:
     """Create partitioned version of a source dataset."""
+    # they expect XY which is a Tuple[np.ndarray, np.ndarray] so it's either train_data or val_data
     x, y = source_dataset
     x, y = shuffle(x, y)
     xy_partitions = partition(x, y, num_partitions)
@@ -49,17 +50,26 @@ def create_partitions(
     return xy_partitions
 
 
-def load(
-    num_partitions: int,
-) -> PartitionedDataset:
+def load(num_partitions: int,) -> PartitionedDataset:
+    
     """Create partitioned version of CIFAR-10."""
+    
     xy_train, xy_test = tf.keras.datasets.cifar10.load_data()
-    # normalize the data that partitions are iteratively created from
-    # xy_train = (xy_train/255)-0.5
-    # xy_test = (xy_test/255)-0.5
-    # # one-hot encoded labels
-    # y_train = tf.keras.utils.to_categorical(xy_train, 10)
-    # y_test = tf.keras.utils.to_categorical(xy_test, 10)
+
+    x_train = xy_train[0]
+    y_train = xy_train[1]
+    x_test = xy_test[0]
+    y_test = xy_test[1]
+
+    # dict of a tuple of tuples (where there is (np.ndarray, np.ndarray) inside of the value in a key value creates the error)
+
+    # preprocess as train_dataset and validation_dataset
+    train_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_train, 'label': y_train})
+        #.batch(batch_size=32)
+    
+    val_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_test, 'label': y_test})
 
     xy_train_partitions = create_partitions(xy_train, num_partitions)
     xy_test_partitions = create_partitions(xy_test, num_partitions)

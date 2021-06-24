@@ -59,13 +59,11 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 from tensorflow.keras.utils import plot_model
 import dataset
 
-# TODO: configure epochs, batch_size config based on HParams
-# plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
-
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # Tuple[np.ndarray, np.ndarray] --> [x_train, y_train]
 # they store both train and test
+# [xy_train, xy_test] = [(x_train, y_train), (x_test, y_test)]
 DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
 class HParams(object):
@@ -118,7 +116,9 @@ def start_client(dataset: DATASET) -> None:
     adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
+    # they load partition, it's why cifar10 isn't explicitly defined here.
     (x_train, y_train), (x_test, y_test) = dataset
+
 
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -140,9 +140,7 @@ def start_client(dataset: DATASET) -> None:
         def evaluate(self, parameters, config):
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
-            # x_test : <class 'tensorflow.python.framework.ops.EagerTensor'>
-            # convert x_test data; remove dict key, perturb images during train and test
-            x_test, val_steps = CifarClient.process_test_data(batch_size=32)
+            # process an ndarray instead of BatchDataSet
             loss, accuracy = model.evaluate(x_test, y_test)
             return loss, len(x_test), {"accuracy": accuracy}
         
