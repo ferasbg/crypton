@@ -151,11 +151,12 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
     # Optionally block the script here for a second or two so the server has time to start
     time.sleep(2)
 
-    # Load the dataset partitions
+    # Load the dataset partitions; all the client partitions of the train/test tuples (since there's (image, label) tuples)
     partitions = dataset.load(num_partitions=num_clients)
 
     # Start all the clients
     for partition in partitions:
+        # partition is a list of tuples e.g. the train/test partitions; it's why evaluate can't read the data right
         client_process = Process(target=start_client, args=(partition,))
         client_process.start()
         processes.append(client_process)

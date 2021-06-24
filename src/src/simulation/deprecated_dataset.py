@@ -19,22 +19,28 @@ from typing import List, Tuple, cast
 import numpy as np
 import tensorflow as tf
 
+# XY is (x_train, y_train) or (x_test, y_test)
+XY = Tuple[np.ndarray, np.ndarray]
+# then it seems like they take the tuple and make it into a list?
+XYList = List[XY]
+PartitionedDataset = List[Tuple[XY, XY]]
 
-def shuffle(x: np.ndarray, y: np.ndarray):
+
+def shuffle(x: np.ndarray, y: np.ndarray) -> XY:
     """Shuffle x and y."""
     idx = np.random.permutation(len(x))
     return x[idx], y[idx]
 
 
-def partition(x: np.ndarray, y: np.ndarray, num_partitions: int):
+def partition(x: np.ndarray, y: np.ndarray, num_partitions: int) -> XYList:
     """Split x and y into a number of partitions."""
     return list(zip(np.split(x, num_partitions), np.split(y, num_partitions)))
 
 
 def create_partitions(
-    source_dataset,
+    source_dataset: XY,
     num_partitions: int,
-):
+) -> XYList:
     """Create partitioned version of a source dataset."""
     # they expect XY which is a Tuple[np.ndarray, np.ndarray] so it's either train_data or val_data
     x, y = source_dataset
@@ -45,15 +51,13 @@ def create_partitions(
     return xy_partitions
 
 
-def load(num_partitions: int,):
+def load(num_partitions: int,) -> PartitionedDataset:
     
     """Create partitioned version of CIFAR-10."""
     
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    xy_train, xy_test = tf.keras.datasets.cifar10.load_data()
 
-    # adv_model perturbs the batches when the batch is processed; what if we perturb before?
-    xy_train = (x_train, y_train)
-    xy_test = (x_test, y_test)
+    
 
     # unpack into feature tuple, and not a list of tuples
     xy_train_partitions = create_partitions(xy_train, num_partitions)

@@ -58,15 +58,8 @@ from model import Network
 Generate adversarial examples.
 
 Methods will include:
-    -  imperceptible ASR attack
     - universal perturbation attack (norm)
-    - deepfool
-    - PixelAttack
     - target universal perturbation attack
-    - projected gradient descent attack
-    - fast gradient sign method
-    - hamiltonian pixelwise perturbations
-
 '''
 
 def setup_sample_data_for_file():
@@ -76,22 +69,6 @@ def setup_sample_data_for_file():
     image = x_train[-1:]
     return image, image.shape, tf.keras.preprocessing.image.array_to_img(image)
 
-def brightness_perturbation_norm(input_image):
-    sigma = 0.085
-    brightness_threshold = 1 - sigma
-    input_image = tf.math.scalar_mul(brightness_threshold, input_image)
-    return input_image
-
-def hamiltonian_perturbation(input_image):
-    return input_image
-
 def additive_perturbation(input_image, norm_type, norm_value):
     return input_image
 
-def apply_eval_perturbation(x_test):
-    return x_test
-
-if __name__ == '__main__':
-    # setup data for testing each function
-    setup_sample_data_for_file()
-    # apply specified perturbation to use during evaluation (inference time, so to speak)

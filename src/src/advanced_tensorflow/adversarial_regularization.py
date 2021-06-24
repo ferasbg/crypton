@@ -15,21 +15,21 @@ import traceback
 import warnings
 from typing import Dict, List, Tuple
 
-import art
-import cleverhans
+# import art
+# import cleverhans
 import flwr as fl
 import keras
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import neural_structured_learning as nsl
 import numpy
 import numpy as np
 import scipy
 import sympy
 import tensorflow as tf
-import tensorflow_datasets as tfds
-import tensorflow_federated as tff
-import tensorflow_privacy as tpp
-import tensorflow_probability as tpb
+# import tensorflow_datasets as tfds
+# import tensorflow_federated as tff
+# import tensorflow_privacy as tpp
+# import tensorflow_probability as tpb
 import tqdm
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
@@ -44,7 +44,6 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from PIL import Image
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
@@ -52,21 +51,6 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
 import warnings
 warnings.filterwarnings("ignore")
-
-from model import Network
-
-
-class AdversarialRegularizationWrapper(object):
-
-    def __init__(self, num_classes: int, model: Sequential):
-        super(AdversarialRegularizationWrapper, self).__init__()
-        self.model = model
-        self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
-        self.num_classes = num_classes
-
-    def create_adversarial_regularization_model(num_classes: int):
-        model = Network(num_classes).build_compile_model()
-        return model
 
 
 class HParams(object):
@@ -147,10 +131,10 @@ def fit_opt():
 
     train_data = tf.data.Dataset.from_tensor_slices(
         {'image': x_train, 'label': y_train}).batch(parameters.batch_size)
-
+    
     val_data = get_val()
     val_steps = x_test.shape[0] / parameters.batch_size
-
+    
     # BatchDataset != Feature Tuple
     history = adv_model.fit(train_data, validation_data=val_data,
                 validation_steps=val_steps, epochs=parameters.epochs, verbose=1)

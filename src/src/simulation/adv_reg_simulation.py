@@ -95,7 +95,7 @@ def start_client(dataset: DATASET) -> None:
     # setup conditional to handle appending gaussian layer to base network; default=perturbations, next=gaussian noise + perturbations, ....
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
     parameters = HParams(num_classes=num_classes, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") # 32,32,1
+    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -110,15 +110,15 @@ def start_client(dataset: DATASET) -> None:
     flatten = layers.Flatten()(maxpool3)
     dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
     output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-    model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
+    model = keras.Model(inputs=input_layer, outputs=output_layer)
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-    adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
-    adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     # they load partition, it's why cifar10 isn't explicitly defined here.
     (x_train, y_train), (x_test, y_test) = dataset
-
+    # model expects tuple to be passed in eval function
 
     # Define a Flower client
     class CifarClient(fl.client.NumPyClient):
@@ -133,7 +133,7 @@ def start_client(dataset: DATASET) -> None:
             # https://keras.io/api/models/model_training_apis/#fit-method
             # why is it that FitRes can process fit param of dict map but EvaluateRes cannot??
             # x_train is a set of np.ndarrays
-            model.fit(x={"image": x_train, "label": y_train}, epochs=1,
+            model.fit(x_train, y_train, epochs=1,
                       batch_size=32, steps_per_epoch=3)
             return model.get_weights(), len(x_train), {}
 
@@ -141,9 +141,10 @@ def start_client(dataset: DATASET) -> None:
             """Evaluate using provided parameters."""
             model.set_weights(parameters)
             # process an ndarray instead of BatchDataSet
+            # np.ndarray nor tensor is iterable here
             loss, accuracy = model.evaluate(x_test, y_test)
             return loss, len(x_test), {"accuracy": accuracy}
-        
+
         @staticmethod
         def process_test_data(batch_size : int):
             # train_data = tf.data.Dataset.from_tensor_slices(
@@ -189,3 +190,22 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float):
 
 if __name__ == "__main__":
     run_simulation(num_rounds=100, num_clients=10, fraction_fit=0.5)
+
+
+'''
+
+# perturb data iteratively before passing to partition AND VALIDATE HOW IT IS PROCESSED to work with .evaluate
+    x_train = xy_train[0]
+    y_train = xy_train[1]
+    x_test = xy_test[0]
+    y_test = xy_test[1]
+
+    # preprocess as train_dataset and validation_dataset
+    train_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_train, 'label': y_train}).batch(batch_size=32)
+        #.batch(batch_size=32)
+
+    val_data = tf.data.Dataset.from_tensor_slices(
+        {'image': x_test, 'label': y_test}).batch(batch_size=32)
+
+'''
