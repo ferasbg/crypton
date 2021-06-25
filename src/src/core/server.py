@@ -29,73 +29,80 @@ from client import HParams, build_adv_model, build_base_model
 
 warnings.filterwarnings("ignore")
 
-def main() -> None:
-    # 1. server-side parameter initialization
-    # 2. server-side parameter evaluation
-    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
-    parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity", state=False)
-    model = build_base_model(parameters=parameters)
+# def main() -> None:
+#     # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
 
-    # Create strategy
-    strategy = flwr.server.strategy.FedAvg(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=3,
-        min_eval_clients=2,
-        min_available_clients=10,
-        eval_fn=get_eval_fn(model),
-        # strategy based on user-written wrapper functions
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        initial_parameters=model.get_weights(),
-    )
+#     # 1. server-side parameter initialization
+#     # 2. server-side parameter evaluation
+#     # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
+#     parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+#     model = build_base_model(parameters=parameters)
 
-    # Start Flower server for ten rounds of federated learning
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": 10})
+#     # Create strategy
+#     strategy = flwr.server.strategy.FedAvg(
+#         fraction_fit=0.3,
+#         fraction_eval=0.2,
+#         min_fit_clients=3,
+#         min_eval_clients=2,
+#         min_available_clients=10,
+#         eval_fn=get_eval_fn(model),
+#         # strategy based on user-written wrapper functions
+#         on_fit_config_fn=fit_config,
+#         on_evaluate_config_fn=evaluate_config,
+#         initial_parameters=model.get_weights(),
+#     )
 
-def get_eval_fn(model):
-    """Return an evaluation function for server-side evaluation."""
+#     # Start Flower server for ten rounds of federated learning
+#     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": 10})
 
-    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    (x_train, y_train) = tf.keras.datasets.cifar10.load_data()
+# def get_eval_fn(model):
+#     """Return an evaluation function for server-side evaluation."""
 
-    # Use the last 5k training examples as a validation set
-    x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+#     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
+#     (x_train, y_train) = tf.keras.datasets.mnist.load_data()
 
-    # The `evaluate` function will be called after every round
-    def evaluate(
-        weights: flwr.common.Parameters,
-    ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
+#     # Use the last 5k training examples as a validation set
+#     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
 
-        model.set_weights(weights)  # Update model with the latest parameters
-        # convert from tuples to dicts if this
-        loss, accuracy = model.evaluate(x_test, y_test)
-        # get dict of history in evaluation, and return
-        return loss, {"accuracy": accuracy}
+#     # The `evaluate` function will be called after every round
+#     def evaluate(
+#         weights: flwr.common.Parameters,
+#     ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
 
-    return evaluate
+#         model.set_weights(weights)  # Update model with the latest parameters
+#         # convert from tuples to dicts if this
+#         loss, accuracy = model.evaluate(x_test, y_test)
+#         # get dict of history in evaluation, and return
+#         return loss, {"accuracy": accuracy}
 
-def fit_config(rnd: int):
-    """Return training configuration dict for each round.
+#     return evaluate
 
-    Keep batch size fixed at 32, perform two rounds of training with one
-    local epoch, increase to two local epochs afterwards.
-    """
-    config = {
-        "batch_size": 32,
-        "local_epochs": 1 if rnd < 2 else 2,
-    }
-    return config
+# def fit_config(rnd: int):
+#     """Return training configuration dict for each round.
 
-def evaluate_config(rnd: int):
-    """Return evaluation configuration dict for each round.
+#     Keep batch size fixed at 32, perform two rounds of training with one
+#     local epoch, increase to two local epochs afterwards.
+#     """
+#     config = {
+#         "batch_size": 32,
+#         "local_epochs": 1 if rnd < 2 else 2,
+#     }
+#     return config
 
-    Perform five local evaluation steps on each client (i.e., use five
-    batches) during rounds one to three, then increase to ten local
-    evaluation steps.
-    """
-    val_steps = 5 if rnd < 4 else 10
-    return {"val_steps": val_steps}
+# def evaluate_config(rnd: int):
+#     """Return evaluation configuration dict for each round.
+
+#     Perform five local evaluation steps on each client (i.e., use five
+#     batches) during rounds one to three, then increase to ten local
+#     evaluation steps.
+#     """
+#     val_steps = 5 if rnd < 4 else 10
+#     return {"val_steps": val_steps}
 
 if __name__ == "__main__":
-    main()
+    # parser.add_argument("--num-clients", default=2, type=int)
+    # parser.add_argument("--num-rounds", default=1, type=int)
+    # parser.add_argument("--fraction-fit", default=1.0, type=float)
+    # args = parser.parse_args()
+    # main(args)
+    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": 10})

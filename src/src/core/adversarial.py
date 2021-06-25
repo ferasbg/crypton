@@ -1,10 +1,11 @@
 import argparse
-import flwr 
+import flwr as fl
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
+from client import Client
 
 class HParams(object):
     '''
@@ -26,7 +27,7 @@ class HParams(object):
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
         self.input_shape = [32, 32, 3]
         self.num_classes = num_classes
-        self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
+        self.conv_filters = [32, 64, 64, 128, 128, 256]
         self.kernel_size = (3, 3)
         self.pool_size = (2, 2)
         self.num_fc_units = [64]
@@ -38,8 +39,6 @@ class HParams(object):
         self.gaussian_state : bool = False
         # if gaussian_state: append after input layer at index 1
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
-        self.clip_value_min = 0.0
-        self.clip_value_max = 1.0
 
 def build_base_model(parameters : HParams):
     input_layer = layers.Input(shape=(28,28,1), batch_size=None, name="image")
@@ -55,9 +54,7 @@ def build_base_model(parameters : HParams):
     conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
     maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
     flatten = layers.Flatten()(maxpool3)
-    # flatten is creating error because type : NoneType
     dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
-    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
     output_layer = layers.Dense(parameters.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
@@ -77,28 +74,25 @@ def build_adv_model(parameters : HParams):
     conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
     maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
     flatten = layers.Flatten()(maxpool3)
-    # flatten is creating error because type : NoneType
     dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
-    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
     output_layer = layers.Dense(parameters.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-    # AdvRegularization is a sub-class of tf.keras.Model, so processing the data to input layer in train/test may differ (probably not though)
     model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return model
 
-# adv_reg federated client with mnist data
-
 parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+
+# ad-hoc config to create client model
 adv_model = build_adv_model(parameters=parameters)
 base_model = build_base_model(parameters=parameters)
-# hardcode
-model = base_model
+
 # partition data here, perturb batches here, apply corruptions here; everything done before it's processed to Client
 IMAGE_INPUT_NAME = 'image'
 LABEL_INPUT_NAME = 'label'
+
 datasets = tfds.load('mnist')
 train_dataset = datasets['train']
 test_dataset = datasets['test']
@@ -112,46 +106,21 @@ def normalize(features):
 def convert_to_tuples(features):
   return features[IMAGE_INPUT_NAME], features[LABEL_INPUT_NAME]
 
-def convert_to_dict(image, label):
+def convert_to_dictionaries(image, label):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
-# change train_dataset and test_dataset params based on whether client model is adv_reg or not
-adv_reg : bool = True
+train_dataset = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
+test_dataset = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
 
-if (adv_reg):
-    train_dataset = train_dataset.map(convert_to_dict)
-    test_dataset = test_dataset.map(convert_to_dict)
+# base_model.fit(train_dataset, epochs=parameters.epochs)
+# results = base_model.evaluate(test_dataset)
 
-if (adv_reg == False):
-    train_dataset = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
-    test_dataset = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
+adv_model = build_adv_model(parameters=parameters)
+# adv_model needs it to be processed in a dict, but flwr.client processes it as a tuple; this conflict is my error
+train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
+test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
-# test that federated client can process the dataset itself
-class Client(flwr.client.NumPyClient):
-    def get_parameters(self):  # type: ignore
-        return model.get_weights()
-
-    def fit(self, parameters, config):  # type: ignore
-        model.set_weights(parameters)
-        # validation data param may be negligible
-        history = model.fit(train_dataset, epochs=5, verbose=1)
-        results = {
-            "loss": history.history["loss"][0],
-            "accuracy": history.history["accuracy"][0],
-            "val_loss": history.history["val_loss"][0],
-            "val_accuracy": history.history["val_accuracy"][0],
-        }
-        return model.get_weights(), results
-
-    def evaluate(self, parameters, config):  # type: ignore
-        model.set_weights(parameters)
-        loss, accuracy = model.evaluate(test_dataset)
-        return loss, {"accuracy": accuracy}
-
-def main():
-    parser = argparse.ArgumentParser(description="entry point to client model configuration.")
-    # parameters (adv_multiplier, adv_step_size, etc), apply_gaussian_layer : bool, formal_robustness : bool, strategy, norm type, norm value, apply adv reg, nominal config
-    flwr.client.start_numpy_client("[::]:8080", client=Client())
-
-if __name__ == '__main__':
-    main()
+#adv_history = adv_model.fit(train_set_for_adv_model, epochs=parameters.epochs)
+#print(adv_history)
+adv_results = adv_model.evaluate(test_set_for_adv_model)
+# default: IID data given artificial setup of the clients and the data
