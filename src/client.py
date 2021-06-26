@@ -105,8 +105,8 @@ def normalize(features):
 def convert_to_tuples(features):
   return features['image'], features['label']
 
-def convert_to_dictionaries(image, label):
-  return {'image': image, 'label': label}
+def convert_to_dictionaries(features):
+  return {'image': features['image'], 'label': features['label']}
 
 def load_partition(idx: int):
     """Load 1/10th of the training and test data to simulate a partition."""
