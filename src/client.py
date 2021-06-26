@@ -11,7 +11,7 @@ from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 
 # todo: factor in partitions after two clients are functional
-# todo: add perturb_batch(batch) per batch in server_model_eval_dataset  
+# todo: add perturb_batch(batch) per batch in server_model_eval_dataset
 # todo: formulate robustness from metrics into formal math for paper ON paper
 
 class HParams(object):
@@ -125,7 +125,7 @@ def load_partition(idx: int):
 parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 adv_model = build_adv_model(parameters=parameters)
 base_model = build_base_model(parameters=parameters)
-model = adv_model 
+model = adv_model
 
 # standard dataset processed for base client
 datasets = tfds.load('mnist')
@@ -158,13 +158,13 @@ class AdvRegClient(flwr.client.NumPyClient):
         model.set_weights(parameters)
         # change to iterable np.ndarray dicts as normal; check for errors then
         history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
-        results = {
-            "loss": history.history["loss"][0],
-            "accuracy": history.history["accuracy"][0],
-            "val_loss": history.history["val_loss"][0],
-            "val_accuracy": history.history["val_accuracy"][0],
-        }
-        return model.get_weights(), results
+        # results = {
+        #     "loss": history.history["loss"][0],
+        #     "accuracy": history.history["accuracy"][0],
+        #     "val_loss": history.history["val_loss"][0],
+        #     "val_accuracy": history.history["val_accuracy"][0],
+        # }
+        return model.get_weights(), history
 
     def evaluate(self, parameters, config):  # type: ignore
         model.set_weights(parameters)
@@ -230,3 +230,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
