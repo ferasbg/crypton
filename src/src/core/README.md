@@ -9,9 +9,16 @@
 - configure client and server
 - configure custom parse_args to modify important variables
 - add metrics
+- currently solving the error of callable param of label; some simple errors with processing mnist dataset
+- it's very much do-able to have adv_reg clients
+- adding .perturb_bath during server-side eval is needed
+- formalization of robustness of entire system is different than metrics collected to assess exp. configs
+- solve input layer compatability error
+- solve dataset processing error with adv_reg with adv_model with Client
 
 
 
+## Unused Code
 
 ```
 
@@ -104,5 +111,15 @@ for batch in test_set_for_adv_model:
   predictions.append(tf.argmax(y_pred, axis=-1).numpy())
 
 print('%s model accuracy: %f' % ('base', metric.result().numpy()))
+
+
+
+if (adv_reg_m2):
+    # method 2
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    train_dataset = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': tf.convert_to_tensor(y_train, dtype='float32')}).batch(batch_size=32)
+    test_dataset = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': tf.convert_to_tensor(y_test, dtype='float32')}).batch(batch_size=32)
+
+
 
 ```
