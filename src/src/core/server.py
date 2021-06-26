@@ -25,7 +25,6 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
-from client import HParams, build_adv_model, build_base_model
 
 warnings.filterwarnings("ignore")
 

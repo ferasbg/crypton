@@ -6,7 +6,6 @@ from tensorflow import keras
 from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
-from dataset import Data
 from settings import *
 
 class HParams(object):
@@ -93,32 +92,16 @@ def build_adv_model(parameters : HParams):
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return model
 
-parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-adv_model = build_adv_model(parameters=parameters)
-base_model = build_base_model(parameters=parameters)
-model = base_model
-IMAGE_INPUT_NAME = 'image'
-LABEL_INPUT_NAME = 'label'
-
 def normalize(features):
-  features[IMAGE_INPUT_NAME] = tf.cast(
-      features[IMAGE_INPUT_NAME], dtype=tf.float32) / 255.0
+  features['image'] = tf.cast(
+      features['image'], dtype=tf.float32) / 255.0
   return features
 
 def convert_to_tuples(features):
-  return features[IMAGE_INPUT_NAME], features[LABEL_INPUT_NAME]
+  return features['image'], features['label']
 
 def convert_to_dictionaries(image, label):
-  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
-
-# use different clients based on whether we are using adversarial regularization
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_adv_model = train_dataset.map(convert_to_dictionaries)
-test_dataset_for_adv_model = test_dataset.map(convert_to_dictionaries)
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
+  return {'image': image, 'label': label}
 
 class AdvRegClient(flwr.client.NumPyClient):
     def get_parameters(self):  # type: ignore
@@ -161,9 +144,20 @@ class Client(flwr.client.NumPyClient):
         loss, accuracy = model.evaluate(test_dataset_for_base_model)
         return loss, {"accuracy": accuracy}
 
+parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+adv_model = build_adv_model(parameters=parameters)
+base_model = build_base_model(parameters=parameters)
+model = base_model
+datasets = tfds.load('mnist')
+train_dataset = datasets['train']
+test_dataset = datasets['test']
+train_dataset_for_adv_model = train_dataset.map(convert_to_dictionaries)
+test_dataset_for_adv_model = test_dataset.map(convert_to_dictionaries)
+train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
+test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
+
 def main():
     parser = argparse.ArgumentParser(description="entry point to client model configuration.")
-    # parameters (adv_multiplier, adv_step_size, etc), apply_gaussian_layer : bool, formal_robustness : bool, strategy, norm type, norm value, apply adv reg, nominal config
     if (type(model) == AdversarialRegularization):
         flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient())
 

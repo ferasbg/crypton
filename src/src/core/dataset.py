@@ -45,7 +45,7 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from neural_structured_learning import nsl
+import neural_structured_learning as nsl
 from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
@@ -166,21 +166,36 @@ class Data:
         x_set = tf.cast(x_set, dtype=tf.float32)
         return x_set
 
+    @staticmethod
+    def perturb_adv_model_dataset(model : AdversarialRegularization, dataset, parameters : HParams):
+        # since perturbation is built-in method in defined class below
+        assert type(model) == AdversarialRegularization
+        IMAGE_INPUT_NAME = 'image'  
+        LABEL_INPUT_NAME = 'label'
+        for batch in dataset:
+            perturbed_batch = model.perturb_on_batch(batch)
+            perturbed_batch[IMAGE_INPUT_NAME] = tf.clip_by_value(perturbed_batch[IMAGE_INPUT_NAME], 0.0, 1.0)
 
-def perturb_adv_model_dataset(model : AdversarialRegularization, dataset, parameters : HParams):
-    # since perturbation is built-in method in defined class below
-    assert type(model) == AdversarialRegularization
-    IMAGE_INPUT_NAME = 'image'  
-    LABEL_INPUT_NAME = 'label'
-    for batch in dataset:
-        perturbed_batch = model.perturb_on_batch(batch)
-        perturbed_batch[IMAGE_INPUT_NAME] = tf.clip_by_value(perturbed_batch[IMAGE_INPUT_NAME], 0.0, 1.0)
+    @staticmethod
+    def perturb_base_model_dataset(dataset, parameters : HParams):
+        pass
 
-def perturb_base_model_dataset(dataset, parameters : HParams):
-    pass
+    @staticmethod
+    def apply_corruptions_to_dataset(dataset, model, corruption_name : str):
+        # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
+        # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
+        pass
 
-def apply_corruptions_to_dataset(dataset, model, corruption_name : str):
-    # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
-    # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
-    pass
+IMAGE_INPUT_NAME = 'image'
+LABEL_INPUT_NAME = 'label'
 
+def normalize(features):
+  features[IMAGE_INPUT_NAME] = tf.cast(
+      features[IMAGE_INPUT_NAME], dtype=tf.float32) / 255.0
+  return features
+
+def convert_to_tuples(features):
+  return features[IMAGE_INPUT_NAME], features[LABEL_INPUT_NAME]
+
+def convert_to_dictionaries(image, label):
+  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}

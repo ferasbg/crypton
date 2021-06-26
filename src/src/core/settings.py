@@ -8,6 +8,8 @@ from adversarial import HParams, build_adv_model, build_base_model
 import argparse
 import absl
 from absl import flags
+import tensorflow_datasets as tfds
+from dataset import *
 
 DEFAULT_SERVER_ADDRESS="[::]:8080"
 DEFAULT_NUM_CLIENTS = 10
@@ -70,4 +72,3 @@ DATA_CORRUPTION_SET = ["jpeg_compression", "elastic_transform", "pixelate"]
 NOISE_CORRUPTION_SET = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
 TRAIN_SET_IMAGE_DISTORTION_STATE = False
 SERVER_TEST_SET_PERTURBATION_STATE = False
-
