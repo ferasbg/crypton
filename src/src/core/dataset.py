@@ -185,17 +185,3 @@ class Data:
         # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
         # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
         pass
-
-IMAGE_INPUT_NAME = 'image'
-LABEL_INPUT_NAME = 'label'
-
-def normalize(features):
-  features[IMAGE_INPUT_NAME] = tf.cast(
-      features[IMAGE_INPUT_NAME], dtype=tf.float32) / 255.0
-  return features
-
-def convert_to_tuples(features):
-  return features[IMAGE_INPUT_NAME], features[LABEL_INPUT_NAME]
-
-def convert_to_dictionaries(image, label):
-  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
