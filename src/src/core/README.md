@@ -120,6 +120,10 @@ if (adv_reg_m2):
     train_dataset = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': tf.convert_to_tensor(y_train, dtype='float32')}).batch(batch_size=32)
     test_dataset = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': tf.convert_to_tensor(y_test, dtype='float32')}).batch(batch_size=32)
 
+## deprecated dict conversion 
+
+# train_dataset_for_adv_model = train_dataset.map(convert_to_dictionaries)
+# test_dataset_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
 
 ```

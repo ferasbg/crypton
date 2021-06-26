@@ -99,4 +99,5 @@ def evaluate_config(rnd: int):
     return {"val_steps": val_steps}
 
 if __name__ == "__main__":
+    # add strategy of server-side model (no adv_reg)
     flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": 10})

@@ -103,6 +103,25 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label):
   return {'image': image, 'label': label}
 
+
+parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+adv_model = build_adv_model(parameters=parameters)
+base_model = build_base_model(parameters=parameters)
+model = adv_model
+
+# standard dataset processed for base client
+datasets = tfds.load('mnist')
+train_dataset = datasets['train']
+test_dataset = datasets['test']
+train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
+test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
+
+# datasets processed for adversarial regularization client; iterable dicts
+train_set = tfds.load('mnist', split="train", as_supervised=True)
+train_dataset_for_adv_model = tfds.as_numpy(train_set)
+test_set = tfds.load('mnist', split="test", as_supervised=True)
+test_dataset_for_adv_model = tfds.as_numpy(test_set)
+
 class AdvRegClient(flwr.client.NumPyClient):
     def get_parameters(self):  # type: ignore
         return model.get_weights()
@@ -143,18 +162,6 @@ class Client(flwr.client.NumPyClient):
         model.set_weights(parameters)
         loss, accuracy = model.evaluate(test_dataset_for_base_model)
         return loss, {"accuracy": accuracy}
-
-parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-adv_model = build_adv_model(parameters=parameters)
-base_model = build_base_model(parameters=parameters)
-model = base_model
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_adv_model = train_dataset.map(convert_to_dictionaries)
-test_dataset_for_adv_model = test_dataset.map(convert_to_dictionaries)
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
 
 def main():
     parser = argparse.ArgumentParser(description="entry point to client model configuration.")
