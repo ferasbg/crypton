@@ -1,6 +1,8 @@
 import tensorflow_datasets as tfds
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
 
 def normalize(features):
   features['image'] = tf.cast(
@@ -13,24 +15,26 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label):
   return {'image': image, 'label': label}
 
-# iteratively process data with convert_to_dictionaries: 1 method for processing adv_reg data actually may work: convert existing callable function iteratively on dataset instead to have a dict of numpy arrays
-
 # standard dataset processed for base client
-datasets = tfds.load('mnist', as_supervised=True)
+datasets = tfds.load('mnist')
 train_dataset = datasets['train']
 test_dataset = datasets['test']
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(batch_size=32).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(batch_size=32).map(convert_to_tuples)
+train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
+# train_dataset_for_adv_model = tfds.as_numpy(train_set)
+test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=False)
+# test_dataset_for_adv_model = tfds.as_numpy(test_dataset_for....)
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+# would non-iterable Tensor error come up if I process the evaluation dataset as a dict by default --> convert (x_test, y_test) into a dict (dict of dicts)
+x_train = x_train.reshape((x_train.shape[0], 28, 28, 1))
+x_test = x_test.reshape((x_test.shape[0], 28, 28, 1))
+y_train = to_categorical(y_train)
+y_test = to_categorical(y_test)
 
-train_set = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
-train_dataset_for_adv_model = tfds.as_numpy(train_set)
-print(type(train_dataset_for_adv_model))
-test_set = tfds.load('mnist', split="test", as_supervised=False)
-test_dataset_for_adv_model = tfds.as_numpy(test_set)
-print(type(test_dataset_for_adv_model))
-
-train_set = tfds.load('mnist', split="train", as_supervised=True) # False -> Tuple; True -> Dict
-train_dataset_for_adv_model = tfds.as_numpy(train_set)
-print(type(train_dataset_for_adv_model))
-
-
+# method 2
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train = x_train.reshape((x_train.shape[0], 28, 28, 1))
+x_test = x_test.reshape((x_test.shape[0], 28, 28, 1))
+y_train = to_categorical(y_train)
+y_test = to_categorical(y_test)

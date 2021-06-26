@@ -7,6 +7,12 @@ from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
 from settings import *
+from tensorflow.keras.utils import to_categorical
+from keras.regularizers import l2
+
+# todo: factor in partitions after two clients are functional
+# todo: add perturb_batch(batch) per batch in server_model_eval_dataset  
+# todo: formulate robustness from metrics into formal math for paper ON paper
 
 class HParams(object):
     '''
@@ -45,17 +51,16 @@ class HParams(object):
 
 def build_base_model(parameters : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    # todo: add kernel_regularizer e..g weight reg.
-    conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
+    conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(dropout)
+    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(dropout)
     maxpool1 = layers.MaxPool2D(parameters.pool_size)(conv2)
-    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
+    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), kernel_initializer='he_uniform', padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), kernel_initializer='he_uniform', padding='same')(conv3)
     maxpool2 = layers.MaxPool2D(parameters.pool_size)(conv4)
-    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
+    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), kernel_initializer='he_uniform', padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), kernel_initializer='he_uniform', padding='same')(conv5)
     maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
     flatten = layers.Flatten()(maxpool3)
     # flatten is creating error because type : NoneType
@@ -71,13 +76,13 @@ def build_adv_model(parameters : HParams):
     conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(dropout)
+    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(dropout)
     maxpool1 = layers.MaxPool2D(parameters.pool_size)(conv2)
-    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
+    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(conv3)
     maxpool2 = layers.MaxPool2D(parameters.pool_size)(conv4)
-    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
+    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01), padding='same')(conv5)
     maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
     flatten = layers.Flatten()(maxpool3)
     # flatten is creating error because type : NoneType
@@ -116,10 +121,11 @@ def load_partition(idx: int):
         y_test[idx * 1000 : (idx + 1) * 1000],
     )
 
+# create models
 parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 adv_model = build_adv_model(parameters=parameters)
 base_model = build_base_model(parameters=parameters)
-model = adv_model
+model = adv_model 
 
 # standard dataset processed for base client
 datasets = tfds.load('mnist')
@@ -128,12 +134,21 @@ test_dataset = datasets['test']
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
 
-# method 2 is dataset = dataset.map(convert_to_dictionaries); perhaps this can be done iteratively instead of having a callable error
-# datasets processed for adversarial regularization client; iterable dicts
-train_set = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
-train_dataset_for_adv_model = tfds.as_numpy(train_set)
-test_set = tfds.load('mnist', split="test", as_supervised=False)
-test_dataset_for_adv_model = tfds.as_numpy(test_set)
+# adv_train = train_dataset.map(convert_to_dictionaries)
+# adv_test = test_dataset.map(convert_to_dictionaries)
+
+# method 1
+train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
+test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=False)
+
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+train_data = tf.data.Dataset.from_tensor_slices(
+    {'image': x_train, 'label': y_train}).batch(batch_size=32)
+
+val_data = tf.data.Dataset.from_tensor_slices(
+    {'image': x_test, 'label': y_test}).batch(batch_size=32)
+
+val_steps = x_test.shape[0] / 32
 
 class AdvRegClient(flwr.client.NumPyClient):
     def get_parameters(self):  # type: ignore
@@ -141,7 +156,8 @@ class AdvRegClient(flwr.client.NumPyClient):
 
     def fit(self, parameters, config):  # type: ignore
         model.set_weights(parameters)
-        history = model.fit(train_dataset_for_adv_model, epochs=5, verbose=1)
+        # change to iterable np.ndarray dicts as normal; check for errors then
+        history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
         results = {
             "loss": history.history["loss"][0],
             "accuracy": history.history["accuracy"][0],
@@ -152,7 +168,7 @@ class AdvRegClient(flwr.client.NumPyClient):
 
     def evaluate(self, parameters, config):  # type: ignore
         model.set_weights(parameters)
-        loss, accuracy = model.evaluate(test_dataset_for_adv_model)
+        loss, accuracy = model.evaluate(val_data)
         return loss, {"accuracy": accuracy}
 
 class Client(flwr.client.NumPyClient):
@@ -178,33 +194,33 @@ class Client(flwr.client.NumPyClient):
 
 def main():
     # what entropy exists between the technique used for adv. reg. and the federated strategy given the data state per client
-    parser = argparse.ArgumentParser(description="entry point to client model configuration.")
-    # configurations
-    parser.add_argument("--num_partitions", type=int, choices=range(0, 100), required=True)
-    parser.add_argument("--adv_grad_norm", type=str, required=True)
-    parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
-    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=True)
-    parser.add_argument("--batch_size", type=int, required=True)
-    parser.add_argument("--epochs", type=int, required=True)
-    parser.add_argument("--num_clients", type=int, required=True)
-    parser.add_argument("--num_rounds", type=int, required=True)
-    parser.add_argument("--federated_optimizer_strategy", type=str, required=True)
-    parser.add_argument("--adv_reg", type=bool, required=True)
-    parser.add_argument("--gaussian_layer", type=bool, required=True)
-    parser.add_argument("--pseudorandom_image_transformations", type=bool, required=False, default=False)
-    parser.add_argument("--image_corruption_train", type=bool, required=False)
-    parser.add_argument("--image_resolution_loss_train", type=bool, required=False)
-    parser.add_argument("--formal_robustness_analysis", type=bool, required=False)
-    parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
-    parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
-    parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
-    parser.add_argument("--min_eval_clients", type=int, required=False, default=2)
-    parser.add_argument("--min_available_clients", type=int, required=False, default=2)
-    parser.add_argument("--accept_client_failures_fault_tolerance", type=bool, required=False, default=False)
-    # weight regularization, SGD momentum --> other configs along with kernel/bias initializer
-    parser.add_argument("--weight_regularization", type=bool, required=False)
-    parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description="entry point to client model configuration.")
+    # # configurations
+    # parser.add_argument("--num_partitions", type=int, choices=range(0, 100), required=True)
+    # parser.add_argument("--adv_grad_norm", type=str, required=True)
+    # parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+    # parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=True)
+    # parser.add_argument("--batch_size", type=int, required=True)
+    # parser.add_argument("--epochs", type=int, required=True)
+    # parser.add_argument("--num_clients", type=int, required=True)
+    # parser.add_argument("--num_rounds", type=int, required=True)
+    # parser.add_argument("--federated_optimizer_strategy", type=str, required=True)
+    # parser.add_argument("--adv_reg", type=bool, required=True)
+    # parser.add_argument("--gaussian_layer", type=bool, required=True)
+    # parser.add_argument("--pseudorandom_image_transformations", type=bool, required=False, default=False)
+    # parser.add_argument("--image_corruption_train", type=bool, required=False)
+    # parser.add_argument("--image_resolution_loss_train", type=bool, required=False)
+    # parser.add_argument("--formal_robustness_analysis", type=bool, required=False)
+    # parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
+    # parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
+    # parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
+    # parser.add_argument("--min_eval_clients", type=int, required=False, default=2)
+    # parser.add_argument("--min_available_clients", type=int, required=False, default=2)
+    # parser.add_argument("--accept_client_failures_fault_tolerance", type=bool, required=False, default=False)
+    # # weight regularization, SGD momentum --> other configs along with kernel/bias initializer
+    # parser.add_argument("--weight_regularization", type=bool, required=False)
+    # parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
+    # args = parser.parse_args()
 
     if (type(model) == AdversarialRegularization):
         flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient())
@@ -214,28 +230,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-'''
-
-def get_val():
-    # val_data = (x_test, y_test) --> the way that dataset : DATASET is processed creates the error as well
-    val_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_test, 'label': y_test}).batch(parameters.batch_size)
-
-    return val_data
-
-def fit_opt():
-
-    train_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_train, 'label': y_train}).batch(parameters.batch_size)
-
-    val_data = get_val()
-    val_steps = x_test.shape[0] / parameters.batch_size
-
-    # BatchDataset != Feature Tuple
-    history = adv_model.fit(train_data, validation_data=val_data,
-                validation_steps=val_steps, epochs=parameters.epochs, verbose=1)
-
-    return history
-
-'''
