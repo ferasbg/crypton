@@ -1,21 +1,3 @@
-# CORE
-- Have more control over the dataset itself before extending the features to partitions etc. Make sure that it can first work on a defined dataset and the tuple in the same script rather than working with more than enough complexity involved with the problem in the first place.
-- NSL requires particular data formatting into a dict, but that creates errors with the CifarClient, unless I merge the tuple and access an iterable np.ndarray with xy_test[0] for image set and xy_test[1] for target label set.
-- I can also resolve returned values by emulating the history/results dict that is returned for .eval inside a flwr.client sub-class.
-- I can reduce complexity by having control over customizing how every process is executed. To an extent, working with other sample code isn't the best way to solve the problem, and especially when all the methods have been exhausted and a re-implementation with more control is a better option.
-- server is not under any form of adv. regularization regardless of its initial client state.
-- currently I need to setup the federated client with respect to adv_reg
-- first configure the adv_reg client model to client
-- configure client and server
-- configure custom parse_args to modify important variables
-- add metrics
-- currently solving the error of callable param of label; some simple errors with processing mnist dataset
-- it's very much do-able to have adv_reg clients
-- adding .perturb_bath during server-side eval is needed
-- formalization of robustness of entire system is different than metrics collected to assess exp. configs
-- solve input layer compatability error
-- todo: (almost done) solve dataset processing error with adv_reg with adv_model with Client
-- todo: perhaps add requirements.yml or requirements.txt, pyproject.toml, and poetry.lock if u want
-- todo: write code in terms of simulation in terms of iterable client-server ops
-- todo: perturb in server-side eval and start_server, start_client, start_process with Process
-- todo: add strategy in server-side init/eval
+# Crypton Core
+Execute experimental configurations to assess the most optimal configuration for a production-level federated system that is robust against adversarial attacks fixed by norm type and norm values.
+
