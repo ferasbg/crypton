@@ -97,9 +97,6 @@ def normalize(features):
       features['image'], dtype=tf.float32) / 255.0
   return features
 
-
-
-
 def convert_to_tuples(features):
   return features['image'], features['label']
 
@@ -131,10 +128,11 @@ test_dataset = datasets['test']
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
 
+# method 2 is dataset = dataset.map(convert_to_dictionaries); perhaps this can be done iteratively instead of having a callable error
 # datasets processed for adversarial regularization client; iterable dicts
-train_set = tfds.load('mnist', split="train", as_supervised=True)
+train_set = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
 train_dataset_for_adv_model = tfds.as_numpy(train_set)
-test_set = tfds.load('mnist', split="test", as_supervised=True)
+test_set = tfds.load('mnist', split="test", as_supervised=False)
 test_dataset_for_adv_model = tfds.as_numpy(test_set)
 
 class AdvRegClient(flwr.client.NumPyClient):
@@ -207,7 +205,7 @@ def main():
     parser.add_argument("--weight_regularization", type=bool, required=False)
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     args = parser.parse_args()
-    
+
     if (type(model) == AdversarialRegularization):
         flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient())
 
