@@ -141,6 +141,7 @@ test_dataset_for_base_model = test_dataset.map(normalize).batch(parameters.batch
 train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
 test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=False)
 
+# method 2
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 train_data = tf.data.Dataset.from_tensor_slices(
     {'image': x_train, 'label': y_train}).batch(batch_size=32)
@@ -157,14 +158,14 @@ class AdvRegClient(flwr.client.NumPyClient):
     def fit(self, parameters, config):  # type: ignore
         model.set_weights(parameters)
         # change to iterable np.ndarray dicts as normal; check for errors then
-        history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
+        model.fit(train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
         # results = {
         #     "loss": history.history["loss"][0],
         #     "accuracy": history.history["accuracy"][0],
         #     "val_loss": history.history["val_loss"][0],
         #     "val_accuracy": history.history["val_accuracy"][0],
         # }
-        return model.get_weights(), history
+        return model.get_weights()
 
     def evaluate(self, parameters, config):  # type: ignore
         model.set_weights(parameters)
