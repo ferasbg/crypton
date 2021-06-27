@@ -25,8 +25,13 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
+from client import HParams, build_adv_model
 
 warnings.filterwarnings("ignore")
+
+# create models
+params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+adv_model = build_adv_model(params=params)
 
 # def main() -> None:
     # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
@@ -62,6 +67,9 @@ def get_eval_fn(model):
 
     # Use the last 5k training examples as a validation set
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+    for batch in x_test:
+        # with respect to HParams object?
+        adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(
