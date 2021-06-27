@@ -1,5 +1,4 @@
 import argparse
-import argparse
 import flwr
 from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
                                   FedFSv1, Strategy, fedopt)

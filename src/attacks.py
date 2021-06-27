@@ -45,7 +45,6 @@ from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 import neural_structured_learning as nsl
-from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential

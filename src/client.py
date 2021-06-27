@@ -125,7 +125,7 @@ def load_partition(idx: int):
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 adv_model = build_adv_model(params=params)
 base_model = build_base_model(params=params)
-model = base_model
+model = adv_model
 
 # standard dataset processed for base client
 datasets = tfds.load('mnist')
