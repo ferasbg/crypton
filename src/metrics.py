@@ -28,10 +28,12 @@ def create_plot(x_axis, y_axis, x_data: list, y_data: list):
 
 
 def plot_client_model(model):
+    # architecture specs
     keras.utils.plot_model(model, to_file='model.png')
 
 
 def plot_perturbed_image(image):
+    # store images in a list a print them iteratively with this function
     plt.figure(figsize=(21, 21))
     # iteratively get perturbed images based on their norm type and norm values (l∞-p_ε; norm_type, adv_step_size)
     plt.imshow(tf.keras.preprocessing.image.array_to_img(image), cmap='gray')
