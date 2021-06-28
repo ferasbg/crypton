@@ -68,7 +68,7 @@ def build_base_model(params : HParams):
     # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
     output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
-    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=['accuracy'])
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
 def build_adv_model(params : HParams):
@@ -90,11 +90,11 @@ def build_adv_model(params : HParams):
     # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
     output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
     model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
-    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=['accuracy'])
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     adv_config = nsl.configs.make_adv_reg_config(multiplier=params.adv_multiplier, adv_step_size=params.adv_step_size, adv_grad_norm=params.adv_grad_norm)
     # AdvRegularization is a sub-class of tf.keras.Model, but it processes dicts instead for train and eval because of its decomposition approach for nsl
     adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
-    adv_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
 def normalize(features):
@@ -134,45 +134,32 @@ test_dataset = datasets['test']
 # data here is normalized, shuffled, and converted to tuples
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-
-# adv_train = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_dictionaries)
-# adv_test = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_dictionaries)
-
-# train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=True) # False -> Tuple; True -> Dict
-# test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=True)
-# would I need to use different loss func if I don't reshape?
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
-# reshape the data above before processing with function below
-# x_train = x_train.reshape((-1, 28, 28, 1))
-# x_test = x_test.reshape((-1, 28, 28, 1))
-# y_train = tf.keras.utils.to_categorical(y_train, 10)
-# y_test = tf.keras.utils.to_categorical(y_test, 10)
 # dysfunctional because of the format of the data that fits to the adv_model
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(batch_size=32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
 val_steps = x_test.shape[0] / 32
 
 class AdvRegClient(flwr.client.NumPyClient):
-    # todo: create __init__ func and add args param to configure AdvRegClient and Client
-    def get_parameters(self):       
+    def get_parameters(self):
         return model.get_weights()
 
-    def fit(self, parameters, config):  
+    def fit(self, parameters, config):
         model.set_weights(parameters)
         history = model.fit(x=train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
-        return model.get_weights(), len(x_train), {} 
+        return model.get_weights(), len(x_train), {}
 
-    def evaluate(self, parameters, config):  
+    def evaluate(self, parameters, config):
         model.set_weights(parameters)
         loss, accuracy = model.evaluate(val_data)
         return loss, {"accuracy": accuracy}
 
 class Client(flwr.client.NumPyClient):
-    def get_parameters(self):  
+    def get_parameters(self):
         return model.get_weights()
 
-    def fit(self, parameters, config):  
+    def fit(self, parameters, config):
         model.set_weights(parameters)
         # validation data param may be negligible
         history = model.fit(train_dataset_for_base_model, epochs=5, verbose=1)
@@ -185,7 +172,7 @@ class Client(flwr.client.NumPyClient):
         }
         return model.get_weights(), results
 
-    def evaluate(self, parameters, config):  
+    def evaluate(self, parameters, config):
         model.set_weights(parameters)
         loss, accuracy = model.evaluate(test_dataset_for_base_model)
         return loss, {"accuracy": accuracy}
@@ -220,6 +207,7 @@ def main():
     # parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     # args = parser.parse_args()
 
+    # start_client()
     if (type(model) == AdversarialRegularization):
         flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient())
 

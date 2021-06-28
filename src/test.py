@@ -15,15 +15,26 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label):
   return {'image': image, 'label': label}
 
-# # standard dataset processed for base client
-# datasets = tfds.load('mnist')
-# train_dataset = datasets['train']
-# test_dataset = datasets['test']
-# train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(batch_size=32).map(convert_to_tuples)
-# test_dataset_for_base_model = test_dataset.map(normalize).batch(batch_size=32).map(convert_to_tuples)
-# train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=False) # False -> Tuple; True -> Dict
-# # train_dataset_for_adv_model = tfds.as_numpy(train_set)
-# test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=False)
+datasets = tfds.load('mnist')
+train_dataset = datasets['train']
+test_dataset = datasets['test']
+# tuple needs features, dict needs split features
+train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(batch_size=32).map(convert_to_tuples)
+test_dataset_for_base_model = test_dataset.map(normalize).batch(batch_size=32).map(convert_to_tuples)
+
+train_dataset_for_adv_model = tfds.load('mnist', split="train") # False -> Tuple; True -> Dict
+test_dataset_for_adv_model = tfds.load('mnist', split="test")
+print(len(train_dataset_for_base_model))
+print(len(test_dataset_for_adv_model))
+# PrefetchDataset
+print(type(train_dataset_for_adv_model), type(test_dataset_for_adv_model))
+
+# IterableDataset --> convert to iterable dict of np.ndarrays
+
+train = tfds.as_numpy(train_dataset_for_adv_model)
+test = tfds.as_numpy(test_dataset_for_adv_model)
+print(type(train), type(test))
+
 # # test_dataset_for_adv_model = tfds.as_numpy(test_dataset_for....)
 # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 # # would non-iterable Tensor error come up if I process the evaluation dataset as a dict by default --> convert (x_test, y_test) into a dict (dict of dicts)
@@ -39,14 +50,20 @@ def convert_to_dictionaries(image, label):
 # y_train = to_categorical(y_train)
 # y_test = to_categorical(y_test)
 
-# standard dataset processed for base client
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-# .as_numpy --> dict
+# reshape the data above before processing with function below
+# x_train = x_train.reshape((-1, 28, 28, 1))
+# x_test = x_test.reshape((-1, 28, 28, 1))
+# y_train = tf.keras.utils.to_categorical(y_train, 10)
+# y_test = tf.keras.utils.to_categorical(y_test, 10)
 
-adv_train = train_dataset.map(convert_to_dictionaries)
-adv_test = test_dataset.map(convert_to_dictionaries)
-print(type(adv_train),type(adv_test))
 
-# need to fix processing mnist data to adv regularized model for training
+# adv_train = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_dictionaries)
+# adv_test = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_dictionaries)
+
+# train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=True) # False -> Tuple; True -> Dict
+# test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=True)
+# would I need to use different loss func if I don't reshape?
+
+
+## optimizations after base
+    # todo: create __init__ func and add args param to configure AdvRegClient and Client

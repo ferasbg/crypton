@@ -5,7 +5,6 @@ from tensorflow import keras
 from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
-from client import Client
 
 class HParams(object):
     '''
@@ -120,7 +119,14 @@ adv_model = build_adv_model(parameters=parameters)
 train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
 test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
-#adv_history = adv_model.fit(train_set_for_adv_model, epochs=parameters.epochs)
+
+# contradiction: adv train set works fine, but .evaluate can't unpack the data that was already processed
+# the types are normal; base model works fine with tuples, but unpacking dicts seems to create the error
+# best workaround is to see what types are accepted for clients rather than nsl itself
+# the requirements for the data are different with flwr; that being said: this is more of a data formatting error and types error as a result of using nsl and flwr
+
+
+#adv_history = adv_model.fit(train_set_for_adv_model, steps_per_epoch=3, epochs=parameters.epochs)
 #print(adv_history)
 adv_results = adv_model.evaluate(test_set_for_adv_model)
 # default: IID data given artificial setup of the clients and the data
