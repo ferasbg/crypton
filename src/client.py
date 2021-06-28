@@ -140,14 +140,14 @@ test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_siz
 
 # train_dataset_for_adv_model = tfds.load('mnist', split="train", as_supervised=True) # False -> Tuple; True -> Dict
 # test_dataset_for_adv_model = tfds.load('mnist', split="test", as_supervised=True)
-
+# would I need to use different loss func if I don't reshape?
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
 # reshape the data above before processing with function below
-x_train = x_train.reshape((-1, 28, 28, 1))
-x_test = x_test.reshape((-1, 28, 28, 1))
-y_train = tf.keras.utils.to_categorical(y_train, 10)
-y_test = tf.keras.utils.to_categorical(y_test, 10)
+# x_train = x_train.reshape((-1, 28, 28, 1))
+# x_test = x_test.reshape((-1, 28, 28, 1))
+# y_train = tf.keras.utils.to_categorical(y_train, 10)
+# y_test = tf.keras.utils.to_categorical(y_test, 10)
 # dysfunctional because of the format of the data that fits to the adv_model
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(batch_size=32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
