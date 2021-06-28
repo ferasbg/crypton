@@ -83,7 +83,6 @@ def build_adv_model(parameters : HParams):
     return model
 
 parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-
 # ad-hoc config to create client model
 adv_model = build_adv_model(parameters=parameters)
 base_model = build_base_model(parameters=parameters)
@@ -91,7 +90,6 @@ base_model = build_base_model(parameters=parameters)
 # partition data here, perturb batches here, apply corruptions here; everything done before it's processed to Client
 IMAGE_INPUT_NAME = 'image'
 LABEL_INPUT_NAME = 'label'
-
 datasets = tfds.load('mnist')
 train_dataset = datasets['train']
 test_dataset = datasets['test']
@@ -119,12 +117,14 @@ adv_model = build_adv_model(parameters=parameters)
 train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
 test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
+# this set is a MapDataset type e.g. class 'tensorflow.python.data.ops.dataset_ops.MapDataset'>
 
+print(type(train_set_for_adv_model))
+print(type(test_set_for_adv_model))
 # contradiction: adv train set works fine, but .evaluate can't unpack the data that was already processed
 # the types are normal; base model works fine with tuples, but unpacking dicts seems to create the error
 # best workaround is to see what types are accepted for clients rather than nsl itself
 # the requirements for the data are different with flwr; that being said: this is more of a data formatting error and types error as a result of using nsl and flwr
-
 
 #adv_history = adv_model.fit(train_set_for_adv_model, steps_per_epoch=3, epochs=parameters.epochs)
 #print(adv_history)

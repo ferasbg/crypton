@@ -22,6 +22,10 @@ test_dataset = datasets['test']
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(batch_size=32).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(batch_size=32).map(convert_to_tuples)
 
+# MapDataset works for base models
+print(type(train_dataset_for_base_model))
+print(type(test_dataset_for_base_model))
+
 train_dataset_for_adv_model = tfds.load('mnist', split="train") # False -> Tuple; True -> Dict
 test_dataset_for_adv_model = tfds.load('mnist', split="test")
 print(len(train_dataset_for_base_model))
@@ -29,11 +33,16 @@ print(len(test_dataset_for_adv_model))
 # PrefetchDataset
 print(type(train_dataset_for_adv_model), type(test_dataset_for_adv_model))
 
-# IterableDataset --> convert to iterable dict of np.ndarrays
-
+# IterableDataset --> feature dict of np.ndarrayconvert to iterable dict of np.ndarrays
 train = tfds.as_numpy(train_dataset_for_adv_model)
 test = tfds.as_numpy(test_dataset_for_adv_model)
 print(type(train), type(test))
+
+
+
+
+
+
 
 # # test_dataset_for_adv_model = tfds.as_numpy(test_dataset_for....)
 # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()

@@ -8,3 +8,14 @@ Execute experimental configurations to assess the most optimal configuration for
 - diagrams involving nsl and dcnn and federated adagrad
 - diagrams for system architecture
 
+
+## Bugs
+- nsl/flwr conflict with processing mnist eval data
+    - sol: convert IterableDataset to feature dictionaries
+## Features
+- encode partitions for 10 clients
+- parse_args for exp config
+- fed. adv. metrics
+- formal robustness metrics
+- "single-machine" simulation to aggregate client-server process
+

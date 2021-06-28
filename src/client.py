@@ -10,8 +10,6 @@ from settings import *
 from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 
-# todo: factor in partitions after two clients are functional
-# todo: add perturb_batch(batch) per batch in server_model_eval_dataset
 # todo: formulate robustness from metrics into formal math for paper ON paper
 
 class HParams(object):
@@ -121,39 +119,50 @@ def load_partition(idx: int):
         y_test[idx * 1000 : (idx + 1) * 1000],
     )
 
+# prepare_experiment()
+
 # create models
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 adv_model = build_adv_model(params=params)
 base_model = build_base_model(params=params)
 model = adv_model
 
-# standard dataset processed for base client
+IMAGE_INPUT_NAME = 'image'
+LABEL_INPUT_NAME = 'label'
 datasets = tfds.load('mnist')
 train_dataset = datasets['train']
 test_dataset = datasets['test']
-# data here is normalized, shuffled, and converted to tuples
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
-# dysfunctional because of the format of the data that fits to the adv_model
-train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(batch_size=32)
-val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
-val_steps = x_test.shape[0] / 32
+# adv_model needs it to be processed in a dict, but flwr.client processes it as a tuple; this conflict is my error
+train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
+test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
+# both datasets for the base and adv model should be of the same MapDataset type independent of adv_model feature dicts
 
+# create_adv_client()
 class AdvRegClient(flwr.client.NumPyClient):
+    '''
+    def __init__(self, args):
+        self.train_dataset = args.current_train_partition
+        self.test_dataset = args.current_train_partition
+        # for using different models, try self.model = args.model
+        self.params = args.params
+    '''
+
     def get_parameters(self):
         return model.get_weights()
 
     def fit(self, parameters, config):
         model.set_weights(parameters)
-        history = model.fit(x=train_data, validation_data=val_data, validation_steps=val_steps, epochs=5, steps_per_epoch=3, verbose=1)
-        return model.get_weights(), len(x_train), {}
+        history = model.fit(x=train_set_for_adv_model, epochs=5, steps_per_epoch=3, verbose=1)
+        return model.get_weights(), len(train_set_for_adv_model), {}
 
     def evaluate(self, parameters, config):
         model.set_weights(parameters)
-        loss, accuracy = model.evaluate(val_data)
-        return loss, {"accuracy": accuracy}
+        # unpack error
+        loss, accuracy = model.evaluate(x=test_set_for_adv_model)
+        return loss, len(test_set_for_adv_model), {"accuracy": accuracy}
 
 class Client(flwr.client.NumPyClient):
     def get_parameters(self):
@@ -162,7 +171,7 @@ class Client(flwr.client.NumPyClient):
     def fit(self, parameters, config):
         model.set_weights(parameters)
         # validation data param may be negligible
-        history = model.fit(train_dataset_for_base_model, epochs=5, verbose=1)
+        history = model.fit(train_dataset_for_base_model, steps_per_epoch=3, epochs=5, verbose=1)
         # run the entire base model and check for its errors
         results = {
             "loss": history.history["loss"][0],
@@ -174,6 +183,7 @@ class Client(flwr.client.NumPyClient):
 
     def evaluate(self, parameters, config):
         model.set_weights(parameters)
+        # IterableDataset vs BatchDataset
         loss, accuracy = model.evaluate(test_dataset_for_base_model)
         return loss, {"accuracy": accuracy}
 
@@ -192,10 +202,6 @@ def main():
     # parser.add_argument("--federated_optimizer_strategy", type=str, required=True)
     # parser.add_argument("--adv_reg", type=bool, required=True)
     # parser.add_argument("--gaussian_layer", type=bool, required=True)
-    # parser.add_argument("--pseudorandom_image_transformations", type=bool, required=False, default=False)
-    # parser.add_argument("--image_corruption_train", type=bool, required=False)
-    # parser.add_argument("--image_resolution_loss_train", type=bool, required=False)
-    # parser.add_argument("--formal_robustness_analysis", type=bool, required=False)
     # parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
     # parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
     # parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
