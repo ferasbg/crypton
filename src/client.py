@@ -142,7 +142,7 @@ class AdvRegClient(flwr.client.KerasClient):
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
-        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, epochs=5, steps_per_epoch=3, verbose=1)
+        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, epochs=1, steps_per_epoch=3, verbose=1)
         results = {
                 "loss": results[0],
                 "sparse_categorical_crossentropy": results[1],
@@ -243,6 +243,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
+    args = parser.parse_args()
     parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
     parser.add_argument("--adv_grad_norm", type=str, required=False)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
@@ -254,6 +255,5 @@ if __name__ == '__main__':
     parser.add_argument("--gaussian_layer", type=bool, required=False)
     parser.add_argument("--weight_regularization", type=bool, required=False)
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
-    args = parser.parse_args()
     main(args)
 
