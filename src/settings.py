@@ -21,6 +21,10 @@ DEFAULT_ADV_GRAD_NORM = "infinity"
 ADV_GRAD_NORM_OPTIONS = ["infinity", "l2"]
 DEFAULT_ADV_MULTIPLIER = 0.2
 DEFAULT_ADV_STEP_SIZE = 0.05
+DEFAULT_CLIENT_LR_SCHEDULE = []
+DEFAULT_SERVER_LR_SCHEDULE = []
+CLIENT_LEARNING_RATE_SCHEDULER = tf.keras.callbacks.LearningRateScheduler(schedule=DEFAULT_CLIENT_LR_SCHEDULE)
+SERVER_LEARNING_RATE_SCHEDULER = tf.keras.callbacks.LearningRateScheduler(schedule=DEFAULT_SERVER_LR_SCHEDULE)
 PARAMETERS = HParams(num_classes=DEFAULT_NUM_CLIENTS, adv_multiplier=DEFAULT_ADV_MULTIPLIER, adv_step_size=DEFAULT_ADV_STEP_SIZE, adv_grad_norm=ADV_GRAD_NORM_OPTIONS[0])
 ADVERSARIAL_REGULARIZED_MODEL = build_adv_model(parameters=PARAMETERS)
 BASE_MODEL = build_base_model(parameters=PARAMETERS)
@@ -69,9 +73,11 @@ DEFAULT_SERVER_LEARNING_RATE = 0.1
 # DEFAULT_WEIGHT_REGULARIZATION = add in DEFAULT MODEL layer
 DEFAULT_GAUSSIAN_STATE = False
 DEFAULT_IMAGE_CORRUPTION_STATE = False
+# based on the set I want to apply that specific image corruption
 MISC_CORRUPTION_SET = ["spatter", "saturate", "fog", "brightness", "contrast"]
 BLUR_CORRUPTION_SET = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
 DATA_CORRUPTION_SET = ["jpeg_compression", "elastic_transform", "pixelate"]
 NOISE_CORRUPTION_SET = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
+# this defines whether a particular set of corruptions are applied
 TRAIN_SET_IMAGE_DISTORTION_STATE = False
 SERVER_TEST_SET_PERTURBATION_STATE = False
