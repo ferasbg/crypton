@@ -9,6 +9,9 @@ Execute experimental configurations to assess the most optimal configuration for
 - diagrams for system architecture
 - it's possible to have a paper + code configurable project and then have others contribute to the collective project that builds on the layers of verification and other neural network types and adv. regularization techniques etc. --> robustness networks for federated environments
 
+## Usage
+Run `exp-config-run.sh` to run all the experimental configurations to assess.
+
 
 ## Bugs
 - too many to unpack for MapDataset: nsl/flwr conflict with processing mnist eval data
