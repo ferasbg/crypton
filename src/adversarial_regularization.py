@@ -117,7 +117,7 @@ model = build_compile_nsl_model(params=parameters, num_classes=10)
 
 # setup data
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-# train/test split 
+# train/test split
 x_test, y_test = x_train[-10000:], y_train[-10000:]
 x_train = tf.cast(x_train, dtype=tf.float32)
 x_test = tf.cast(x_test, dtype=tf.float32)
@@ -130,9 +130,11 @@ val_steps = x_test.shape[0] / parameters.batch_size
 print(type(val_steps)) # float
 
 # adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
-history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
+#history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
 results = model.evaluate(val_data, batch_size=parameters.batch_size)
-print(type(results)) # list
+print(results[0], results[1], results[2], results[3])
+
+
 # per client, you sample them all and then aggregate their train/eval results for the gradient update to the server model
 
 # the goal is to fit what works with flwr.client with nsl.AdversarialRegularization, which is sub-classed from tf.keras.Model

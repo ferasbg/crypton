@@ -13,6 +13,7 @@ from dataset import *
 from attacks import *
 
 # todo: use LearningRateScheduler to configure client and server learning rate
+# todo: add HParams object as argument for each client to configure the client from args
 
 class HParams(object):
     '''
@@ -134,20 +135,35 @@ class AdvRegClient(flwr.client.KerasClient):
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
         self.validation_steps = validation_steps
+        # store args and params : HParams object
+
     def get_parameters(self):
         return self.model.get_weights()
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
-        # flwr and nsl allow for custom metrics
-        history = self.model.fit(self.train_dataset, epochs=5, steps_per_epoch=3, verbose=1)
+        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, epochs=5, steps_per_epoch=3, verbose=1)
+        results = {
+                "loss": results[0],
+                "sparse_categorical_crossentropy": results[1],
+                "sparse_categorical_accuracy": results[2],
+                "scaled_adversarial_loss": results[3],
+        }
+        # you could make a dict from history callback object
         return self.model.get_weights(), len(self.train_dataset), {}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
-        # i should pass in iterable np.ndarrays instead; test this with adversarial.py instead of the other FeatureDict MapDataset and see if that works; we want a solution consistent and agnostically functional across both backend ops
-        loss, accuracy = self.model.evaluate(self.test_dataset, verbose=1)
-        return loss, len(self.test_dataset), {"accuracy": accuracy}
+        # unpack error because loading into a list is the correct approach, except python infers the type to store the function to the right at runtime
+        history = self.model.evaluate(self.test_dataset, verbose=1)
+        results = {
+                "loss": history[0],
+                "sparse_categorical_crossentropy": history[1],
+                "sparse_categorical_accuracy": history[2],
+                "scaled_adversarial_loss": history[3],
+        }
+        # or just history[0], history[1]
+        return results["loss"], results["sparse_categorical_accuracy"]
 
 class Client(flwr.client.KerasClient):
     def __init__(self, model : tf.keras.models.Model, train_dataset, test_dataset, validation_steps):
@@ -155,27 +171,37 @@ class Client(flwr.client.KerasClient):
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
         self.validation_steps = validation_steps
+
     def get_parameters(self):
         return self.model.get_weights()
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         # validation data param may be negligible
-        history = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, steps_per_epoch=3, epochs=5, verbose=1)
+        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=5, verbose=1)
         # run the entire base model and check for its errors
         results = {
-            "loss": history.history["loss"][0],
-            "accuracy": history.history["accuracy"][0],
-            "val_loss": history.history["val_loss"][0],
-            "val_accuracy": history.history["val_accuracy"][0],
+                "loss": results[0],
+                "sparse_categorical_crossentropy": results[1],
+                "sparse_categorical_accuracy": results[2],
+                "scaled_adversarial_loss": results[3],
         }
         return self.model.get_weights(), results
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
         # it's more abt the dataset types consistent with both nsl and flwr.client; test backwards from what works with client to nsl model
-        loss, accuracy = self.model.evaluate(self.test_dataset, verbose=1)
-        return loss, {"accuracy": accuracy}
+        results = self.model.evaluate(self.test_dataset, verbose=1)
+        # get loss from result list/dict
+        results = {
+                "loss": results[0],
+                "sparse_categorical_crossentropy": results[1],
+                "sparse_categorical_accuracy": results[2],
+                "scaled_adversarial_loss": results[3],
+        }
+
+        # return a tuple of loss, accuracy
+        return results["loss"], results["sparse_categorical_accuracy"]
 
 def main(args):
     # create models
@@ -201,7 +227,7 @@ def main(args):
     train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
     test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
 
-    # type: BatchDataset       
+    # type: BatchDataset
     train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(params.batch_size)
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(params.batch_size)
 
