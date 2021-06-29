@@ -12,7 +12,7 @@ import numpy as np
 from dataset import *
 from attacks import *
 
-# todo: formulate robustness from metrics into formal math for paper ON paper
+# todo: use LearningRateScheduler to configure client and server learning rate
 
 class HParams(object):
     '''
@@ -128,12 +128,12 @@ def load_partition(idx: int):
     )
 
 # create_adv_client()
-class AdvRegClient(flwr.client.NumPyClient):
-    def __init__(self, model : AdversarialRegularization, train_dataset, test_dataset, args=None):
+class AdvRegClient(flwr.client.KerasClient):
+    def __init__(self, model : AdversarialRegularization, train_dataset, test_dataset, validation_steps, args=None):
         self.model = model
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
-
+        self.validation_steps = validation_steps
     def get_parameters(self):
         return self.model.get_weights()
 
@@ -149,19 +149,19 @@ class AdvRegClient(flwr.client.NumPyClient):
         loss, accuracy = self.model.evaluate(self.test_dataset, verbose=1)
         return loss, len(self.test_dataset), {"accuracy": accuracy}
 
-class Client(flwr.client.NumPyClient):
-    def __init__(self, model : tf.keras.models.Model, train_dataset, test_dataset):
+class Client(flwr.client.KerasClient):
+    def __init__(self, model : tf.keras.models.Model, train_dataset, test_dataset, validation_steps):
         self.model = model
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
-
+        self.validation_steps = validation_steps
     def get_parameters(self):
         return self.model.get_weights()
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         # validation data param may be negligible
-        history = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=32, epochs=5, verbose=1)
+        history = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, steps_per_epoch=3, epochs=5, verbose=1)
         # run the entire base model and check for its errors
         results = {
             "loss": history.history["loss"][0],
@@ -182,50 +182,37 @@ def main(args):
     params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # args.adv_step_size, args.adv_grad_norm
     adv_model = build_adv_model(params=params)
     base_model = build_base_model(params=params)
-    model = base_model
+    model = adv_model
+
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    x_test, y_test = x_train[-10000:], y_train[-10000:]
+    x_train = tf.cast(x_train, dtype=tf.float32)
+    x_test = tf.cast(x_test, dtype=tf.float32)
+    val_steps = x_test.shape[0] / params.batch_size
+
+    # MapDataset
+    datasets = tfds.load('mnist')
+    train_dataset = datasets['train']
+    test_dataset = datasets['test']
+    train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
+    test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
+
+    # type: MapDataset
+    train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
+    test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
+
+    # type: BatchDataset       
+    train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(params.batch_size)
+    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(params.batch_size)
 
     # start_client()
     if (type(model) == AdversarialRegularization):
-        # correct FeatureDict to be iterable so that unpacking error is bypassed; the current code I have doesn't work well with AdvReg
-        datasets = tfds.load('mnist')
-        train_dataset = datasets['train']
-        test_dataset = datasets['test']
-        train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-        test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-
-        # the MapDataset fits to nsl, but not to flwr client evaluate function
-        train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
-        test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
-
-        # for batch in train_set_for_adv_model:
-        #     adv_model.perturb_on_batch(batch)
-        #     for element in batch:
-        #         element = Data.apply_noise_image_degrade(element, noisa_sigma=0.05)
-        #         element = Data.apply_blur_corruption(element, "gaussian_blur")
-
-        # convert MapDataset to Iterable FeatureDict / Tuples
-        flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient(model, train_dataset=train_set_for_adv_model, test_dataset=test_set_for_adv_model))
+        adv_reg_client = AdvRegClient(model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
+        flwr.client.start_keras_client(server_address="[::]:8080", client=adv_reg_client)
 
     elif (type(model) == tf.keras.models.Model):
-        datasets = tfds.load('mnist')
-        train_dataset = datasets['train']
-        test_dataset = datasets['test']
-        train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-        test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-        # for batch in train_dataset_for_base_model:
-        #     adv_model.perturb_on_batch(batch)
-        
-        # for batch in test_dataset_for_base_model:
-        #     adv_model.perturb_on_batch(batch)
-
-        # process dataset
-        flwr.client.start_numpy_client("[::]:8080", client=Client(train_dataset=train_dataset_for_base_model, test_dataset=test_dataset_for_base_model))
-
-def perturb_dataset_partition(partition):
-    pass
-
-def create_partitions(num_clients : int):
-    pass
+        base_client = Client(model, train_dataset=train_dataset_for_base_model, test_dataset=test_dataset_for_base_model, validation_steps=val_steps)
+        flwr.client.start_keras_client("[::]:8080", client=base_client)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Crypton Client")

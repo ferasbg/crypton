@@ -58,7 +58,9 @@ federated_adaptive_optimization = FedAdagrad(
         tau=1e-9,
         eta=1e-1,
         eta_l=1e-1
-    )
+)
+
+
 
 DEFAULT_FEDERATED_STRATEGY_SET = [federated_averaging, federated_adaptive_optimization]
 DEFAULT_TRAIN_EPOCHS = 5

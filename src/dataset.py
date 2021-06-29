@@ -103,6 +103,15 @@ class Data:
 
     "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
+    Usage:
+        # for batch in train_set_for_adv_model:
+        #     adv_model.perturb_on_batch(batch)
+        #     for element in batch:
+        #         element = Data.apply_noise_image_degrade(element, noisa_sigma=0.05)
+        #         element = Data.apply_blur_corruption(element, "gaussian_blur")
+
+
+
     '''
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",

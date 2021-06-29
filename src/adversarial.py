@@ -6,8 +6,6 @@ from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
 
-# todo: define train/test partition and client partitions
-
 class HParams(object):
     '''
     adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
@@ -26,7 +24,7 @@ class HParams(object):
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
-        self.input_shape = [32, 32, 3]
+        self.input_shape = [28, 28, 1]
         self.num_classes = num_classes
         self.conv_filters = [32, 64, 64, 128, 128, 256]
         self.kernel_size = (3, 3)
@@ -42,6 +40,7 @@ class HParams(object):
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
 
 def build_base_model(parameters : HParams):
+    # if parameters.gaussian_state:
     input_layer = layers.Input(shape=(28,28,1), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -85,16 +84,21 @@ def build_adv_model(parameters : HParams):
     return model
 
 parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-# ad-hoc config to create client model
 adv_model = build_adv_model(parameters=parameters)
 base_model = build_base_model(parameters=parameters)
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
-# partition data here, perturb batches here, apply corruptions here; everything done before it's processed to Client
-IMAGE_INPUT_NAME = 'image'
-LABEL_INPUT_NAME = 'label'
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
+#x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+adv_history = adv_model.fit(x={'image': x_train, 'label': y_train}, validation_data={'image': x_test, 'label': y_test}, validation_steps=32, epochs=parameters.epochs)
+#adv_results = adv_model.evaluate(x={'image': x_test, 'label': y_test})
+print(adv_history)
+
+# method n
+#datasets = tfds.load('mnist')
+#train_dataset = datasets['train']
+#test_dataset = datasets['test']
+IMAGE_INPUT_NAME='image'
+LABEL_INPUT_NAME='label'
 
 def normalize(features):
   features[IMAGE_INPUT_NAME] = tf.cast(
@@ -104,24 +108,14 @@ def normalize(features):
 def convert_to_tuples(features):
   return features[IMAGE_INPUT_NAME], features[LABEL_INPUT_NAME]
 
-def convert_to_dictionaries(image, label):
+def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
-# this set is a MapDataset type e.g. class 'tensorflow.python.data.ops.dataset_ops.MapDataset'>
-train_dataset = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
-test_dataset = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
+#train_dataset = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
+#test_dataset = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
 # base_model.fit(train_dataset, epochs=parameters.epochs)
 # results = base_model.evaluate(test_dataset)
-adv_model = build_adv_model(parameters=parameters)
-# MapDataset
-train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
-test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
+# this set is a MapDataset type e.g. class 'tensorflow.python.data.ops.dataset_ops.MapDataset'>
+#train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
+#test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
-# default: IID data given artificial setup of the clients and the data
-
-# what types work with flwr.client? --> using direct tuples for nsl model? Test this
-(x_train, y_train) = tf.keras.datasets.mnist.load_data()
-x_test, y_test = x_train[45000:50000], y_train[45000:50000]
-# they are all tuples that are iterable
-adv_history = adv_model.fit(x_train, y_train, steps_per_epoch=3, epochs=parameters.epochs)
-adv_results = adv_model.evaluate(x_test, y_test)

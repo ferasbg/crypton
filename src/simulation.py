@@ -1,15 +1,36 @@
-def start_server():
-    # simulation is a set of functions that formalizes both client-level and server-level functions
-    pass
+import typing
+import itertools
+from itertools import product, permutations
+from client import *
+from server import *
+from settings import *
+import flwr
+from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
+                                  FedFSv1, Strategy, fedopt)
+
+# todo: write start_client, start_server, start_simulation
+# todo: write setup config based on settings
+client_config = {
+    
+}
+
+server_config = {
+
+}
+
+def create_experiment_permutations(client_config : dict, server_config : dict):
+    return {}, {}
 
 def start_client():
     pass
 
-def run_process():
+def start_server(server_address : str, strategy : Strategy, num_rounds : int, num_clients : int, **kwargs):
     pass
 
-def main():
+def start_client(model, train_partition, test_partition, **kwargs):
     pass
 
-if __name__ == '__main__':
-    main()
+def start_simulation(num_clients : int, args):
+    pass
+
+

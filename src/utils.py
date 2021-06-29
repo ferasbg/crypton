@@ -130,3 +130,10 @@ def build_compile_client_model(adversarial_regularization_state : bool, num_clas
         model = build_uncompiled_nsl_model(parameters, num_classes=num_classes)
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
         return model
+
+
+def perturb_dataset_partition(partition):
+    pass
+
+def create_partitions(num_clients : int):
+    pass

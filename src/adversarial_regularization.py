@@ -83,72 +83,61 @@ class HParams(object):
         self.adv_step_size = adv_step_size
         self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity"
 
-def load_simulation_data():
-    # process data the same way simulation.py does in order to make it work for adv_model (independent of client wrapper)
-    pass
-
-# simulation-based data processing; independent of client wrapper and partitions
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-x_test, y_test = x_train[-10000:], y_train[-10000:]
-x_train = tf.cast(x_train, dtype=tf.float32)
-x_test = tf.cast(x_test, dtype=tf.float32)
-DATASET = Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]
+def build_compile_nsl_model(params: HParams, num_classes: int):
+    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
+    batch_norm = layers.BatchNormalization()(conv1)
+    dropout = layers.Dropout(0.3)(batch_norm)
+    #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D((2,2))(conv2)
+    conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D((2,2))(conv4)
+    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D((2,2))(conv6)
+    flatten = layers.Flatten()(maxpool3)
+    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+    output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+    model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    adv_config = nsl.configs.make_adv_reg_config(multiplier=params.adv_multiplier, adv_step_size=params.adv_step_size, adv_grad_norm=params.adv_grad_norm)
+    # AdvRegularization is a sub-class of tf.keras.Model, but it processes dicts instead for train and eval because of its decomposition approach for nsl
+    adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
+    adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    return adv_model
 
 # configure params object
 parameters = HParams(num_classes=10, adv_multiplier=0.2,
                      adv_step_size=0.05, adv_grad_norm="infinity")
 
-def build_uncompiled_nsl_model(parameters: HParams, num_classes: int):
-    # input layer, conv2d, batchnorm, dropout, conv2d, maxpool2d, conv2d, conv2d, maxpool2d, conv2d, conv2d, maxpool2d, flatten, dense (classification), dense (output)
-    input_layer = keras.Input(shape=(32,32,3), batch_size=None, name="image") # 32,32,1
-    conv1 = layers.Conv2D(32, parameters.kernel_size, activation='relu', padding='same')(input_layer)
-    batch_norm = layers.BatchNormalization()(conv1)
-    dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(dropout)
-    maxpool1 = layers.MaxPool2D(parameters.pool_size)(conv2)
-    conv3 = layers.Conv2D(64, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
-    maxpool2 = layers.MaxPool2D(parameters.pool_size)(conv4)
-    conv5 = layers.Conv2D(128, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, parameters.kernel_size, activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
-    maxpool3 = layers.MaxPool2D(parameters.pool_size)(conv6)
-    flatten = layers.Flatten()(maxpool3)
-    # flatten is creating error because type : NoneType
-    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
-    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-    output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-    model = keras.Model(inputs=input_layer, outputs=output_layer, name='base_nsl_model')
-    return model
+model = build_compile_nsl_model(params=parameters, num_classes=10)
 
-def get_val():
-    # val_data = (x_test, y_test) --> the way that dataset : DATASET is processed creates the error as well
-    val_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_test, 'label': y_test}).batch(parameters.batch_size)
+# setup data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+# train/test split 
+x_test, y_test = x_train[-10000:], y_train[-10000:]
+x_train = tf.cast(x_train, dtype=tf.float32)
+x_test = tf.cast(x_test, dtype=tf.float32)
 
-    return val_data
+# how can we fit the existing method of converting tensor slices into iterable dict/tuple for the advreg client model
+train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(parameters.batch_size)
+val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(parameters.batch_size)
+print(type(train_data), type(val_data)) # BatchDataset
+val_steps = x_test.shape[0] / parameters.batch_size
+print(type(val_steps)) # float
 
-def fit_opt():
-
-    train_data = tf.data.Dataset.from_tensor_slices(
-        {'image': x_train, 'label': y_train}).batch(parameters.batch_size)
-    
-    val_data = get_val()
-    val_steps = x_test.shape[0] / parameters.batch_size
-    
-    # BatchDataset != Feature Tuple
-    history = adv_model.fit(train_data, validation_data=val_data,
-                validation_steps=val_steps, epochs=parameters.epochs, verbose=1)
-
-    return history
-
-model = build_uncompiled_nsl_model(parameters=parameters, num_classes=10)
-model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
-adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 # adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
+history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
+results = model.evaluate(val_data, batch_size=parameters.batch_size)
+print(type(results)) # list
+# per client, you sample them all and then aggregate their train/eval results for the gradient update to the server model
 
-# how is adv_reg processing data differently than the simulation.py file?
-history = fit_opt()
-val_data = get_val()
-results = adv_model.evaluate(val_data, batch_size=parameters.batch_size, epochs=parameters.epochs)
+# the goal is to fit what works with flwr.client with nsl.AdversarialRegularization, which is sub-classed from tf.keras.Model
+# if things break further I will just re-implement flwr; doesn't matter to me
+# general: depth in architecture and method and formulation of such is valuable if extensible and configurable
+
+
+# can we see if the loading processes of tfds.load('mnist') and tf.keras.datasets.mnist result in the same cardinality for the train/test set

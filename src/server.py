@@ -87,6 +87,11 @@ def get_eval_fn(model):
     # Use the last 5k training examples as a validation set
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     # x_train, x_test = x_train / 255.0, x_test / 255.0
+    # for batch in train_dataset_for_base_model:
+        #     adv_model.perturb_on_batch(batch)
+        
+        # for batch in test_dataset_for_base_model:
+        #     adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(

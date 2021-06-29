@@ -49,8 +49,6 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
-import cv2
-
 '''
 
 Generate adversarial examples.
