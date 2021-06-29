@@ -22,7 +22,6 @@ from tensorflow import keras
 def create_table(header: list, csv):
     pass
 
-
 def create_plot(x_axis, y_axis, x_data: list, y_data: list):
     pass
 

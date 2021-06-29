@@ -6,6 +6,8 @@ from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
 
+# todo: define train/test partition and client partitions
+
 class HParams(object):
     '''
     adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
@@ -94,7 +96,6 @@ datasets = tfds.load('mnist')
 train_dataset = datasets['train']
 test_dataset = datasets['test']
 
-# define functions to convert between dicts and tuples
 def normalize(features):
   features[IMAGE_INPUT_NAME] = tf.cast(
       features[IMAGE_INPUT_NAME], dtype=tf.float32) / 255.0
@@ -106,27 +107,21 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
+# this set is a MapDataset type e.g. class 'tensorflow.python.data.ops.dataset_ops.MapDataset'>
 train_dataset = train_dataset.map(normalize).shuffle(10000).batch(parameters.batch_size).map(convert_to_tuples)
 test_dataset = test_dataset.map(normalize).batch(parameters.batch_size).map(convert_to_tuples)
-
 # base_model.fit(train_dataset, epochs=parameters.epochs)
 # results = base_model.evaluate(test_dataset)
-
 adv_model = build_adv_model(parameters=parameters)
-# adv_model needs it to be processed in a dict, but flwr.client processes it as a tuple; this conflict is my error
+# MapDataset
 train_set_for_adv_model = train_dataset.map(convert_to_dictionaries)
 test_set_for_adv_model = test_dataset.map(convert_to_dictionaries)
 
-# this set is a MapDataset type e.g. class 'tensorflow.python.data.ops.dataset_ops.MapDataset'>
-
-print(type(train_set_for_adv_model))
-print(type(test_set_for_adv_model))
-# contradiction: adv train set works fine, but .evaluate can't unpack the data that was already processed
-# the types are normal; base model works fine with tuples, but unpacking dicts seems to create the error
-# best workaround is to see what types are accepted for clients rather than nsl itself
-# the requirements for the data are different with flwr; that being said: this is more of a data formatting error and types error as a result of using nsl and flwr
-
-#adv_history = adv_model.fit(train_set_for_adv_model, steps_per_epoch=3, epochs=parameters.epochs)
-#print(adv_history)
-adv_results = adv_model.evaluate(test_set_for_adv_model)
 # default: IID data given artificial setup of the clients and the data
+
+# what types work with flwr.client? --> using direct tuples for nsl model? Test this
+(x_train, y_train) = tf.keras.datasets.mnist.load_data()
+x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+# they are all tuples that are iterable
+adv_history = adv_model.fit(x_train, y_train, steps_per_epoch=3, epochs=parameters.epochs)
+adv_results = adv_model.evaluate(x_test, y_test)

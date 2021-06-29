@@ -21,7 +21,7 @@ Configurations:
     - federated_optimizer_strategy : str (options: federated_optimizer="fedavg", federated_optimizer="fedadagrad", federated_optimizer="faulttolerantfedavg", federated_optimizer="fedsv1", federated_optimizer="fedopt")
     - adv_reg : bool (default=False)
     - gaussian_layer : bool (default=False)
-    - pseudorandom_image_distribution_transformation_train : bool (default=False, options=[True, False])
+    - pseudorandom_image_distribution_transformation_train : bool (default=False, options=[False, False])
     - apply_all_image_degradation_configs : bool (default=False, options=[True, False])
     - image_corruption_train : bool
     - image_resolution_loss_train : bool
@@ -52,7 +52,26 @@ Configurations:
 
 '''
 
-# pass parse args in simulation.py
-def get_parse_args():
-    parser = argparse.ArgumentParser(description="Crypton")
-
+parser = argparse.ArgumentParser(description="Crypton")
+# configurations
+parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
+parser.add_argument("--adv_grad_norm", type=str, required=False)
+parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
+parser.add_argument("--batch_size", type=int, required=False)
+parser.add_argument("--epochs", type=int, required=False)
+parser.add_argument("--num_clients", type=int, required=False)
+parser.add_argument("--num_rounds", type=int, required=False)
+parser.add_argument("--federated_optimizer_strategy", type=str, required=False)
+parser.add_argument("--adv_reg", type=bool, required=False)
+parser.add_argument("--gaussian_layer", type=bool, required=False)
+parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
+parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
+parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
+parser.add_argument("--min_eval_clients", type=int, required=False, default=2)
+parser.add_argument("--min_available_clients", type=int, required=False, default=2)
+parser.add_argument("--accept_client_failures_fault_tolerance", type=bool, required=False, default=False)
+# weight regularization, SGD momentum --> other configs along with kernel/bias initializer
+parser.add_argument("--weight_regularization", type=bool, required=False)
+parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
+args = parser.parse_args()

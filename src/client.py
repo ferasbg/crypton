@@ -6,9 +6,11 @@ from tensorflow import keras
 from keras import layers
 import neural_structured_learning as nsl
 import tensorflow_datasets as tfds
-from settings import *
 from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
+import numpy as np
+from dataset import *
+from attacks import *
 
 # todo: formulate robustness from metrics into formal math for paper ON paper
 
@@ -103,14 +105,20 @@ def normalize(features):
 def convert_to_tuples(features):
   return features['image'], features['label']
 
-def convert_to_dictionaries(image, label):
-  return {'image': image, 'label': label}
+def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
+  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
 def load_partition(idx: int):
     """Load 1/10th of the training and test data to simulate a partition."""
     assert idx in range(10)
 
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+    datasets = tfds.load('mnist')
+    # from the train split, can we partition the data?
+    train_dataset = datasets['train']
+    test_dataset = datasets['test']
+
     return (
         x_train[idx * 5000 : (idx + 1) * 5000],
         y_train[idx * 5000 : (idx + 1) * 5000],
@@ -119,59 +127,41 @@ def load_partition(idx: int):
         y_test[idx * 1000 : (idx + 1) * 1000],
     )
 
-# prepare_experiment()
-
-# create models
-params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-adv_model = build_adv_model(params=params)
-base_model = build_base_model(params=params)
-model = adv_model
-
-IMAGE_INPUT_NAME = 'image'
-LABEL_INPUT_NAME = 'label'
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-
-# adv_model needs it to be processed in a dict, but flwr.client processes it as a tuple; this conflict is my error
-train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
-test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
-# both datasets for the base and adv model should be of the same MapDataset type independent of adv_model feature dicts
-
 # create_adv_client()
 class AdvRegClient(flwr.client.NumPyClient):
-    '''
-    def __init__(self, args):
-        self.train_dataset = args.current_train_partition
-        self.test_dataset = args.current_train_partition
-        # for using different models, try self.model = args.model
-        self.params = args.params
-    '''
+    def __init__(self, model : AdversarialRegularization, train_dataset, test_dataset, args=None):
+        self.model = model
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
 
     def get_parameters(self):
-        return model.get_weights()
+        return self.model.get_weights()
 
     def fit(self, parameters, config):
-        model.set_weights(parameters)
-        history = model.fit(x=train_set_for_adv_model, epochs=5, steps_per_epoch=3, verbose=1)
-        return model.get_weights(), len(train_set_for_adv_model), {}
+        self.model.set_weights(parameters)
+        # flwr and nsl allow for custom metrics
+        history = self.model.fit(self.train_dataset, epochs=5, steps_per_epoch=3, verbose=1)
+        return self.model.get_weights(), len(self.train_dataset), {}
 
     def evaluate(self, parameters, config):
-        model.set_weights(parameters)
-        # unpack error
-        loss, accuracy = model.evaluate(x=test_set_for_adv_model)
-        return loss, len(test_set_for_adv_model), {"accuracy": accuracy}
+        self.model.set_weights(parameters)
+        # i should pass in iterable np.ndarrays instead; test this with adversarial.py instead of the other FeatureDict MapDataset and see if that works; we want a solution consistent and agnostically functional across both backend ops
+        loss, accuracy = self.model.evaluate(self.test_dataset, verbose=1)
+        return loss, len(self.test_dataset), {"accuracy": accuracy}
 
 class Client(flwr.client.NumPyClient):
+    def __init__(self, model : tf.keras.models.Model, train_dataset, test_dataset):
+        self.model = model
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
+
     def get_parameters(self):
-        return model.get_weights()
+        return self.model.get_weights()
 
     def fit(self, parameters, config):
-        model.set_weights(parameters)
+        self.model.set_weights(parameters)
         # validation data param may be negligible
-        history = model.fit(train_dataset_for_base_model, steps_per_epoch=3, epochs=5, verbose=1)
+        history = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=32, epochs=5, verbose=1)
         # run the entire base model and check for its errors
         results = {
             "loss": history.history["loss"][0],
@@ -179,47 +169,78 @@ class Client(flwr.client.NumPyClient):
             "val_loss": history.history["val_loss"][0],
             "val_accuracy": history.history["val_accuracy"][0],
         }
-        return model.get_weights(), results
+        return self.model.get_weights(), results
 
     def evaluate(self, parameters, config):
-        model.set_weights(parameters)
-        # IterableDataset vs BatchDataset
-        loss, accuracy = model.evaluate(test_dataset_for_base_model)
+        self.model.set_weights(parameters)
+        # it's more abt the dataset types consistent with both nsl and flwr.client; test backwards from what works with client to nsl model
+        loss, accuracy = self.model.evaluate(self.test_dataset, verbose=1)
         return loss, {"accuracy": accuracy}
 
-def main():
-    # what entropy exists between the technique used for adv. reg. and the federated strategy given the data state per client
-    # parser = argparse.ArgumentParser(description="entry point to client model configuration.")
-    # # configurations
-    # parser.add_argument("--num_partitions", type=int, choices=range(0, 100), required=True)
-    # parser.add_argument("--adv_grad_norm", type=str, required=True)
-    # parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
-    # parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=True)
-    # parser.add_argument("--batch_size", type=int, required=True)
-    # parser.add_argument("--epochs", type=int, required=True)
-    # parser.add_argument("--num_clients", type=int, required=True)
-    # parser.add_argument("--num_rounds", type=int, required=True)
-    # parser.add_argument("--federated_optimizer_strategy", type=str, required=True)
-    # parser.add_argument("--adv_reg", type=bool, required=True)
-    # parser.add_argument("--gaussian_layer", type=bool, required=True)
-    # parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
-    # parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
-    # parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
-    # parser.add_argument("--min_eval_clients", type=int, required=False, default=2)
-    # parser.add_argument("--min_available_clients", type=int, required=False, default=2)
-    # parser.add_argument("--accept_client_failures_fault_tolerance", type=bool, required=False, default=False)
-    # # weight regularization, SGD momentum --> other configs along with kernel/bias initializer
-    # parser.add_argument("--weight_regularization", type=bool, required=False)
-    # parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
-    # args = parser.parse_args()
+def main(args):
+    # create models
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # args.adv_step_size, args.adv_grad_norm
+    adv_model = build_adv_model(params=params)
+    base_model = build_base_model(params=params)
+    model = base_model
 
     # start_client()
     if (type(model) == AdversarialRegularization):
-        flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient())
+        # correct FeatureDict to be iterable so that unpacking error is bypassed; the current code I have doesn't work well with AdvReg
+        datasets = tfds.load('mnist')
+        train_dataset = datasets['train']
+        test_dataset = datasets['test']
+        train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
+        test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
+
+        # the MapDataset fits to nsl, but not to flwr client evaluate function
+        train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
+        test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
+
+        # for batch in train_set_for_adv_model:
+        #     adv_model.perturb_on_batch(batch)
+        #     for element in batch:
+        #         element = Data.apply_noise_image_degrade(element, noisa_sigma=0.05)
+        #         element = Data.apply_blur_corruption(element, "gaussian_blur")
+
+        # convert MapDataset to Iterable FeatureDict / Tuples
+        flwr.client.start_numpy_client("[::]:8080", client=AdvRegClient(model, train_dataset=train_set_for_adv_model, test_dataset=test_set_for_adv_model))
 
     elif (type(model) == tf.keras.models.Model):
-        flwr.client.start_numpy_client("[::]:8080", client=Client())
+        datasets = tfds.load('mnist')
+        train_dataset = datasets['train']
+        test_dataset = datasets['test']
+        train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
+        test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
+        # for batch in train_dataset_for_base_model:
+        #     adv_model.perturb_on_batch(batch)
+        
+        # for batch in test_dataset_for_base_model:
+        #     adv_model.perturb_on_batch(batch)
+
+        # process dataset
+        flwr.client.start_numpy_client("[::]:8080", client=Client(train_dataset=train_dataset_for_base_model, test_dataset=test_dataset_for_base_model))
+
+def perturb_dataset_partition(partition):
+    pass
+
+def create_partitions(num_clients : int):
+    pass
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Crypton Client")
+    # configurations
+    parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
+    parser.add_argument("--adv_grad_norm", type=str, required=False)
+    parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
+    parser.add_argument("--batch_size", type=int, required=False)
+    parser.add_argument("--epochs", type=int, required=False)
+    parser.add_argument("--num_clients", type=int, required=False)
+    parser.add_argument("--adv_reg", type=bool, required=False)
+    parser.add_argument("--gaussian_layer", type=bool, required=False)
+    parser.add_argument("--weight_regularization", type=bool, required=False)
+    parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
+    args = parser.parse_args()
+    main(args)
 
