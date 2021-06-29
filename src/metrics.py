@@ -18,6 +18,12 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 
+'''
+To collect data from each exp config, create a list of metrics collected either from counter variables, keras.utils.Metrics, and so forth
+
+
+'''
+
 
 def create_table(header: list, csv):
     pass

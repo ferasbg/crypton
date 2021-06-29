@@ -19,13 +19,11 @@ Execute experimental configurations to assess the most optimal configuration for
 - there is no .fit working actually when there's 313 images processed in the nsl cache; whether that's a validation method, I am unsure what code is touching that eager execution to occur
 - todo: only solution: get to MapDataset, then convert to iterable tuple of dicts with FeatureDict
 
-
 ## Features
 - done: encode partitions for 10 clients
 - done: apply image corruptions to data along with perturb_batch processed in nsl backend before processed with flwr.client
 - done: parse_args for exp config
-- debug core data error processed with adv_reg client-server 
-- define fed. adv. metrics
-- define formal robustness metrics
-- define "single-machine" simulation to aggregate client-server process
+- fed. adv. metrics
+- formal robustness metrics
+- "single-machine" simulation to aggregate client-server process
 
