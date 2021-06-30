@@ -33,6 +33,7 @@ class HParams(object):
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
+        # store model and its respective train/test dataset + metadata in parameters
         self.input_shape = [28, 28, 1]
         self.num_classes = num_classes
         self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
@@ -49,6 +50,26 @@ class HParams(object):
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.clip_value_min = 0.0
         self.clip_value_max = 1.0
+
+class ClientConfig(object):
+    # todo: re-write this file so that there's an AdvRegClientConfig and ClientConfig that store client-specific configurations based on if one is adv. model or not; this also simplifies how the datasets are created and what datasets are used
+    # difference in datasets given adv_model and base_model
+    def __init__(self, model : tf.keras.models.Model, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
+        self.model = model
+        self.params = params
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
+        self.validation_steps = validation_steps
+        self.validation_split = validation_split
+
+class AdvRegClientConfig(object):
+    def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
+        self.model = model
+        self.params = params
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
+        self.validation_steps = validation_steps
+        self.validation_split = validation_split
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -128,21 +149,35 @@ def load_partition(idx: int):
         y_test[idx * 1000 : (idx + 1) * 1000],
     )
 
+# create models
+params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # args.adv_step_size, args.adv_grad_norm
+base_model = build_base_model(params=params)
+# set default model to adv_model
+model = build_adv_model(params=params)
+
+# prepare BatchDataset
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_test, y_test = x_train[-10000:], y_train[-10000:]
+x_train = tf.cast(x_train, dtype=tf.float32)
+x_test = tf.cast(x_test, dtype=tf.float32)
+val_steps = x_test.shape[0] / params.batch_size
+
+# type: BatchDataset
+train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(params.batch_size)
+val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(params.batch_size)
+adv_client_config = AdvRegClientConfig(model=model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
+client_config = ClientConfig(model=model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
+
 # create_adv_client()
 class AdvRegClient(flwr.client.KerasClient):
-    def __init__(self, model : AdversarialRegularization, train_dataset, test_dataset, validation_steps, args=None):
-        self.model = model
-        self.train_dataset = train_dataset
-        self.test_dataset = test_dataset
-        self.validation_steps = validation_steps
-        # store args and params : HParams object
+    # todo: store args and params : HParams object; and configure upon object instantiation both for model and client
 
     def get_parameters(self):
-        return self.model.get_weights()
+        return adv_client_config.model.get_weights()
 
     def fit(self, parameters, config):
-        self.model.set_weights(parameters)
-        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, epochs=1, steps_per_epoch=3, verbose=1)
+        adv_client_config.model.set_weights(parameters)
+        results = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1, steps_per_epoch=3, verbose=1)
         results = {
                 "loss": results[0],
                 "sparse_categorical_crossentropy": results[1],
@@ -150,12 +185,13 @@ class AdvRegClient(flwr.client.KerasClient):
                 "scaled_adversarial_loss": results[3],
         }
         # you could make a dict from history callback object
-        return self.model.get_weights(), len(self.train_dataset), {}
+        return adv_client_config.model.get_weights(), len(adv_client_config.train_dataset), {}
 
     def evaluate(self, parameters, config):
-        self.model.set_weights(parameters)
+        adv_client_config.model.set_weights(parameters)
         # unpack error because loading into a list is the correct approach, except python infers the type to store the function to the right at runtime
-        history = self.model.evaluate(self.test_dataset, verbose=1)
+        history = adv_client_config.model.evaluate(adv_client_config.test_dataset, verbose=1)
+        # only fit uses validation accuracy and sce loss
         results = {
                 "loss": history[0],
                 "sparse_categorical_crossentropy": history[1],
@@ -166,19 +202,13 @@ class AdvRegClient(flwr.client.KerasClient):
         return results["loss"], results["sparse_categorical_accuracy"]
 
 class Client(flwr.client.KerasClient):
-    def __init__(self, model : tf.keras.models.Model, train_dataset, test_dataset, validation_steps):
-        self.model = model
-        self.train_dataset = train_dataset
-        self.test_dataset = test_dataset
-        self.validation_steps = validation_steps
-
     def get_parameters(self):
-        return self.model.get_weights()
+        return client_config.model.get_weights()
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         # validation data param may be negligible
-        results = self.model.fit(self.train_dataset, validation_data=self.test_dataset, validation_steps=self.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=5, verbose=1)
+        results = client_config.model.fit(client_config.train_dataset, validation_data=client_config.test_dataset, validation_steps=client_config.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=5, verbose=1)
         # run the entire base model and check for its errors
         results = {
                 "loss": results[0],
@@ -186,12 +216,12 @@ class Client(flwr.client.KerasClient):
                 "sparse_categorical_accuracy": results[2],
                 "scaled_adversarial_loss": results[3],
         }
-        return self.model.get_weights(), results
+        return client_config.model.get_weights(), results
 
     def evaluate(self, parameters, config):
-        self.model.set_weights(parameters)
+        client_config.model.set_weights(parameters)
         # it's more abt the dataset types consistent with both nsl and flwr.client; test backwards from what works with client to nsl model
-        results = self.model.evaluate(self.test_dataset, verbose=1)
+        results = client_config.model.evaluate(client_config.test_dataset, verbose=1)
         # get loss from result list/dict
         results = {
                 "loss": results[0],
@@ -203,13 +233,9 @@ class Client(flwr.client.KerasClient):
         # return a tuple of loss, accuracy
         return results["loss"], results["sparse_categorical_accuracy"]
 
-def main(args):
-    # create models
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # args.adv_step_size, args.adv_grad_norm
-    adv_model = build_adv_model(params=params)
-    base_model = build_base_model(params=params)
-    model = adv_model
 
+def main(args):
+    # config = ClientConfig()
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_test, y_test = x_train[-10000:], y_train[-10000:]
     x_train = tf.cast(x_train, dtype=tf.float32)
@@ -233,6 +259,7 @@ def main(args):
 
     # start_client()
     if (type(model) == AdversarialRegularization):
+        # pass AdvRegClientConfig variables into AdvRegClient
         adv_reg_client = AdvRegClient(model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
         flwr.client.start_keras_client(server_address="[::]:8080", client=adv_reg_client)
 
