@@ -194,3 +194,18 @@ class Data:
         # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
         # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
         pass
+
+    @staticmethod
+    def load_partition(idx: int, dataset):
+        """Load 1/10th of the training and test data to simulate a partition."""
+        raise NotImplementedError
+
+    @staticmethod
+    def create_train_partitions(dataset, num_clients : int):
+        # Usage: train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
+        # current_train_dataset = train_partitions[current_client_idx]
+        return []
+
+    @staticmethod
+    def create_test_partitions(dataset, num_clients : int):
+        return []

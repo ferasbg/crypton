@@ -13,30 +13,16 @@ from dataset import *
 from attacks import *
 
 # todo: use LearningRateScheduler to configure client and server learning rate
-# todo: add HParams object as argument for each client to configure the client from args
 # todo: setup ExpConfig as ExpConfig(object): def __init__(params, client_config, server_config) and the objects passed are set based on args
-# todo: re-write this file so that there's an AdvRegClientConfig and ClientConfig that store client-specific configurations based on if one is adv. model or not; this also simplifies how the datasets are created and what datasets are used
-# todo: re-write params to pass its parameters through the ClientConfig params
-# todo: store args and params : HParams object; and configure upon object instantiation both for model and client
 
 class HParams(object):
     '''
     adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
     adv_step_size: The magnitude of adversarial perturbation.
     adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
-
-    Notes:
-        - there are different regularization techniques, but keep technique constant
-        - formalize relationship between adversarial input generation for a client and its server-side evaluation-under-attack.
-        - adversarial regularization is very useful for defining an explicit structure e.g. structural signals rather than single samples.
-        - nsl-ar structured signals provides more fine-grained information not available in feature inputs.
-        - We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
-        - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
-        - wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
-        - graph the feature representation given graph with respect to the graph of the rest of its computations, and the trusted aggregator eval
     '''
 
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, **kwargs):
         # store model and its respective train/test dataset + metadata in parameters
         self.input_shape = [28, 28, 1]
         self.num_classes = num_classes
@@ -67,12 +53,22 @@ class ClientConfig(object):
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
+        # when we iteratively update params and the dataset in terms of the current client being sampled for fit_round and eval_round, the config simplifies accessing the variables' state
         self.model = model
-        self.params = params # additional point of accessing "param var state"
+        self.params = params 
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
         self.validation_steps = validation_steps
         self.validation_split = validation_split
+
+class ExperimentConfig(object):
+    def __init__(self, client_config, params, args):
+        # client config stores partition datasets and model to use for client, independent of model type (MapDataset/BatchDataset fit to both model types) 
+        self.client_config = client_config
+        # params store (adv) hyperparameter configurations that will iteratively update given each .sh execution
+        self.params = params
+        # args object; usage ex: exp_config.args.num_clients; args stores all the experiment-specific configurations (based on all permutations) defined by the user; args passed in main also works
+        self.args = args
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -122,6 +118,59 @@ def build_adv_model(params : HParams):
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
+def build_gaussian_base_model(params : HParams):
+    if (params.gaussian_state):
+        input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+        gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
+        conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(gaussian_layer)
+        batch_norm = layers.BatchNormalization()(conv1)
+        dropout = layers.Dropout(0.3)(batch_norm)
+        #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+        conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+        maxpool1 = layers.MaxPool2D((2,2))(conv2)
+        conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+        conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+        maxpool2 = layers.MaxPool2D((2,2))(conv4)
+        conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+        conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+        maxpool3 = layers.MaxPool2D((2,2))(conv6)
+        flatten = layers.Flatten()(maxpool3)
+        dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+        # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+        output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+        model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+        return model
+
+def build_gaussian_adv_model(params : HParams):
+    # precondition matches state check
+    if (params.gaussian_state):
+        input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+        gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
+        conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(gaussian_layer)
+        batch_norm = layers.BatchNormalization()(conv1)
+        dropout = layers.Dropout(0.3)(batch_norm)
+        #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+        conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+        maxpool1 = layers.MaxPool2D((2,2))(conv2)
+        conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+        conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+        maxpool2 = layers.MaxPool2D((2,2))(conv4)
+        conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+        conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+        maxpool3 = layers.MaxPool2D((2,2))(conv6)
+        flatten = layers.Flatten()(maxpool3)
+        dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+        # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+        output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+        model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+        adv_config = nsl.configs.make_adv_reg_config(multiplier=params.adv_multiplier, adv_step_size=params.adv_step_size, adv_grad_norm=params.adv_grad_norm)
+        # AdvRegularization is a sub-class of tf.keras.Model, but it processes dicts instead for train and eval because of its decomposition approach for nsl
+        adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
+        adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        return adv_model
+
 def normalize(features):
   features['image'] = tf.cast(
       features['image'], dtype=tf.float32) / 255.0
@@ -133,14 +182,7 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
-def load_partition(idx: int, dataset : BatchDataset | MapDataset):
-    """Load 1/10th of the training and test data to simulate a partition."""
-    raise NotImplementedError
-
-def create_partitions(dataset, num_clients : int):
-    # create train/test partitions
-    raise NotImplementedError
-
+# setup models
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 base_model = build_base_model(params=params)
 adv_model = build_adv_model(params=params)
@@ -152,22 +194,12 @@ x_train = tf.cast(x_train, dtype=tf.float32)
 x_test = tf.cast(x_test, dtype=tf.float32)
 val_steps = x_test.shape[0] / params.batch_size
 
-# MapDataset
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-
-# type: MapDataset
-train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
-test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
-
 # type: BatchDataset
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(params.batch_size)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(params.batch_size)
+
+# setup client configurations 
 adv_client_config = AdvRegClientConfig(model=adv_model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
-# using BatchDataset for base client; MapDataset for base model proves to be functional.
 client_config = ClientConfig(model=base_model, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
 
 # create_adv_client()
@@ -177,7 +209,7 @@ class AdvRegClient(flwr.client.KerasClient):
 
     def fit(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
-        results = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1, steps_per_epoch=3, verbose=1)
+        results = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1, steps_per_epoch=3)
         results = {
                 "loss": results[0],
                 "sparse_categorical_crossentropy": results[1],
@@ -188,13 +220,13 @@ class AdvRegClient(flwr.client.KerasClient):
 
     def evaluate(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
-        history = adv_client_config.model.evaluate(adv_client_config.test_dataset, verbose=1)
+        results = adv_client_config.model.evaluate(adv_client_config.test_dataset, verbose=1)
         # only fit uses validation accuracy and sce loss
         results = {
-                "loss": history[0],
-                "sparse_categorical_crossentropy": history[1],
-                "sparse_categorical_accuracy": history[2],
-                "scaled_adversarial_loss": history[3],
+                "loss": results[0],
+                "sparse_categorical_crossentropy": results[1],
+                "sparse_categorical_accuracy": results[2],
+                "scaled_adversarial_loss": results[3],
         }
         # or just history[0], history[1]
         return results["loss"], results["sparse_categorical_accuracy"]
@@ -232,6 +264,26 @@ class Client(flwr.client.KerasClient):
         return results["loss"], results["sparse_categorical_accuracy"]
 
 def main(args):
+    # MapDataset for partition creation
+    datasets = tfds.load('mnist')
+    train_dataset = datasets['train']
+    test_dataset = datasets['test']
+    train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
+    test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
+
+    # type: MapDataset
+    train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
+    test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
+
+    # create adv_reg client partitions
+    adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=args.num_clients)
+    adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=args.num_clients)
+    
+    # create client partitions
+    train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=args.num_clients)
+    test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=args.num_clients)
+
+    # args defines if the clients will be adversarially regularized 
     if (args.adv_reg):
         model = adv_model
 
@@ -257,11 +309,10 @@ if __name__ == '__main__':
     parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
     parser.add_argument("--batch_size", type=int, required=False)
     parser.add_argument("--epochs", type=int, required=False)
-    parser.add_argument("--num_clients", type=int, required=False)
+    parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--adv_reg", type=bool, required=False, default=True)
     parser.add_argument("--gaussian_layer", type=bool, required=False)
     parser.add_argument("--weight_regularization", type=bool, required=False)
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     args = parser.parse_args()
     main(args)
-

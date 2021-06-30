@@ -130,7 +130,7 @@ val_steps = x_test.shape[0] / parameters.batch_size
 print(type(val_steps)) # float
 
 # adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
-#history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
+history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
 results = model.evaluate(val_data, batch_size=parameters.batch_size)
 print(results[0], results[1], results[2], results[3])
 
