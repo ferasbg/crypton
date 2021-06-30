@@ -11,7 +11,6 @@ from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
 # todo: write start_client, start_server, start_simulation
 # todo: write setup config based on settings
 # todo: create exp config permutations given settings
-# todo: add configurations eg strategies, gaussian_noise_layer, image corruptions, nsl adversarial regularization or base regularization (batch, dropout), adversarial hyperparameters, clients, server model config, partitions, etc
 
 def create_experiment_permutations(client_config : dict, server_config : dict):
     return {}, {}
@@ -45,3 +44,21 @@ server_settings = {
 }
 
 client_setting_combinations = itertools.combinations(client_settings)
+
+class StrategyConfig(object):
+    pass
+
+def main(args) -> None:
+    # pass map dataset of train dataset only
+    train_partitions = Data.create_train_partitions(dataset=[], num_clients=10)
+    test_partitions = Data.create_test_partitions(dataset=[], num_clients=10)
+    strategy_config = StrategyConfig()  
+    params = HParams(10, 0.2, 0.05, "infinity")
+    strategy = FedAdagrad()
+
+    # run a process
+    for client in range(params.num_clients):
+        adv_client_config = AdvRegClientConfig(model=[], params=[], train_dataset=[], test_dataset=[], validation_steps=[])
+        client = AdvRegClient()
+        flwr.server.start_server(server_address=DEFAULT_SERVER_ADDRESS, strategy=strategy)
+        flwr.client.start_keras_client(server_address=DEFAULT_SERVER_ADDRESS, client=client)

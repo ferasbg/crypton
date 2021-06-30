@@ -58,16 +58,6 @@ class HParams(object):
     adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
     adv_step_size: The magnitude of adversarial perturbation.
     adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
-
-    Notes:
-        - there are different regularization techniques, but keep technique constant
-        - formalize relationship between adversarial input generation for a client and its server-side evaluation-under-attack.
-        - adversarial regularization is very useful for defining an explicit structure e.g. structural signals rather than single samples.
-        - nsl-ar structured signals provides more fine-grained information not available in feature inputs.
-        - We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
-        - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
-        - wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
-
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
@@ -133,7 +123,6 @@ print(type(val_steps)) # float
 history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
 results = model.evaluate(val_data, batch_size=parameters.batch_size)
 print(results[0], results[1], results[2], results[3])
-
 
 # per client, you sample them all and then aggregate their train/eval results for the gradient update to the server model
 

@@ -84,8 +84,10 @@ def get_eval_fn(model):
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
     (x_train, y_train) = tf.keras.datasets.mnist.load_data()
 
-    # Use the last 5k training examples as a validation set
-    x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+    # val set
+    #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+    x_test, y_test = x_train[-10000:], y_train[-10000:]
+    
     # x_train, x_test = x_train / 255.0, x_test / 255.0
     # for batch in train_dataset_for_base_model:
         #     adv_model.perturb_on_batch(batch)
@@ -142,6 +144,3 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     main(args)
-
-# python3 server.py  --num_rounds=10 --strategy="fedadagrad" 
-# python3 client.py --num_partitions=10 --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=5 --num_clients=10 adv_reg=True gaussian_layer=True 
