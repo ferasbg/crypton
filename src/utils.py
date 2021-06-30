@@ -143,3 +143,19 @@ def start_client(model, train_partition, test_partition, **kwargs):
 
 def start_simulation(num_clients : int, args):
     pass
+
+def setup_client_parse_args():
+    parser = argparse.ArgumentParser(description="Crypton Client")
+    # configurations
+    parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
+    parser.add_argument("--adv_grad_norm", type=str, required=False)
+    parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
+    parser.add_argument("--batch_size", type=int, required=False)
+    parser.add_argument("--epochs", type=int, required=False)
+    parser.add_argument("--num_clients", type=int, required=False, default=10)
+    parser.add_argument("--adv_reg", type=bool, required=False, default=True)
+    parser.add_argument("--gaussian_layer", type=bool, required=False)
+    parser.add_argument("--weight_regularization", type=bool, required=False)
+    parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
+    return parser

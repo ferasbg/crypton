@@ -52,7 +52,6 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 import warnings
 warnings.filterwarnings("ignore")
 
-
 class HParams(object):
     '''
     adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
@@ -104,31 +103,43 @@ parameters = HParams(num_classes=10, adv_multiplier=0.2,
                      adv_step_size=0.05, adv_grad_norm="infinity")
 
 model = build_compile_nsl_model(params=parameters, num_classes=10)
-
-# setup data
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-# train/test split
 x_test, y_test = x_train[-10000:], y_train[-10000:]
 x_train = tf.cast(x_train, dtype=tf.float32)
 x_test = tf.cast(x_test, dtype=tf.float32)
-
-# how can we fit the existing method of converting tensor slices into iterable dict/tuple for the advreg client model
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(parameters.batch_size)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(parameters.batch_size)
-print(type(train_data), type(val_data)) # BatchDataset
 val_steps = x_test.shape[0] / parameters.batch_size
-print(type(val_steps)) # float
 
-# adv_model.fit(x={'image': x_train, 'label': y_train}, batch_size=parameters.batch_size, epochs=parameters.epochs)
-history = model.fit(train_data, validation_data=val_data, validation_steps=val_steps, steps_per_epoch=3, epochs=5, verbose=1)
-results = model.evaluate(val_data, batch_size=parameters.batch_size)
-print(results[0], results[1], results[2], results[3])
+# type: History Callback object
+history = model.fit(train_data, steps_per_epoch=1, epochs=5, batch_size=parameters.batch_size, verbose=1)
+# these are the variables that are calculated and stored in the tf.keras.callbacks.History object
+keys = history.history.keys() # dict_keys(['loss', 'sparse_categorical_crossentropy', 'sparse_categorical_accuracy', 'scaled_adversarial_loss'])
+loss = history.history["loss"]
+sparse_categorical_crossentropy = history.history["sparse_categorical_crossentropy"]
+sparse_categorical_accuracy = history.history["sparse_categorical_accuracy"]
+scaled_adversarial_loss = history.history["scaled_adversarial_loss"]
 
-# per client, you sample them all and then aggregate their train/eval results for the gradient update to the server model
+print("printing data stored in dict_keys from History object."  )
+# it prints the loss for each epoch run
+print(loss)
+print(sparse_categorical_crossentropy)
+print(sparse_categorical_accuracy)
+print(scaled_adversarial_loss)
 
-# the goal is to fit what works with flwr.client with nsl.AdversarialRegularization, which is sub-classed from tf.keras.Model
-# if things break further I will just re-implement flwr; doesn't matter to me
-# general: depth in architecture and method and formulation of such is valuable if extensible and configurable
 
+results = model.evaluate(val_data, verbose=1)
 
-# can we see if the loading processes of tfds.load('mnist') and tf.keras.datasets.mnist result in the same cardinality for the train/test set
+results = {
+    "loss": results[0],
+    "sparse_categorical_crossentropy": results[1],
+    "sparse_categorical_accuracy": results[2],
+    "scaled_adversarial_loss": results[3],
+}
+
+print("printing loss, accuracy: \n")
+print(results["loss"])
+print(results["sparse_categorical_accuracy"])
+
+#base_client = Client(model, train_dataset=train_dataset_for_base_model, test_dataset=test_dataset_for_base_model, validation_steps=val_steps)
+#flwr.client.start_keras_client(server_address="[::]:8080", client=base_client)
