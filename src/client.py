@@ -133,27 +133,15 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
-def load_partition(idx: int):
+def load_partition(idx: int, dataset : BatchDataset | MapDataset):
     """Load 1/10th of the training and test data to simulate a partition."""
-    assert idx in range(10)
+    raise NotImplementedError
 
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+def create_partitions(dataset, num_clients : int):
+    # create train/test partitions
+    raise NotImplementedError
 
-    datasets = tfds.load('mnist')
-    # from the train split, can we partition the data?
-    train_dataset = datasets['train']
-    test_dataset = datasets['test']
-
-    return (
-        x_train[idx * 5000 : (idx + 1) * 5000],
-        y_train[idx * 5000 : (idx + 1) * 5000],
-    ), (
-        x_test[idx * 1000 : (idx + 1) * 1000],
-        y_test[idx * 1000 : (idx + 1) * 1000],
-    )
-
-# create models; param metadata should iteratively update 
-params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") 
+params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 base_model = build_base_model(params=params)
 adv_model = build_adv_model(params=params)
 
@@ -246,7 +234,7 @@ class Client(flwr.client.KerasClient):
 def main(args):
     if (args.adv_reg):
         model = adv_model
-    
+
     elif (args.adv_reg == False):
         model = base_model
 

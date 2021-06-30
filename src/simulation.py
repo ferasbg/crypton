@@ -14,7 +14,7 @@ from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
 
 # configurations are based on the number of strategies, gaussian_noise_layer, image corruptions, nsl adversarial regularization or base regularization (batch, dropout), adversarial hyperparameters, clients, server model config, partitions, etc
 client_config = {
-    
+
 }
 
 server_config = {
@@ -35,5 +35,6 @@ def start_client(model, train_partition, test_partition, **kwargs):
 
 def start_simulation(num_clients : int, args):
     pass
+
 
 
