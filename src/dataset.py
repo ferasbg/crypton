@@ -209,3 +209,23 @@ class Data:
     @staticmethod
     def create_test_partitions(dataset, num_clients : int):
         return []
+
+    @staticmethod
+    def perturb_dataset_partition(partition):
+        '''
+            Usage:
+            # for partition in train_dataset: 
+                # partition = perturb_dataset_partition(partition)
+            # for partition in test_dataset:
+                # partition = perturb_dataset_partition(partition)
+        '''
+
+        pass
+
+    @staticmethod
+    def setup_sample_data_for_file():
+        # setup dataset and store input image to test
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+        # take first image from train set
+        image = x_train[-1:]
+        return image, image.shape, tf.keras.preprocessing.image.array_to_img(image)

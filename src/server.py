@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Crypton Server")
     # configurations
     parser.add_argument("--num_rounds", type=int, required=False)
-    parser.add_argument("--federated_optimizer_strategy", type=str, required=False)
+    parser.add_argument("--strategy", type=str, required=False)
     parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
     parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
     parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
@@ -142,3 +142,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     main(args)
+
+# python3 server.py  --num_rounds=10 --strategy="fedadagrad" 
+# python3 client.py --num_partitions=10 --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=5 --num_clients=10 adv_reg=True gaussian_layer=True 

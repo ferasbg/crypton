@@ -34,7 +34,27 @@ from PIL import Image
 from tensorflow import keras
 
 # the relationship between generating robust adversarial examples and developing adversarially robust models is that both conditions help each other
-# referencee: https://people.eecs.berkeley.edu/~sseshia/pubdir/vnn19.pdf
+# reference: https://people.eecs.berkeley.edu/~sseshia/pubdir/vnn19.pdf
+
+'''
+Mathematical Formulation of Adversarially Robust Federated Optimization With Neural Structured Learning:
+
+Variables:
+  - neural network function (map to an output probability with a softmax)
+  - sampling algorithm for clients
+  - adaptive federated optimization algorithm given adversarially regularized client models
+  - neural structured learning algorithm given neural network (formalize feature decomposition, regularization --> federated strategy --> server-side parameter evaluation-under-attack (robustness))
+  - server-side parameter evaluation algorithm in federated setting
+  - checking server-side model (trusted aggregator) against server-side specifications for certification of adversarial robustness (both in terms of the examples and the accuracy under perturbation attacks --> extrapolate robustness via federated accuracy-under-attack to abstraction given decision formulation in decision_formulations (set of all specifications/checks))
+
+Statements:
+  - 
+  -
+  -
+  -
+
+
+'''
 
 def compute_admissibility_constraint(x):
   '''

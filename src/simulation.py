@@ -10,31 +10,38 @@ from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
 
 # todo: write start_client, start_server, start_simulation
 # todo: write setup config based on settings
-# todo: when writing simulation: for each client sampled, access partition iteratively in terms of num_clients
-
-# configurations are based on the number of strategies, gaussian_noise_layer, image corruptions, nsl adversarial regularization or base regularization (batch, dropout), adversarial hyperparameters, clients, server model config, partitions, etc
-client_config = {
-
-}
-
-server_config = {
-
-}
+# todo: create exp config permutations given settings
+# todo: add configurations eg strategies, gaussian_noise_layer, image corruptions, nsl adversarial regularization or base regularization (batch, dropout), adversarial hyperparameters, clients, server model config, partitions, etc
 
 def create_experiment_permutations(client_config : dict, server_config : dict):
     return {}, {}
 
-def start_client():
-    pass
+# create permutations given dictionary of client_config
+client_settings = {
+    "adv_reg": False,
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
 
-def start_server(server_address : str, strategy : Strategy, num_rounds : int, num_clients : int, **kwargs):
-    pass
+}
 
-def start_client(model, train_partition, test_partition, **kwargs):
-    pass
+server_settings = {
+    "num_rounds": 10,
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+    "": "",
+}
 
-def start_simulation(num_clients : int, args):
-    pass
-
-
-
+client_setting_combinations = itertools.combinations(client_settings)

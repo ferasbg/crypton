@@ -2,7 +2,8 @@
 Execute experimental configurations to assess the most optimal configuration for a production-level federated system that is robust against adversarial attacks fixed by norm type and norm values. Though it's not fixed to norm type nor norm value. Attack vectors aren't limited to adversarial examples (adv. input generation).
 
 ## Usage
-Run `exp-config-run.sh` to run all the experimental configurations to assess.
+- `python3 server.py --num_rounds=10 --strategy="fedadagrad"` 
+- `python3 client.py --num_partitions=10 --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=5 --num_clients=10 adv_reg=True gaussian_layer=True`
 
 ## Features
 - working: server-side evaluation after fit_round and sample_round sampling of clients

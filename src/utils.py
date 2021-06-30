@@ -132,8 +132,14 @@ def build_compile_client_model(adversarial_regularization_state : bool, num_clas
         return model
 
 
-def perturb_dataset_partition(partition):
+def start_client():
     pass
 
-def create_partitions(num_clients : int):
+def start_server(server_address : str, strategy : Strategy, num_rounds : int, num_clients : int, **kwargs):
+    pass
+
+def start_client(model, train_partition, test_partition, **kwargs):
+    pass
+
+def start_simulation(num_clients : int, args):
     pass
