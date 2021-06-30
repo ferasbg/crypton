@@ -1,5 +1,4 @@
 import argparse
-from utils import setup_client_parse_args
 import flwr
 from neural_structured_learning.keras.adversarial_regularization import AdversarialRegularization
 import tensorflow as tf
@@ -17,9 +16,9 @@ from dataset import *
 
 class HParams(object):
     '''
-    adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
-    adv_step_size: The magnitude of adversarial perturbation.
-    adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
+        adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
+        adv_step_size: The magnitude of adversarial perturbation.
+        adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, **kwargs):
@@ -40,7 +39,6 @@ class HParams(object):
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.clip_value_min = 0.0
         self.clip_value_max = 1.0
-
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -183,10 +181,45 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
+def setup_client_parse_args():
+    parser = argparse.ArgumentParser(description="Crypton Client")
+    # configurations
+    parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
+    parser.add_argument("--adv_grad_norm", type=str, required=False)
+    parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
+    parser.add_argument("--batch_size", type=int, required=False)
+    parser.add_argument("--epochs", type=int, required=False)
+    parser.add_argument("--num_clients", type=int, required=False, default=10)
+    parser.add_argument("--adv_reg", type=bool, required=False, default=True)
+    parser.add_argument("--gaussian_layer", type=bool, required=False)
+    parser.add_argument("--weight_regularization", type=bool, required=False)
+    parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
+    return parser
+
 # setup models
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 base_model = build_base_model(params=params)
 adv_model = build_adv_model(params=params)
+
+# MapDataset for partition creation
+datasets = tfds.load('mnist')
+train_dataset = datasets['train']
+test_dataset = datasets['test']
+train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
+test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
+
+#type: MapDataset
+train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
+test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
+
+# create adv_reg client partitions
+adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=10)
+adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=10)
+
+# create client partitions
+train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=10)
+test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=10)
 
 # prepare BatchDataset
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -202,28 +235,7 @@ val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}
 # setup client configurations; hardcoded configs for now
 adv_client_config = AdvRegClientConfig(model=adv_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
 client_config = ClientConfig(model=base_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
-# MapDataset for partition creation
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
 
-# type: MapDataset
-train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
-test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
-
-# create adv_reg client partitions
-adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=10)
-adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=10)
-
-# create client partitions
-train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=10)
-test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=10)
-
-model = adv_model
-
-# create_adv_client()
 class AdvRegClient(flwr.client.KerasClient):
     def get_parameters(self):
         return adv_client_config.model.get_weights()
@@ -262,7 +274,7 @@ class Client(flwr.client.KerasClient):
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         # validation data param may be negligible; validation_data=client_config.test_dataset, validation_steps=client_config.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=1, verbose=1
-        history = client_config.model.fit(client_config.train_dataset, steps_per_epoch=3)
+        history = client_config.model.fit(client_config.train_dataset, steps_per_epoch=3, epochs=5)
         # run the entire base model and check for its errors
         results = {
             "loss": history.history["loss"],
@@ -286,11 +298,11 @@ class Client(flwr.client.KerasClient):
 
         return results["loss"], results["sparse_categorical_accuracy"]
 
-def main(args):
+def main():
     adv_reg_client = AdvRegClient()
     flwr.client.start_keras_client(server_address="[::]:8080", client=adv_reg_client)
 
 if __name__ == '__main__':
-    client_parser = setup_client_parse_args()
-    args = client_parser.parse_args()
-    main(args)
+    # client_parser = setup_client_parse_args()
+    # args = client_parser.parse_args()
+    main()

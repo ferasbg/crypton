@@ -34,7 +34,11 @@ Execute experimental configurations to assess the most optimal configuration for
 - write tex file containing abstract and paper
 - during arxiv preprint process: advertise/market the paper on HN, reddit, twitter, discord, etc as a benchmark for further research in certification of robust NNs, optimization, etc
 
-# Notes
+## Technical Notes
+- The correct dict passed in the .fit() function along with correcting errors in my code that weren't reported to me corrected the error for the steps_per_epoch parameter taking effect.
+
+
+## Research Notes
 - fedadagrad adaptability + feature decomposition from NSL / higher dimensionality of features + DCNN with skip connections and nominal regularizations etc --> converge to satisfy robustness specifications and conform to optimal optimization formulation
 
 ## Remaining Research Questions
