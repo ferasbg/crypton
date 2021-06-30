@@ -14,6 +14,7 @@ from attacks import *
 
 # todo: use LearningRateScheduler to configure client and server learning rate
 # todo: add HParams object as argument for each client to configure the client from args
+# todo: setup ExpConfig as ExpConfig(object): def __init__(params, client_config, server_config) and the objects passed are set based on args
 
 class HParams(object):
     '''
@@ -171,7 +172,6 @@ client_config = ClientConfig(model=model, train_dataset=train_data, test_dataset
 # create_adv_client()
 class AdvRegClient(flwr.client.KerasClient):
     # todo: store args and params : HParams object; and configure upon object instantiation both for model and client
-
     def get_parameters(self):
         return adv_client_config.model.get_weights()
 
@@ -185,7 +185,7 @@ class AdvRegClient(flwr.client.KerasClient):
                 "scaled_adversarial_loss": results[3],
         }
         # you could make a dict from history callback object
-        return adv_client_config.model.get_weights(), len(adv_client_config.train_dataset), {}
+        return adv_client_config.model.get_weights(), len(adv_client_config.train_dataset), results
 
     def evaluate(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
@@ -232,7 +232,6 @@ class Client(flwr.client.KerasClient):
 
         # return a tuple of loss, accuracy
         return results["loss"], results["sparse_categorical_accuracy"]
-
 
 def main(args):
     # config = ClientConfig()
