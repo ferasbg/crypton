@@ -10,9 +10,10 @@ from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 import numpy as np
 from dataset import *
-
-# todo: use LearningRateScheduler to configure client and server learning rate
-# todo: setup ExpConfig as ExpConfig(object): def __init__(params, client_config, server_config) and the objects passed are set based on args
+from tensorflow.keras.callbacks import LearningRateScheduler
+# todo: hardcode arguments from parse_args for both client, server, and experiment config
+# todo: get the base AdvRegClient to work with fit_round and evaluate_round with federated server-client process
+# todo: implement formal robustness property checks/formulations 
 
 class HParams(object):
     '''
@@ -197,6 +198,12 @@ def setup_client_parse_args():
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     return parser
 
+def scheduler(epoch, lr):
+    if epoch < 5:
+        return lr
+    else:
+        return lr * tf.math.exp(-0.1)
+
 # setup models
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
 base_model = build_base_model(params=params)
@@ -209,7 +216,7 @@ test_dataset = datasets['test']
 train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
 test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
 
-#type: MapDataset
+# type: MapDataset
 train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
 test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
 
@@ -235,6 +242,7 @@ val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}
 # setup client configurations; hardcoded configs for now
 adv_client_config = AdvRegClientConfig(model=adv_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
 client_config = ClientConfig(model=base_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
+callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
 class AdvRegClient(flwr.client.KerasClient):
     def get_parameters(self):
@@ -244,7 +252,6 @@ class AdvRegClient(flwr.client.KerasClient):
         adv_client_config.model.set_weights(parameters)
         # validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1
         history = adv_client_config.model.fit(adv_client_config.train_dataset, steps_per_epoch=3, epochs=5)
-
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -274,7 +281,7 @@ class Client(flwr.client.KerasClient):
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         # validation data param may be negligible; validation_data=client_config.test_dataset, validation_steps=client_config.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=1, verbose=1
-        history = client_config.model.fit(client_config.train_dataset, steps_per_epoch=3, epochs=5)
+        history = client_config.model.fit(client_config.train_dataset, steps_per_epoch=3, epochs=5, callbacks=[callback])
         # run the entire base model and check for its errors
         results = {
             "loss": history.history["loss"],
