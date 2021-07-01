@@ -45,16 +45,6 @@ server_settings = {
 
 client_setting_combinations = itertools.combinations(client_settings)
 
-class StrategyConfig(object):
-    def __init__(self, strategy : str):
-        strategy = strategy.lower()
-        
-        if (strategy == "fedadagrad"):
-            self.strategy = FedAdagrad()
-        
-        if (strategy == "fedavg"):
-            self.strategy = FedAvg()
-
 def start_client():
     pass
 
@@ -71,7 +61,7 @@ def main() -> None:
     # pass map dataset of train dataset only
     train_partitions = Data.create_train_partitions(dataset=[], num_clients=10)
     test_partitions = Data.create_test_partitions(dataset=[], num_clients=10)
-    strategy_config = StrategyConfig()  
+    strategy_config = StrategyConfig()
     params = HParams(10, 0.2, 0.05, "infinity")
     strategy = FedAdagrad()
 
