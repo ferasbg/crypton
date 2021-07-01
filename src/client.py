@@ -12,11 +12,13 @@ import numpy as np
 from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 
-# todo: create partitions and setup experiment given arguments
 # todo: implement formal robustness property checks/formulations in formal_robustness.py; review the paper again and also the specifications paper
-# todo : make weight reg and sgd mmentum default in each model function
+# todo : add weight reg in each model function
 # todo: add validation set to the .fit() function for both clients
-    # reference code: validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1
+# todo (very imp.): create client train/test partitions here; for each client instance run with python3 client.py --argName1 etc we will hardcode the configs in a .sh file and run them
+# todo: create (train and/or test) partitions functions are run by default which creates the set of train/test partitions respectively, and are accessed based on the current client_idx
+# todo: clear up technical process relating to args and config objects that handle the data passed from args
+# todo: test base client (control) to make sure that it can be sampled just like AdvRegClient
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -40,30 +42,57 @@ class ClientConfig(object):
 
 class ServerConfig(object):
     def __init__(self):
-        # encapsulate import to isolate from other client-side code
-        from simulation import StrategyConfig
-        self.strategy = StrategyConfig(strategy="fedadagrad")
+        # update this object with variables speciic to the strategies below
+        self.fedadagrad = FedAdagrad()
+        self.fedavg = FedAvg()
+
+class DatasetConfig:
+    def __init__(self):
+        # MapDataset for partition creation
+        self.datasets = tfds.load('mnist')
+        self.map_train_dataset = self.datasets['train']
+        self.map_test_dataset = self.datasets['test']
+        self.train_dataset_for_base_model = self.map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
+        self.test_dataset_for_base_model = self.map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
+        
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_test, y_test = x_train[-10000:], y_train[-10000:]
+        
+        self.x_train = tf.cast(x_train, dtype=tf.float32)
+        self.x_test = tf.cast(x_test, dtype=tf.float32)
+        self.val_steps = self.x_test.shape[0] / 32
+
+        # type: BatchDataset
+        self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+        self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+
+        # client partitions created
+        self.adv_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
+        self.adv_test_partitions = Data.create_test_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
+        self.client_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
+        self.client_test_partitions = Data.create_test_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
 
 class ExperimentConfig(object):
-    def __init__(self, client_config, args, strategy):
-        # client config stores partition datasets and model to use for client, independent of model type (MapDataset/BatchDataset fit to both model types)
+    '''
+    DatasetConfig --> ExperimentConfig --> AdvRegClientConfig --> AdvRegClient
+    '''
+    def __init__(self, client_config, args, client_partition : int, dataset_config=DatasetConfig()):
         self.client_config = client_config
-        # args object; usage ex: exp_config.args.num_clients; args stores all the experiment-specific configurations (based on all permutations) defined by the user; args passed in main also works
         self.args = args
-        # store all partitions in ExperimentConfig to run Experiment instance in single-machine simulation; creating partitions independent of client model type
-        self.adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=10)
-        self.adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=10)
-        # create client partitions
-        self.client_train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=10)
-        self.client_test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=10)
-        self.server_config = []
-        from simulation import StrategyConfig
-        self.strategy_config = StrategyConfig(strategy=strategy)
+        self.client_partition = client_partition
+        # pass tuples from (x_train, y_train), (x_test, y_test) and convert into partitioned BatchDataset objects when passing to AdvRegClientConfig object 
+        self.client_train_partition_dataset = Data.load_train_partition(client_partition, dataset_config.x_train, dataset_config.y_train)
+        self.client_test_partition_dataset = Data.load_test_partition(client_partition, dataset_config.x_test, dataset_config.y_test)
+
+class Args:
+    # args = Args(args=args).args; only use of this approach is persistent state regardless of code order for params; configuring params with args; agnostic to where param code is written
+    def __init__(self, args):
+        self.args = args
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    # kernel_regularizer=l2(0.1), bias_regularizer=l2(0.1)
-    conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
+    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
     conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(dropout)
@@ -85,7 +114,8 @@ def build_base_model(params : HParams):
 
 def build_adv_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
+    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
     #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
@@ -109,58 +139,58 @@ def build_adv_model(params : HParams):
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
-def build_gaussian_base_model(params : HParams):
-    if (params.gaussian_state):
-        input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-        gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
-        conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(gaussian_layer)
-        batch_norm = layers.BatchNormalization()(conv1)
-        dropout = layers.Dropout(0.3)(batch_norm)
-        #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
-        conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
-        maxpool1 = layers.MaxPool2D((2,2))(conv2)
-        conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
-        conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
-        maxpool2 = layers.MaxPool2D((2,2))(conv4)
-        conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
-        conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
-        maxpool3 = layers.MaxPool2D((2,2))(conv6)
-        flatten = layers.Flatten()(maxpool3)
-        dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
-        # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-        output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-        model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
-        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-        return model
+def build_gaussian_base_model():
+    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
+    batch_norm = layers.BatchNormalization()(conv1)
+    dropout = layers.Dropout(0.3)(batch_norm)
+    #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D((2,2))(conv2)
+    conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D((2,2))(conv4)
+    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D((2,2))(conv6)
+    flatten = layers.Flatten()(maxpool3)
+    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+    output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+    model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    return model
 
-def build_gaussian_adv_model(params : HParams):
+def build_gaussian_adv_model():
     # precondition matches state check
-    if (params.gaussian_state):
-        input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-        gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
-        conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(gaussian_layer)
-        batch_norm = layers.BatchNormalization()(conv1)
-        dropout = layers.Dropout(0.3)(batch_norm)
-        #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
-        conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
-        maxpool1 = layers.MaxPool2D((2,2))(conv2)
-        conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
-        conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
-        maxpool2 = layers.MaxPool2D((2,2))(conv4)
-        conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
-        conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
-        maxpool3 = layers.MaxPool2D((2,2))(conv6)
-        flatten = layers.Flatten()(maxpool3)
-        dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
-        # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-        output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-        model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
-        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-        adv_config = nsl.configs.make_adv_reg_config(multiplier=params.adv_multiplier, adv_step_size=params.adv_step_size, adv_grad_norm=params.adv_grad_norm)
-        # AdvRegularization is a sub-class of tf.keras.Model, but it processes dicts instead for train and eval because of its decomposition approach for nsl
-        adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
-        adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        return adv_model
+    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
+    batch_norm = layers.BatchNormalization()(conv1)
+    dropout = layers.Dropout(0.3)(batch_norm)
+    #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D((2,2))(conv2)
+    conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D((2,2))(conv4)
+    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D((2,2))(conv6)
+    flatten = layers.Flatten()(maxpool3)
+    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
+    output_layer = layers.Dense(params.num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+    model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    adv_config = nsl.configs.make_adv_reg_config(multiplier=params.adv_multiplier, adv_step_size=params.adv_step_size, adv_grad_norm=params.adv_grad_norm)
+    # AdvRegularization is a sub-class of tf.keras.Model, but it processes dicts instead for train and eval because of its decomposition approach for nsl
+    adv_model = nsl.keras.AdversarialRegularization(model, label_keys=['label'], adv_config=adv_config, base_with_labels_in_features=True)
+    adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    return adv_model
 
 def normalize(features):
   features['image'] = tf.cast(
@@ -187,6 +217,7 @@ def setup_client_parse_args():
     parser.add_argument("--gaussian_layer", type=bool, required=False, default=False)
     # nominal regularization shouldn't be configured at all
     parser.add_argument("--weight_regularization", type=bool, required=False, default=True)
+    # FedAdagrad assumes Adam(lr=0.01) as the base optimizer on the client-level
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     return parser
 
@@ -196,37 +227,14 @@ def scheduler(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-# setup models
+# setup models; configure so that it can be setup with args; we could create an args object
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-base_model = build_base_model(params=params)
-adv_model = build_adv_model(params=params)
 
-# MapDataset for partition creation
-datasets = tfds.load('mnist')
-train_dataset = datasets['train']
-test_dataset = datasets['test']
-train_dataset_for_base_model = train_dataset.map(normalize).shuffle(10000).batch(params.batch_size).map(convert_to_tuples)
-test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_size).map(convert_to_tuples)
-
-# type: MapDataset
-train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
-test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
-
-
-# prepare BatchDataset
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-x_test, y_test = x_train[-10000:], y_train[-10000:]
-x_train = tf.cast(x_train, dtype=tf.float32)
-x_test = tf.cast(x_test, dtype=tf.float32)
-val_steps = x_test.shape[0] / params.batch_size
-
-# type: BatchDataset
-train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(params.batch_size)
-val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(params.batch_size)
+dataset_config = DatasetConfig()
 
 # setup client configurations; hardcoded configs for now
-adv_client_config = AdvRegClientConfig(model=adv_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
-client_config = ClientConfig(model=base_model, params=params, train_dataset=train_data, test_dataset=val_data, validation_steps=val_steps)
+adv_client_config = AdvRegClientConfig(model=build_adv_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+client_config = ClientConfig(model=build_base_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
 class AdvRegClient(flwr.client.KerasClient):
@@ -235,8 +243,8 @@ class AdvRegClient(flwr.client.KerasClient):
 
     def fit(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
-        # remove steps_per_epoch once client-serveer federated training/eval pipeline is functional; advRegClient and server-side model eval + strategy
-        history = adv_client_config.model.fit(adv_client_config.train_dataset, steps_per_epoch=1, epochs=1)
+        # dataset_config creates the partitions, and loads the partition based on the index (in .sh loop) for the train/val data BatchDataset objects to be passed in the adv_client_config object, so that the data in each client config object is the partition only, not the original dataset
+        history = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.val_data, validation_steps=dataset_config.val_steps, steps_per_epoch=1, epochs=1)
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -247,7 +255,6 @@ class AdvRegClient(flwr.client.KerasClient):
         train_cardinality = len(adv_client_config.train_dataset)    
         accuracy = results["sparse_categorical_accuracy"]
         accuracy = int(accuracy[0])
-        # what metrics should be returned from the results dict object
         return adv_client_config.model.get_weights(), train_cardinality, accuracy
 
     def evaluate(self, parameters, config):
@@ -262,7 +269,6 @@ class AdvRegClient(flwr.client.KerasClient):
         }
 
         loss = int(results["loss"])
-        # this may be of type list
         accuracy = int(results["sparse_categorical_accuracy"])
         test_cardinality = len(adv_client_config.test_dataset)
         
@@ -305,6 +311,5 @@ def main():
 if __name__ == '__main__':
     client_parser = setup_client_parse_args()
     args = client_parser.parse_args()
-    # iteratively update params that is passed to adv_client_config object; args stores secondary exp config metadata
     experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args)
     main()

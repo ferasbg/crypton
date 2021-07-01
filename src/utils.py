@@ -219,18 +219,28 @@ class Data:
         pass
 
     @staticmethod
-    def load_partition(idx: int, dataset):
-        """Load 1/10th of the training and test data to simulate a partition."""
+    def load_train_partition(idx: int, x_train, y_train):
         raise NotImplementedError
 
     @staticmethod
-    def create_train_partitions(dataset, num_clients : int):
-        # Usage: train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
-        # current_train_dataset = train_partitions[current_client_idx]
+    def load_test_partition(idx: int, dataset):
+        raise NotImplementedError
+
+    @staticmethod
+    def create_train_partitions(x_train, y_train, x_test, y_test, num_clients : int):
+        '''
+        Usage: 
+            - train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
+            - current_train_dataset = train_partitions[current_client_idx]
+
+        Notes:
+            - preprocess the partitions before wrapping them into the MapDataset / BatchDataset objects
+
+        '''
         return []
 
     @staticmethod
-    def create_test_partitions(dataset, num_clients : int):
+    def create_test_partitions(x_train, y_train, x_test, y_test, num_clients : int):
         return []
 
     @staticmethod
