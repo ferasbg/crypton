@@ -19,6 +19,7 @@ from tensorflow.keras.callbacks import LearningRateScheduler
 # todo: create (train and/or test) partitions functions are run by default which creates the set of train/test partitions respectively, and are accessed based on the current client_idx
 # todo: clear up technical process relating to args and config objects that handle the data passed from args
 # todo: test base client (control) to make sure that it can be sampled just like AdvRegClient
+# todo: (precondition: created client train and test partitions in DatasetConfig and loaded partition into ExperimentConfig and into AdvRegClientConfig): create client partition given index in args.client_partition : int --> will create train/test partitions processed with ExperimentConfig 
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -46,6 +47,17 @@ class ServerConfig(object):
         self.fed_adagrad = FedAdagrad()
         self.fed_avg = FedAvg()
 
+def normalize(features):
+  features['image'] = tf.cast(
+      features['image'], dtype=tf.float32) / 255.0
+  return features
+
+def convert_to_tuples(features):
+  return features['image'], features['label']
+
+def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
+  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
+
 class DatasetConfig:
     def __init__(self):
         # MapDataset for partition creation
@@ -59,7 +71,9 @@ class DatasetConfig:
         x_test, y_test = x_train[-10000:], y_train[-10000:]
 
         self.x_train = tf.cast(x_train, dtype=tf.float32)
+        self.y_train = y_train
         self.x_test = tf.cast(x_test, dtype=tf.float32)
+        self.y_test = y_test
         self.val_steps = self.x_test.shape[0] / 32
 
         # type: BatchDataset
@@ -91,7 +105,7 @@ class Args:
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    regularizer = tf.keras.regularizers.l2()
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -114,7 +128,7 @@ def build_base_model(params : HParams):
 
 def build_adv_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    regularizer = tf.keras.regularizers.l2()
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -141,7 +155,7 @@ def build_adv_model(params : HParams):
 
 def build_gaussian_base_model():
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    regularizer = tf.keras.regularizers.l2()
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -166,7 +180,7 @@ def build_gaussian_base_model():
 def build_gaussian_adv_model():
     # precondition matches state check
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
+    regularizer = tf.keras.regularizers.l2()
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -192,21 +206,11 @@ def build_gaussian_adv_model():
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
-def normalize(features):
-  features['image'] = tf.cast(
-      features['image'], dtype=tf.float32) / 255.0
-  return features
-
-def convert_to_tuples(features):
-  return features['image'], features['label']
-
-def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
-  return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
-
 def setup_client_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
     parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
+    parser.add_argument("--client_partition", type=int, required=False, default=0)
     parser.add_argument("--adv_grad_norm", type=str, required=False)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
@@ -308,7 +312,8 @@ def main():
     flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
 
 if __name__ == '__main__':
-    client_parser = setup_client_parse_args()
-    args = client_parser.parse_args()
-    experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args)
+    # client_parser = setup_client_parse_args()
+    # args store client partition index
+    # args = client_parser.parse_args()
+    # experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args, client_partition=0)
     main()
