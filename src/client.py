@@ -9,11 +9,12 @@ import tensorflow_datasets as tfds
 from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 import numpy as np
-from dataset import *
+from dataset import Data
 from tensorflow.keras.callbacks import LearningRateScheduler
+
 # todo: hardcode arguments from parse_args for both client, server, and experiment config
 # todo: get the base AdvRegClient to work with fit_round and evaluate_round with federated server-client process
-# todo: implement formal robustness property checks/formulations 
+# todo: implement formal robustness property checks/formulations
 
 class HParams(object):
     '''
