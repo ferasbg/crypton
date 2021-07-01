@@ -15,11 +15,12 @@ from tensorflow.keras.callbacks import LearningRateScheduler
 # todo: implement formal robustness property checks/formulations in formal_robustness.py; review the paper again and also the specifications paper
 # todo : add weight reg in each model function
 # todo: add validation set to the .fit() function for both clients
-# todo (very imp.): create client train/test partitions here; for each client instance run with python3 client.py --argName1 etc we will hardcode the configs in a .sh file and run them
+# todo (very imp.): write load_partition set and create_partition set in utils; create client train/test partitions here; for each client instance run with python3 client.py --argName1 etc we will hardcode the configs in a .sh file and run them
 # todo: create (train and/or test) partitions functions are run by default which creates the set of train/test partitions respectively, and are accessed based on the current client_idx
 # todo: clear up technical process relating to args and config objects that handle the data passed from args
-# todo: test base client (control) to make sure that it can be sampled just like AdvRegClient
+# todo: validate and test base client (control) to make sure that it can be sampled just like AdvRegClient
 # todo: (precondition: created client train and test partitions in DatasetConfig and loaded partition into ExperimentConfig and into AdvRegClientConfig): create client partition given index in args.client_partition : int --> will create train/test partitions processed with ExperimentConfig 
+# todo: given gaussian_state, pass the specified model into the ClientConfig objects (adv. reg, non adv. reg)
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
