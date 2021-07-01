@@ -41,10 +41,10 @@ class ClientConfig(object):
         self.validation_split = validation_split
 
 class ServerConfig(object):
+    # server-side model and server configurations
     def __init__(self):
-        # update this object with variables speciic to the strategies below
-        self.fedadagrad = FedAdagrad()
-        self.fedavg = FedAvg()
+        self.fed_adagrad = FedAdagrad()
+        self.fed_avg = FedAvg()
 
 class DatasetConfig:
     def __init__(self):
@@ -54,10 +54,10 @@ class DatasetConfig:
         self.map_test_dataset = self.datasets['test']
         self.train_dataset_for_base_model = self.map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
         self.test_dataset_for_base_model = self.map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
-        
+
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_test, y_test = x_train[-10000:], y_train[-10000:]
-        
+
         self.x_train = tf.cast(x_train, dtype=tf.float32)
         self.x_test = tf.cast(x_test, dtype=tf.float32)
         self.val_steps = self.x_test.shape[0] / 32
@@ -80,7 +80,7 @@ class ExperimentConfig(object):
         self.client_config = client_config
         self.args = args
         self.client_partition = client_partition
-        # pass tuples from (x_train, y_train), (x_test, y_test) and convert into partitioned BatchDataset objects when passing to AdvRegClientConfig object 
+        # pass tuples from (x_train, y_train), (x_test, y_test) and convert into partitioned BatchDataset objects when passing to AdvRegClientConfig object
         self.client_train_partition_dataset = Data.load_train_partition(client_partition, dataset_config.x_train, dataset_config.y_train)
         self.client_test_partition_dataset = Data.load_test_partition(client_partition, dataset_config.x_test, dataset_config.y_test)
 
@@ -229,7 +229,6 @@ def scheduler(epoch, lr):
 
 # setup models; configure so that it can be setup with args; we could create an args object
 params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-
 dataset_config = DatasetConfig()
 
 # setup client configurations; hardcoded configs for now
@@ -252,7 +251,7 @@ class AdvRegClient(flwr.client.KerasClient):
             "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
         }
 
-        train_cardinality = len(adv_client_config.train_dataset)    
+        train_cardinality = len(adv_client_config.train_dataset)
         accuracy = results["sparse_categorical_accuracy"]
         accuracy = int(accuracy[0])
         return adv_client_config.model.get_weights(), train_cardinality, accuracy
@@ -271,7 +270,7 @@ class AdvRegClient(flwr.client.KerasClient):
         loss = int(results["loss"])
         accuracy = int(results["sparse_categorical_accuracy"])
         test_cardinality = len(adv_client_config.test_dataset)
-        
+
         return loss, test_cardinality, accuracy
 
 class Client(flwr.client.KerasClient):
