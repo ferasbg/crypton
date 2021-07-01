@@ -37,6 +37,8 @@ Execute experimental configurations to assess the most optimal configuration for
 ## Research Notes
 - fedadagrad adaptability + feature decomposition from NSL / higher dimensionality of features + DCNN with skip connections and nominal regularizations etc --> converge to satisfy robustness specifications and conform to optimal optimization formulation
 - structured signals (higher dimensionality of feature representation) + adaptive federated optimization --> more robust model with corrupted and sparse data;
+- strategy (when explaining/comparing GaussianNoise and without GaussianNoise): Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better (Goodfellow, et. al --> adversarial examples paper).
+
 ## Remaining Research Questions
 - how does convexity apply to the optimizer used to most efficiently aggregate the learnings of each client on local data? Surely important considering optimization formulation is interlinked with specifications that depend on measuring variability.
 
@@ -50,3 +52,6 @@ Execute experimental configurations to assess the most optimal configuration for
 - wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
 - graph the feature representation given graph with respect to the graph of the rest of its computations, and the trusted aggregator eval
 
+## Future Work
+- create secure gRPC connection between client nodes and trusted aggregator parent node
+- run with ray as a distributed local graph specified by model and task, to aggregate federated environments

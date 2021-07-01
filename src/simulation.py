@@ -46,9 +46,28 @@ server_settings = {
 client_setting_combinations = itertools.combinations(client_settings)
 
 class StrategyConfig(object):
+    def __init__(self, strategy : str):
+        strategy = strategy.lower()
+        
+        if (strategy == "fedadagrad"):
+            self.strategy = FedAdagrad()
+        
+        if (strategy == "fedavg"):
+            self.strategy = FedAvg()
+
+def start_client():
     pass
 
-def main(args) -> None:
+def start_server(server_address : str, strategy : Strategy, num_rounds : int, num_clients : int, **kwargs):
+    pass
+
+def start_client(model, train_partition, test_partition, **kwargs):
+    pass
+
+def start_simulation(num_clients : int, args):
+    pass
+
+def main() -> None:
     # pass map dataset of train dataset only
     train_partitions = Data.create_train_partitions(dataset=[], num_clients=10)
     test_partitions = Data.create_test_partitions(dataset=[], num_clients=10)
@@ -62,3 +81,6 @@ def main(args) -> None:
         client = AdvRegClient()
         flwr.server.start_server(server_address=DEFAULT_SERVER_ADDRESS, strategy=strategy)
         flwr.client.start_keras_client(server_address=DEFAULT_SERVER_ADDRESS, client=client)
+
+if __name__ == '__main___':
+    main()

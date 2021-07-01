@@ -9,38 +9,14 @@ import tensorflow_datasets as tfds
 from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 import numpy as np
-from dataset import Data
+from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 
-# todo: hardcode arguments from parse_args for both client, server, and experiment config
-# todo: get the base AdvRegClient to work with fit_round and evaluate_round with federated server-client process
-# todo: implement formal robustness property checks/formulations
-
-class HParams(object):
-    '''
-        adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
-        adv_step_size: The magnitude of adversarial perturbation.
-        adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
-    '''
-
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, **kwargs):
-        # store model and its respective train/test dataset + metadata in parameters
-        self.input_shape = [28, 28, 1]
-        self.num_classes = num_classes
-        self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
-        self.kernel_size = (3, 3)
-        self.pool_size = (2, 2)
-        self.num_fc_units = [64]
-        self.batch_size = 32
-        self.epochs = 5
-        self.adv_multiplier = adv_multiplier
-        self.adv_step_size = adv_step_size
-        self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity" = l2_clip_norm if "l2"
-        self.gaussian_state : bool = False
-        # if (params.gaussian_state): model = tf.keras.models.Model.add(params.gaussian_layer, stack_index=1)
-        self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
-        self.clip_value_min = 0.0
-        self.clip_value_max = 1.0
+# todo: create partitions and setup experiment given arguments
+# todo: implement formal robustness property checks/formulations in formal_robustness.py; review the paper again and also the specifications paper
+# todo : make weight reg and sgd mmentum default in each model function
+# todo: add validation set to the .fit() function for both clients
+    # reference code: validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -62,17 +38,31 @@ class ClientConfig(object):
         self.validation_steps = validation_steps
         self.validation_split = validation_split
 
+class ServerConfig(object):
+    def __init__(self):
+        # encapsulate import to isolate from other client-side code
+        from simulation import StrategyConfig
+        self.strategy = StrategyConfig(strategy="fedadagrad")
+
 class ExperimentConfig(object):
-    def __init__(self, client_config, params, args):
+    def __init__(self, client_config, args, strategy):
         # client config stores partition datasets and model to use for client, independent of model type (MapDataset/BatchDataset fit to both model types)
         self.client_config = client_config
-        # params store (adv) hyperparameter configurations that will iteratively update given each .sh execution
-        self.params = params
         # args object; usage ex: exp_config.args.num_clients; args stores all the experiment-specific configurations (based on all permutations) defined by the user; args passed in main also works
         self.args = args
+        # store all partitions in ExperimentConfig to run Experiment instance in single-machine simulation; creating partitions independent of client model type
+        self.adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=10)
+        self.adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=10)
+        # create client partitions
+        self.client_train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=10)
+        self.client_test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=10)
+        self.server_config = []
+        from simulation import StrategyConfig
+        self.strategy_config = StrategyConfig(strategy=strategy)
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+    # kernel_regularizer=l2(0.1), bias_regularizer=l2(0.1)
     conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
@@ -189,13 +179,14 @@ def setup_client_parse_args():
     parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
     parser.add_argument("--adv_grad_norm", type=str, required=False)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
-    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False)
-    parser.add_argument("--batch_size", type=int, required=False)
-    parser.add_argument("--epochs", type=int, required=False)
+    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
+    parser.add_argument("--batch_size", type=int, required=False, default=32)
+    parser.add_argument("--epochs", type=int, required=False, default=10)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--adv_reg", type=bool, required=False, default=True)
-    parser.add_argument("--gaussian_layer", type=bool, required=False)
-    parser.add_argument("--weight_regularization", type=bool, required=False)
+    parser.add_argument("--gaussian_layer", type=bool, required=False, default=False)
+    # nominal regularization shouldn't be configured at all
+    parser.add_argument("--weight_regularization", type=bool, required=False, default=True)
     parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     return parser
 
@@ -221,13 +212,6 @@ test_dataset_for_base_model = test_dataset.map(normalize).batch(params.batch_siz
 train_set_for_adv_model = train_dataset_for_base_model.map(convert_to_dictionaries)
 test_set_for_adv_model = test_dataset_for_base_model.map(convert_to_dictionaries)
 
-# create adv_reg client partitions
-adv_train_partitions = Data.create_train_partitions(train_set_for_adv_model, num_clients=10)
-adv_test_partitions = Data.create_test_partitions(test_set_for_adv_model, num_clients=10)
-
-# create client partitions
-train_partitions = Data.create_train_partitions(train_dataset_for_base_model, num_clients=10)
-test_partitions = Data.create_test_partitions(test_dataset_for_base_model, num_clients=10)
 
 # prepare BatchDataset
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -246,13 +230,13 @@ client_config = ClientConfig(model=base_model, params=params, train_dataset=trai
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
 class AdvRegClient(flwr.client.KerasClient):
-    def get_parameters(self):
+    def get_weights(self):
         return adv_client_config.model.get_weights()
 
     def fit(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
-        # validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1
-        history = adv_client_config.model.fit(adv_client_config.train_dataset, steps_per_epoch=3, epochs=5)
+        # remove steps_per_epoch once client-serveer federated training/eval pipeline is functional; advRegClient and server-side model eval + strategy
+        history = adv_client_config.model.fit(adv_client_config.train_dataset, steps_per_epoch=1, epochs=1)
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -260,7 +244,11 @@ class AdvRegClient(flwr.client.KerasClient):
             "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
         }
 
-        return adv_client_config.model.get_weights(), len(adv_client_config.train_dataset), results
+        train_cardinality = len(adv_client_config.train_dataset)    
+        accuracy = results["sparse_categorical_accuracy"]
+        accuracy = int(accuracy[0])
+        # what metrics should be returned from the results dict object
+        return adv_client_config.model.get_weights(), train_cardinality, accuracy
 
     def evaluate(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
@@ -272,8 +260,13 @@ class AdvRegClient(flwr.client.KerasClient):
                 "sparse_categorical_accuracy": results[2],
                 "scaled_adversarial_loss": results[3],
         }
-        # or just history[0], history[1]
-        return results["loss"], results["sparse_categorical_accuracy"]
+
+        loss = int(results["loss"])
+        # this may be of type list
+        accuracy = int(results["sparse_categorical_accuracy"])
+        test_cardinality = len(adv_client_config.test_dataset)
+        
+        return loss, test_cardinality, accuracy
 
 class Client(flwr.client.KerasClient):
     def get_parameters(self):
@@ -307,10 +300,11 @@ class Client(flwr.client.KerasClient):
         return results["loss"], results["sparse_categorical_accuracy"]
 
 def main():
-    adv_reg_client = AdvRegClient()
-    flwr.client.start_keras_client(server_address="[::]:8080", client=adv_reg_client)
+    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
 
 if __name__ == '__main__':
-    # client_parser = setup_client_parse_args()
-    # args = client_parser.parse_args()
+    client_parser = setup_client_parse_args()
+    args = client_parser.parse_args()
+    # iteratively update params that is passed to adv_client_config object; args stores secondary exp config metadata
+    experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args)
     main()

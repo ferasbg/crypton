@@ -89,3 +89,18 @@ def compute_target_behavior_constraint(a, x, x_prime, beta):
   return x
 
 
+'''
+    robustness trace property set τ:
+        - robustness trace 1: given lp-norm perturbation, the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
+        - robustness trace 3: network is not making misclassifications with respect to L-norm (infinity, l^2, l-1)
+        - robustness trace 4: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
+        - robust kl-divergence: kl-divergence for server-side federated accuracy under perturbation attack
+    - note: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]). : fancy way of checking if the property that wants an accurate label holds and robustness itself translates to a threshold given the batch_episode set per epoch or a set of epochs iterating over the defined # of rounds.
+    - objective: just analyze how adversarial attacks affect convergence, and focus on nn optimization by having math to explain the phenomenon, e.g. confirming expectations or contradicting it with truth
+    - note: If the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. 
+
+    References:
+        - https://arxiv.org/pdf/1904.13215.pdf
+        - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
+
+'''

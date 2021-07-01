@@ -1,32 +1,27 @@
 #!/usr/bin/env python3
 # Copyright (c) 2021 Feras Baig
+
 import argparse
 import collections
 import logging
-import multiprocessing
 import os
 import pickle
 import random
 import sys
-import threading
 import time
-import traceback
 import warnings
-from multiprocessing import Process
-from typing import Dict, List, NamedTuple, Tuple
+from typing import Dict, List, Tuple
 
 import art
 import cleverhans
-import flwr
 import flwr as fl
+import imagecorruptions
 import keras
 import matplotlib.pyplot as plt
-import neural_structured_learning as nsl
 import numpy
 import numpy as np
 import scipy
 import sympy
-import tensorflow
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_federated as tff
@@ -34,17 +29,14 @@ import tensorflow_privacy as tpp
 import tensorflow_probability as tpb
 import tqdm
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
-from flwr.common.typing import Weights
 from flwr.server.client_proxy import ClientProxy
-# FedAvg (Baseline); FedAdagrad (Comparable), FedOpt (Optimized FedAdagrad and Comparable)
-from flwr.server.strategy import (  # FedProx; FedAdagrad helps convergence behavior which in turn helps optimize model robustness; fedOpt is configurable Adagrad for server-side optimizations for the server model e.g. trusted aggregator
+from flwr.server.strategy import (  
     FaultTolerantFedAvg, FedAdagrad, FedAvg, FedFSv1, Strategy, fedopt)
 from keras import backend as K
 from keras import optimizers, regularizers
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.datasets import cifar10, cifar100
 from keras.datasets.cifar10 import load_data
-from keras.datasets.cifar100 import load_data
 from keras.layers import (Activation, BatchNormalization, Conv2D,
                           Conv2DTranspose, Dense, Dropout, Flatten,
                           GaussianDropout, GaussianNoise, Input, MaxPool2D,
@@ -53,94 +45,216 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
+import neural_structured_learning as nsl
 from PIL import Image
 from tensorflow import keras
-from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
-from tensorflow.python.ops.gen_batch_ops import Batch
+import imagedegrade
+from imagedegrade import np as degrade
+from imagecorruptions import corrupt
 
-from adversarial_regularization import (AdversarialRegularizationWrapper,
-                                        HParams, build_adv_reg_model,
-                                        build_uncompiled_nsl_model)
-from client import FederatedClient
-from model import Network
-from server import evaluate_config, fit_config, get_eval_fn
 
-def make_training_data_iid(x_train):
-    # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
-    return x_train
-
-def make_training_data_non_iid(x_train):
-    # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
-    return x_train
-
-def create_clients(num_classes : int, num_clients : int, client_networks : list, clients : list):
+class HParams(object):
     '''
-    @param num_classes : int depends on the CIFAR dataset used.
+        adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
+        adv_step_size: The magnitude of adversarial perturbation.
+        adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
+    
+    '''
+
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, **kwargs):
+        # store model and its respective train/test dataset + metadata in parameters
+        self.input_shape = [28, 28, 1]
+        self.num_classes = num_classes
+        self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
+        self.kernel_size = (3, 3)
+        self.pool_size = (2, 2)
+        self.num_fc_units = [64]
+        self.batch_size = 32
+        self.epochs = 25
+        self.adv_multiplier = adv_multiplier
+        self.adv_step_size = adv_step_size
+        self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity" = l2_clip_norm if "l2"
+        self.gaussian_state : bool = False
+        # if (params.gaussian_state): model = tf.keras.models.Model.add(params.gaussian_layer, stack_index=1)
+        self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
+        self.clip_value_min = 0.0
+        self.clip_value_max = 1.0
+
+class Data:
+    '''
+    This class handles processing data corruption, data preprocessing, and data utilities.
+
+    - goal: using image processing techniques as a form of regularization through the data sent through the client models to evaluate better on real-world "adversarial examples". Structured signals from adv. regularization relation to entropy and adaptive federated optimization and effects from combined methods of data "regularization" to generate robust adversarial examples for the purpose of building a robust server-client model infrastructure.
+    - process: perturb dtype=uint8 x_train before it's casted to tf.float32
+    - note: modifying image fidelity as a means of regularization through the data and not the model
+    - note: Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
+    - note: u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
+    - note: if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
+    - note: use np.random.seed() to generate a seed value for noise vector to apply
+    - note: image degradation and corruptions ARE perturbations/transformations etc. (perhaps by the means of distortion, blur, etc)
+    - question: how do ppl generally map the gradients of the network with its image data processed to maximize its loss? fgsm
+    - question: how do ppl tell the difference between how model architecture affects robustness ? under an attack of course and assuming adv. reg. in training
+    - common corruptions:
+    - surface variations within corruptions for adv. reg. via data
+    - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
+    - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
+    - FedAdagrad helps server model converge on heteregeneous data better; that's all
+
+    - iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
+    - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+    - each config has 1 specific corruption applied along with structured signals for adv. regularization
+    - each config also has 1 specific federated strategy of course
+    - either way test all permutations iteratively
+    - first get base config working before extending to parse_args
+    - also define the setup so that parse_args can process correctly with simulation.py
+
+    References:
+        @article{michaelis2019dragon,
+        title={Benchmarking Robustness in Object Detection:
+            Autonomous Driving when Winter is Coming},
+        author={Michaelis, Claudio and Mitzkus, Benjamin and
+            Geirhos, Robert and Rusak, Evgenia and
+            Bringmann, Oliver and Ecker, Alexander S. and
+            Bethge, Matthias and Brendel, Wieland},
+        journal={arXiv preprint arXiv:1907.07484},
+        year={2019}
+        }
+
+    In leu of structured signals, graph representations, and graph learning, here's a reference for the paper nsl depends on:
+
+    "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
+
+    Usage:
+        # for batch in train_set_for_adv_model:
+        #     adv_model.perturb_on_batch(batch)
+        #     for element in batch:
+        #         element = Data.apply_noise_image_degrade(element, noisa_sigma=0.05)
+        #         element = Data.apply_blur_corruption(element, "gaussian_blur")
+
+
 
     '''
-    # creates 100 client models and adds the sequential models into a list, the flwr.client objects in their own list
-    for i in range(num_clients):
-        # setup base (unconfigured, compiled) client models (default configs)
-        client_network = Network(num_classes=num_classes).build_compile_model()
-        client_networks.append(client_network)
-        client = FederatedClient(client_network, defense_state=False)
-        clients.append(client)
-        assert len(client_networks) == 100
+    corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
+                    "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
+                    "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
+                    "saturate"]
 
-def adaptive_federated_adagrad(client_model : Sequential):
-    federated_adagrad_strategy = FedAdagrad(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=101,
-        min_eval_clients=101,
-        min_available_clients=110,
-        eval_fn=get_eval_fn(client_model),
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        accept_failures=False,
-        initial_parameters=client_model.get_weights(),
-        tau=1e-9,
-        eta=1e-1,
-        eta_l=1e-1
-    )
+    # applying image corruptions is less of a priority than setting up adv. reg client and seeing errors there and ironing vs. dataset specific reg.
+    # the goal here is categorized corruptions; rather than just ad-hoc using every corruption there is
+    @staticmethod
+    def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
+        misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
+        for corruption_str in misc_corruption_set:
+            if (corruption_name == corruption_str):
+                image = imagecorruptions.corrupt(image, corruption_name=corruption_str, severity=1)
 
-    return federated_adagrad_strategy
+        return image
 
-def build_compile_client_model(adversarial_regularization_state : bool, num_classes : int):
-    # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-    # keras makes complexity mapping assumptions of developer when generating graph
-    if (adversarial_regularization_state == True):
-        parameters = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-        model = build_uncompiled_nsl_model(parameters=parameters, num_classes=num_classes)
-        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-        adv_config = nsl.configs.make_adv_reg_config(multiplier=parameters.adv_multiplier, adv_step_size=parameters.adv_step_size, adv_grad_norm=parameters.adv_grad_norm)
-        adv_model = nsl.keras.AdversarialRegularization(model, adv_config=adv_config)
-
-        adv_model.compile(
-            optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-        return adv_model
-
-    elif (adversarial_regularization_state == False):
-        # change norm type and adv_step_size iteratively as its own config per exp
-        parameters = HParams(num_classes=num_classes, adv_multiplier=0.2,
-                            adv_step_size=0.05, adv_grad_norm="infinity")
-        model = build_uncompiled_nsl_model(parameters, num_classes=num_classes)
-        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
-        return model
+    @staticmethod
+    def apply_blur_corruption(image : np.ndarray, blur_corruption_name : str) -> np.ndarray:
+        # iter over blur corruptions
+        # support a subset that is relevant to imperceptible fidelity change from source np.ndarray matrix distribution
+        blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+        return image
 
 
-def start_client():
-    pass
+    @staticmethod
+    def apply_data_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_data_corruptions --> jpeg_compression
+        data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+        return image
 
-def start_server(server_address : str, strategy : Strategy, num_rounds : int, num_clients : int, **kwargs):
-    pass
+    @staticmethod
+    def apply_noise_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        # apply_noise_corruptions --> gaussian noise (omit and figure out nsl backend implementation with tf.GradientTape as tape), shot noise, impulse noise, etc
+        # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
+        noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
+        return image
 
-def start_client(model, train_partition, test_partition, **kwargs):
-    pass
+    @staticmethod
+    def apply_noise_image_degrade(image : np.ndarray, noise_sigma : float):
+        # noise_sigma specifies gaussian_noise_stdev
+        image = imagedegrade.np.noise(image, noise_sigma)
+        return image
 
-def start_simulation(num_clients : int, args):
-    pass
+    @staticmethod
+    def image_compression_distortion(image : np.ndarray, intensity_range=0.1):
+        # either process per batch or the entire dataset before it's processed into network's input layer
+        # distortion is not the same as data/resolution loss
+        jpeg_quality = 85 # 85% distortion
+        image = imagedegrade.np.jpeg(input=image, jpeg_quality=jpeg_quality, intensity_range=intensity_range)
+        return image
 
+    @staticmethod
+    def cast_data_to_float32(x_set):
+        '''
+            Usage:
+                x_train, x_test = cast_data_to_float32(x_train), cast_data_to_float32(x_test)
+
+        '''
+        x_set = tf.cast(x_set, dtype=tf.float32)
+        return x_set
+
+    @staticmethod
+    def perturb_adv_model_dataset(model, dataset, parameters : HParams):
+        IMAGE_INPUT_NAME = 'image'  
+        LABEL_INPUT_NAME = 'label'
+        for batch in dataset:
+            perturbed_batch = model.perturb_on_batch(batch)
+            perturbed_batch[IMAGE_INPUT_NAME] = tf.clip_by_value(perturbed_batch[IMAGE_INPUT_NAME], 0.0, 1.0)
+
+        return dataset
+
+    @staticmethod
+    def perturb_base_model_dataset(dataset, parameters : HParams):
+        pass
+
+    @staticmethod
+    def apply_corruptions_to_dataset(dataset, model, corruption_name : str):
+        # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
+        # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
+        pass
+
+    @staticmethod
+    def load_partition(idx: int, dataset):
+        """Load 1/10th of the training and test data to simulate a partition."""
+        raise NotImplementedError
+
+    @staticmethod
+    def create_train_partitions(dataset, num_clients : int):
+        # Usage: train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
+        # current_train_dataset = train_partitions[current_client_idx]
+        return []
+
+    @staticmethod
+    def create_test_partitions(dataset, num_clients : int):
+        return []
+
+    @staticmethod
+    def perturb_dataset_partition(partition):
+        '''
+            Usage:
+            # for partition in train_dataset: 
+                # partition = perturb_dataset_partition(partition)
+            # for partition in test_dataset:
+                # partition = perturb_dataset_partition(partition)
+        '''
+
+        pass
+
+    @staticmethod
+    def get_mnist_image(image : np.ndarray):
+        return tf.keras.preprocessing.image.array_to_img(image)
+
+    @staticmethod
+    def make_training_data_iid(dataset, num_partitions):
+        # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
+        return []
+
+    @staticmethod
+    def make_training_data_non_iid(dataset, num_partitions):
+        # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
+        return []
