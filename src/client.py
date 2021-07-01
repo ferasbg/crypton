@@ -241,7 +241,7 @@ class AdvRegClient(flwr.client.KerasClient):
         return adv_client_config.model.get_weights()
 
     def fit(self, parameters, config):
-        adv_client_config.model.set_weights(parameters) 
+        adv_client_config.model.set_weights(parameters)
         # validation_data=adv_client_config.test_dataset, validation_steps=adv_client_config.validation_steps, validation_split=0.1, epochs=1
         history = adv_client_config.model.fit(adv_client_config.train_dataset, steps_per_epoch=3, epochs=5)
 

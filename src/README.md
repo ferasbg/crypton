@@ -8,12 +8,12 @@ Execute experimental configurations to assess the most optimal configuration for
 ## Features
 - working: server-side evaluation after fit_round and sample_round sampling of clients
 - working: writing funcs for formal robustness metrics
-- working: "single-machine" simulation to aggregate client-server process
+- working: write simulation.py that takes in args per execution instance and runs client-server processes similar to flwr example for simulation.py
+
 
 ## Bugs
-- steps_per_epoch doesn't apply to the cache that pulls 5 epochs and 1875 per epoch in train. How can I override this?
-- force flwr not to override .fit with cache of dataset --> force steps_per_epoch in client wrapper
-
+- fixed: steps_per_epoch doesn't apply to the cache that pulls 5 epochs and 1875 per epoch in train. How can I override this?
+- working: force flwr not to override .fit with cache of dataset --> force steps_per_epoch in client wrapper
 
 ## TODO
 - exp: We can measure MNIST + adv_grad_norm + robust federated server-side accuracy based on the ε value.
@@ -34,13 +34,9 @@ Execute experimental configurations to assess the most optimal configuration for
 - write tex file containing abstract and paper
 - during arxiv preprint process: advertise/market the paper on HN, reddit, twitter, discord, etc as a benchmark for further research in certification of robust NNs, optimization, etc
 
-## Technical Notes
-- The correct dict passed in the .fit() function along with correcting errors in my code that weren't reported to me corrected the error for the steps_per_epoch parameter taking effect.
-
-
 ## Research Notes
 - fedadagrad adaptability + feature decomposition from NSL / higher dimensionality of features + DCNN with skip connections and nominal regularizations etc --> converge to satisfy robustness specifications and conform to optimal optimization formulation
-
+- structured signals (higher dimensionality of feature representation) + adaptive federated optimization --> more robust model with corrupted and sparse data;
 ## Remaining Research Questions
 - how does convexity apply to the optimizer used to most efficiently aggregate the learnings of each client on local data? Surely important considering optimization formulation is interlinked with specifications that depend on measuring variability.
 
