@@ -71,7 +71,7 @@ class DatasetConfig:
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-        # client partitions created
+        # todo: implement create_partitions for train and test given client index (num_clients)
         self.adv_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
         self.adv_test_partitions = Data.create_test_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
         self.client_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
@@ -269,27 +269,28 @@ class AdvRegClient(flwr.client.KerasClient):
         return loss, test_cardinality, accuracy
 
 class Client(flwr.client.KerasClient):
-    def get_parameters(self):
-        return client_config.model.get_weights()
+    def get_weights(self):
+        return adv_client_config.model.get_weights()
 
     def fit(self, parameters, config):
-        self.model.set_weights(parameters)
-        # validation data param may be negligible; validation_data=client_config.test_dataset, validation_steps=client_config.validation_steps, validation_split=0.1, steps_per_epoch=3, epochs=1, verbose=1
-        history = client_config.model.fit(client_config.train_dataset, steps_per_epoch=3, epochs=5, callbacks=[callback])
-        # run the entire base model and check for its errors
+        client_config.model.set_weights(parameters)
+        history = client_config.model.fit(client_config.train_dataset, validation_data=client_config.val_data, validation_steps=dataset_config.val_steps, steps_per_epoch=1, epochs=1)
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
             "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
             "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
         }
-        return client_config.model.get_weights(), len(client_config.train_dataset), results
+
+        train_cardinality = len(client_config.train_dataset)
+        accuracy = results["sparse_categorical_accuracy"]
+        accuracy = int(accuracy[0])
+        
+        return client_config.model.get_weights(), train_cardinality, accuracy
 
     def evaluate(self, parameters, config):
         client_config.model.set_weights(parameters)
-        # it's more abt the dataset types consistent with both nsl and flwr.client; test backwards from what works with client to nsl model
         results = client_config.model.evaluate(client_config.test_dataset, verbose=1)
-        # get loss from result list/dict
         results = {
                 "loss": results[0],
                 "sparse_categorical_crossentropy": results[1],
@@ -297,7 +298,11 @@ class Client(flwr.client.KerasClient):
                 "scaled_adversarial_loss": results[3],
         }
 
-        return results["loss"], results["sparse_categorical_accuracy"]
+        loss = int(results["loss"])
+        accuracy = int(results["sparse_categorical_accuracy"])
+        test_cardinality = len(client_config.test_dataset)
+
+        return loss, test_cardinality, accuracy
 
 def main():
     flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
