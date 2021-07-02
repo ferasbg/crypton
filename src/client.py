@@ -237,14 +237,17 @@ elif (params.gaussian_state and params.adv_reg_state == False):
 
 else:
     model = base_model
-
-if (type(model) == AdversarialRegularization):
-    adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-
-if (type(model) == tf.keras.models.Model):
-    client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
+
+def main(args):
+
+    if (type(model) == AdversarialRegularization):
+        adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+
+    if (type(model) == tf.keras.models.Model):
+        client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+
+    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
 
 class AdvRegClient(flwr.client.KerasClient):
     def get_weights(self):
@@ -319,8 +322,6 @@ class Client(flwr.client.KerasClient):
 
         return loss, test_cardinality, accuracy
 
-def main():
-    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
 
 if __name__ == '__main__':
     # client_parser = setup_client_parse_args()
