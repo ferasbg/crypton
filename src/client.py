@@ -89,11 +89,6 @@ class ExperimentConfig(object):
         self.client_train_partition_dataset = Data.load_train_partition(client_partition, dataset_config.x_train, dataset_config.y_train)
         self.client_test_partition_dataset = Data.load_test_partition(client_partition, dataset_config.x_test, dataset_config.y_test)
 
-class Args:
-    # args = Args(args=args).args; only use of this approach is persistent state regardless of code order for params; configuring params with args; agnostic to where param code is written
-    def __init__(self, args):
-        self.args = args
-
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()

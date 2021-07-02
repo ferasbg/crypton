@@ -18,19 +18,11 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 
-'''
-To collect data from each exp config, create a list of metrics collected either from counter variables, keras.utils.Metrics, and so forth
-
-
-'''
-
-
 def create_table(header: list, csv):
     pass
 
 def create_plot(x_axis, y_axis, x_data: list, y_data: list):
     pass
-
 
 def plot_client_model(model):
     # architecture specs
@@ -44,8 +36,8 @@ def plot_perturbed_image(image):
     plt.imshow(tf.keras.preprocessing.image.array_to_img(image), cmap='gray')
     plt.axis('off')
 
-
 '''
+
 pd.DataFrame(history.history).plot(figsize=(8, 5))
 plt.grid(True)
 plt.gca().set_ylim(0, 1)
