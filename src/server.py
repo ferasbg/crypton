@@ -28,27 +28,40 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 
 warnings.filterwarnings("ignore")
 
-def build_base_server_model(num_classes : int):
-    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
-    conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
+
+def build_base_server_model(num_classes: int):
+    input_layer = layers.Input(
+        shape=(28, 28, 1), batch_size=None, name="image")
+    conv1 = layers.Conv2D(32, (3, 3), activation='relu',
+                          padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(dropout)
-    maxpool1 = layers.MaxPool2D((2,2))(conv2)
-    conv3 = layers.Conv2D(64, (3,3), activation='relu',  kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(conv3)
-    maxpool2 = layers.MaxPool2D((2,2))(conv4)
-    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform', padding='same')(conv5)
-    maxpool3 = layers.MaxPool2D((2,2))(conv6)
+    conv2 = layers.Conv2D(64, (3, 3), activation='relu',
+                          kernel_initializer='he_uniform',  padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D((2, 2))(conv2)
+    conv3 = layers.Conv2D(64, (3, 3), activation='relu',
+                          kernel_initializer='he_uniform', padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, (3, 3), activation='relu',
+                          kernel_initializer='he_uniform', padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D((2, 2))(conv4)
+    conv5 = layers.Conv2D(128, (3, 3), activation='relu',
+                          kernel_initializer='he_uniform', padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, (3, 3), activation='relu',
+                          kernel_initializer='he_uniform', padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D((2, 2))(conv6)
     flatten = layers.Flatten()(maxpool3)
     # flatten is creating error because type : NoneType
-    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
+    dense1 = layers.Dense(128, activation='relu',
+                          kernel_initializer='he_uniform')(flatten)
     # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-    output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-    model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
-    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    output_layer = layers.Dense(num_classes, activation='softmax',
+                                kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+    model = keras.Model(inputs=input_layer,
+                        outputs=output_layer, name='client_model')
+    model.compile(optimizer="adam",
+                  loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
+
 
 def main(args) -> None:
     # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
@@ -61,26 +74,40 @@ def main(args) -> None:
     model = build_base_server_model(num_classes=10)
 
     # # create strategy; later use args.strategy
-    fedavg = flwr.server.strategy.FedAvg(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=3,
-        min_eval_clients=2,
-        min_available_clients=10,
-        eval_fn=get_eval_fn(model),
-        # strategy based on user-written wrapper functions
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        initial_parameters=model.get_weights(),
-    )
 
     #fed_adagrad = FedAdagrad(initial_parameters=model.get_weights())
 
     # todo: write if (args.strategy == "fedavg"): strategy = FedAvg() elif (args.strategy == "fedadagrad"): strategy = FedAdagrad()
+    if ((args.strategy).lower() == "fedavg"):
+        strategy = flwr.server.strategy.FedAvg(
+            fraction_fit=0.3,
+            fraction_eval=0.2,
+            min_fit_clients=3,
+            min_eval_clients=2,
+            min_available_clients=10,
+            eval_fn=get_eval_fn(model),
+            # strategy based on user-written wrapper functions
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=model.get_weights(),
+        )
 
-    # Start Flower server for ten rounds of federated learning;
-    # todo: configure server.py with args and defaults settings defined in settings.py
-    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": 10})
+    if ((args.strategy).lower() == "fedadagrad"):
+        # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor 
+        initial_parameters = model.get_weights()
+        tensor_parameters = []
+        tensor_list = []
+        for element in initial_parameters:
+            tensor_list.append(element)
+        
+        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding
+        
+        strategy = FedAdagrad(initial_parameters=tensor_parameters)
+    
+    default_strategy = FedAvg()    
+    # todo: pass strategy when testing for gRPC freeze and resolve error    
+    flwr.server.start_server(strategy=default_strategy, server_address="[::]:8080", config={
+                             "num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
@@ -93,10 +120,10 @@ def get_eval_fn(model):
 
     # x_train, x_test = x_train / 255.0, x_test / 255.0
     # for batch in train_dataset_for_base_model:
-        #     adv_model.perturb_on_batch(batch)
+    #     adv_model.perturb_on_batch(batch)
 
-        # for batch in test_dataset_for_base_model:
-        #     adv_model.perturb_on_batch(batch)
+    # for batch in test_dataset_for_base_model:
+    #     adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -111,6 +138,7 @@ def get_eval_fn(model):
 
     return evaluate
 
+
 def fit_config(rnd: int):
     """Return training configuration dict for each round.
 
@@ -123,6 +151,7 @@ def fit_config(rnd: int):
     }
     return config
 
+
 def evaluate_config(rnd: int):
     """Return evaluation configuration dict for each round.
 
@@ -133,20 +162,26 @@ def evaluate_config(rnd: int):
     val_steps = 5 if rnd < 4 else 10
     return {"val_steps": val_steps}
 
+
 def setup_server_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Server")
     # configurations
-    parser.add_argument("--num_rounds", type=int, required=False, default=10)
+    parser.add_argument("--num_rounds", type=int, required=False, default=3)
     parser.add_argument("--strategy", type=str, required=False, default=None)
-    parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
-    parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
-    parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
-    parser.add_argument("--min_eval_clients", type=int, required=False, default=2)
-    parser.add_argument("--min_available_clients", type=int, required=False, default=2)
-    # using FaultToleranceFedAvg
-    parser.add_argument("--accept_client_failures_fault_tolerance", type=bool, required=False, default=False)
+    # hardcode or configure with args? optional
+    parser.add_argument("--fraction_fit", type=float,
+                        required=False, default=0.05)
+    parser.add_argument("--fraction_eval", type=float,
+                        required=False, default=0.5)
+    parser.add_argument("--min_fit_clients", type=int,
+                        required=False, default=10)
+    parser.add_argument("--min_eval_clients", type=int,
+                        required=False, default=2)
+    parser.add_argument("--min_available_clients",
+                        type=int, required=False, default=2)
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     # configure the args object when the file is run and it'll be processed into main function and into target objects in question

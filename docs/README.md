@@ -6,6 +6,7 @@ The purpose of this work is to certify the adversarial robustness of a server-si
 ## Introduction
 - State the problem being solved and the approach taken.
 - State what your goals for the paper are.
+- "This paper introduces a novel and scalable connection between adversarial regularization and neural structured learning for production-level federated learning."
 
 ## Problem Statement
 - Formalize the problem that is being solved in terms of the components responsible, neglecting unnecessarily specific variables that are default settings and thus preconditional assumptions (safe to assume, so extraneous in problem formulation).

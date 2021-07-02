@@ -295,3 +295,20 @@ class Data:
     def make_training_data_non_iid(dataset, num_partitions):
         # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
         return []
+
+    @staticmethod
+    def load_partition(idx: int):
+        """Load 1/10th of the training and test data to simulate a partition."""
+        assert idx in range(10)
+        # process the same dataset
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+
+        return (
+            x_train[idx * 5000 : (idx + 1) * 5000],
+            y_train[idx * 5000 : (idx + 1) * 5000],
+        ), (
+            x_test[idx * 1000 : (idx + 1) * 1000],
+            y_test[idx * 1000 : (idx + 1) * 1000],
+        )

@@ -27,6 +27,9 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
 from keras import backend as K
 
+from utils import *
+from client import DatasetConfig, ServerConfig, ClientConfig, AdvRegClientConfig, AdvRegClient, ExperimentConfig
+
 warnings.filterwarnings("ignore")
 
 def build_base_server_model(num_classes : int):
@@ -51,14 +54,30 @@ def build_base_server_model(num_classes : int):
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-def main() -> None:
-    model = build_base_server_model(num_classes=10)
-    # .get_weights() is of type list
-    # convert weights into a iterable Tensor object, then pass into initial parameters
-    weights = model.get_weights()
-    # weights[i] is a list that stores lists of row vectors of weights (if even of course)
-    # weights is a mixed list object where there's nested lists and vector lists
-    # fed_adagrad = FedAdagrad(initial_parameters=tensor_weights)
+# todo: setup the client train and test partitions based on the idx; assume 10 clients only
+# todo: test the corruptions for corruption regularization
+# todo: fix strategy that is freezing up GRPC
+# todo: setup exp configs; hardcode the graphs that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
 
-if __name__ == '__main__':
-    main()
+# create a list of type tuple[tuple[np.ndarray, np.ndarray]]
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+# todo: test partition code given client idx
+
+# partition is in iterable value from the range of 0 to 9
+
+dataset_config = DatasetConfig(client_partition_idx=0)
+partition_x_train, partition_y_train, partition_x_test, partition_y_test = dataset_config.load_partition(0)  
+print(type(partition_x_train))
+print(len(partition_x_train))
+
+print(type(partition_y_train))
+print(len(partition_y_train))
+
+print(type(partition_x_test))
+print(len(partition_x_test))
+
+print(type(partition_y_test))
+print(len(partition_y_test))
+
+train_data = tf.data.Dataset.from_tensor_slices({'image': partition_x_train, 'label': partition_y_train}).batch(32)
+val_data = tf.data.Dataset.from_tensor_slices({'image': partition_x_test, 'label': partition_y_test}).batch(32)

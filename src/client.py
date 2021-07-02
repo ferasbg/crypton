@@ -52,45 +52,42 @@ def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
 class DatasetConfig:
-    def __init__(self):
-        # MapDataset for partition creation
+    def __init__(self, client_partition_idx : int):
         self.datasets = tfds.load('mnist')
         self.map_train_dataset = self.datasets['train']
         self.map_test_dataset = self.datasets['test']
         self.train_dataset_for_base_model = self.map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
         self.test_dataset_for_base_model = self.map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
-
+        
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        x_test, y_test = x_train[-10000:], y_train[-10000:]
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
 
-        self.x_train = tf.cast(x_train, dtype=tf.float32)
-        self.y_train = y_train
-        self.x_test = tf.cast(x_test, dtype=tf.float32)
-        self.y_test = y_test
-        self.val_steps = self.x_test.shape[0] / 32
-
-        # train_dataset and test_dataset of type BatchDataset
-        self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
-        self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-
-        # create a list of type tuple[tuple[np.ndarray, np.ndarray]]
-        # self.adv_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, num_clients=10)
-        # self.adv_test_partitions = Data.create_test_partitions(self.x_test, self.y_test, num_clients=10)
-        # self.client_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, num_clients=10)
-        # self.client_test_partitions = Data.create_test_partitions(self.x_test, self.y_test, num_clients=10)
+        self.val_steps = x_test.shape[0] / 32
+        # partition the tuple[np.ndarray, np.ndarray] before passing it into the partitioned BatchDataset to process into the client model in the AdvRegClient
+        self.partition_x_train, self.partition_y_train, self.partition_x_test, self.partition_y_test = self.load_partition(idx=client_partition_idx)
+        self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.partition_x_train, 'label': self.partition_y_train}).batch(32)
+        self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.partition_x_test, 'label': self.partition_y_test}).batch(32)
+    
+    def load_partition(idx: int):
+        """Load 1/10th of the training and test data to simulate a partition."""
+        assert idx in range(10)
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+        
+        # process the same dataset
+        return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000],), (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000],)
 
 class ExperimentConfig(object):
     '''
     DatasetConfig --> ExperimentConfig --> AdvRegClientConfig --> AdvRegClient
     '''
-    def __init__(self, client_config, args, client_partition : int, dataset_config=DatasetConfig()):
+    def __init__(self, client_config, args, dataset_config : DatasetConfig):
         self.client_config = client_config
-        self.args = args
-        self.client_train_partitions = dataset_config.client_train_partitions
-        self.client_test_partitions = dataset_config.client_test_partitions
-        self.client_partition_idx = client_partition
-        self.current_client_train_partition = Data.load_train_partition(client_partition=self.client_partition_idx)
-        self.current_client_test_partition = Data.load_test_partition(client_partition=self.client_partition_idx)
+        # experiment config should store the BatchDataset that has already been partitioned in DatasetConfig
+        self.client_train_partition_dataset = [] # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig; these are all dependent on the client in question
+        self.client_test_partition = []
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -238,16 +235,15 @@ elif (params.gaussian_state and params.adv_reg_state == False):
 
 else:
     model = base_model
+
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
+# todo: use args as params for config objects
+adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+
 def main(args):
-
-    if (type(model) == AdversarialRegularization):
-        adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-
-    if (type(model) == tf.keras.models.Model):
-        client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-
+    # update the args state that can be used to configure the clients below
     flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
 
 class AdvRegClient(flwr.client.KerasClient):
@@ -257,7 +253,7 @@ class AdvRegClient(flwr.client.KerasClient):
     def fit(self, parameters, config):
         adv_client_config.model.set_weights(parameters)
         # dataset_config creates the partitions, and loads the partition based on the index (in .sh loop) for the train/val data BatchDataset objects to be passed in the adv_client_config object, so that the data in each client config object is the partition only, not the original dataset
-        history = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=dataset_config.val_steps, steps_per_epoch=3, epochs=1)
+        history = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=dataset_config.val_steps, epochs=1)
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -293,7 +289,7 @@ class Client(flwr.client.KerasClient):
 
     def fit(self, parameters, config):
         client_config.model.set_weights(parameters)
-        history = client_config.model.fit(client_config.train_dataset, validation_data=client_config.test_dataset, validation_steps=dataset_config.val_steps, steps_per_epoch=3, epochs=1)
+        history = client_config.model.fit(client_config.train_dataset, validation_data=client_config.test_dataset, validation_steps=dataset_config.val_steps, epochs=1)
         results = {
             "loss": history.history["loss"],
             "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -325,8 +321,8 @@ class Client(flwr.client.KerasClient):
 
 
 if __name__ == '__main__':
-    # client_parser = setup_client_parse_args()
+    client_parser = setup_client_parse_args()
     # args store client partition index
-    # args = client_parser.parse_args()
+    args = client_parser.parse_args()
     # experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args, client_partition=0)
-    main()
+    main(args)
