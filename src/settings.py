@@ -110,7 +110,6 @@ federated_adaptive_optimization = FedAdagrad(
 )
 
 
-
 DEFAULT_FEDERATED_STRATEGY_SET = [federated_averaging, federated_adaptive_optimization]
 DEFAULT_TRAIN_EPOCHS = 5
 DEFAULT_CLIENT_LEARNING_RATE = 0.1
