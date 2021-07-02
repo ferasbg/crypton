@@ -33,6 +33,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 from tensorflow import keras
 
+# The goal here is to certify robustness of adversarial examples and the models at the client-level and at the server-side model level (trusted aggregator, parameter evaluation)
 # the relationship between generating robust adversarial examples and developing adversarially robust models is that both conditions help each other
 # reference: https://people.eecs.berkeley.edu/~sseshia/pubdir/vnn19.pdf
 

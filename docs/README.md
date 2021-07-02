@@ -19,14 +19,14 @@ The purpose of this work is to certify the adversarial robustness of a server-si
 ## Research Innovations
 - Implementing adversarial robustness certification for adversarially regularized deep convolutional networks in a federated setting, and using adaptive federated optimization to adapt to the real-world environment of data sparsity, corruptions, and heterogeneity. 
 - First implementation that formalizes neural structured learning algorithm as an adversarial regularization technique combined with other forms of regularization under federated setting with respect to adversarial robustness certifications for a server-side trusted aggregator model.
-
+- state the utility of why your project even matters in the grand scheme of certifiably robust federated CV models in production systems, and defining confidentiality given that you do not have differential privacy in the scope of your project, since confidentiality and certification of adversarial robustness in a federated ML system was the goal in the first place.
 ## Discussion
-- Statements must either disprove, prove, certify, or validate the behavior, properties, and entropy involved with the results that accounts for the default settings and experiment configs for each component.
+- Statements must either disprove, prove, certify, or validate the behavior, properties, and entropy (as implicit attitude in discussion without mathematical formalization of entropy itself other than the entropy method used) involved with the results that accounts for the default settings and experiment configs for each component.
 - Reason about why particular behavior was observed.
 - State the importance, validity, extensibility, reliability, and significance of the findings observed and reasoned about in the Discussion section.
 - State the research innovations made on the paper, and how the information itself can be used (dynamical systems perspective without stochastic mechanics, but formalizing all other components and the formal robustness properties).
 
-## Usage
+## System Components
 - In `client.py`, the component at the client-level is split into the following subcomponents: `AdvRegClient` which is the client that uses the model of type `nsl.AdversarialRegularization`, `AdvRegClientConfig` which stores configuration data for the `AdvRegClient`, `Client` which uses the base `tf.keras.models.Model` object for its model, `ClientConfig`, `ExperimentConfig` which stores the arguments passed when the user runs `python3 client.py` after instantiating an insecure gRPC instance with `python3 server.py`, and `DatasetConfig`, which creates the client partitions depending on the argument for the total number of clients, and passes the loaded client train & test partitions to the `ClientConfig` or `AdvRegClientConfig` object respectively. By default, the `HParams` utilities object is also used, which defines the adversarial and base network hyperparameters for the models used by the clients.
 - In `server.py`, the component at the server-level is split into the `ServerConfig` and `StrategyConfig` objects that configure the strategy and server-side trusted aggregator model that doesn't use adversarial regularization since it's the model used for server-side parameter evaluation.
 
