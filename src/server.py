@@ -80,7 +80,7 @@ def main(args) -> None:
 
     # Start Flower server for ten rounds of federated learning;
     # todo: configure server.py with args and defaults settings defined in settings.py
-    flwr.server.start_server(strategy=fedavg, server_address="[::]:8080", config={"num_rounds": 10})
+    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": 10})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""

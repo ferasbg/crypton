@@ -34,6 +34,7 @@ for exp_config in exp_config_set:
 
 
 ```
+
 ## Technical Overview
 - In `client.py`, the component at the client-level is split into the following subcomponents: `AdvRegClient` which is the client that uses the model of type `nsl.AdversarialRegularization`, `AdvRegClientConfig` which stores configuration data for the `AdvRegClient`, `Client` which uses the base `tf.keras.models.Model` object for its model, `ClientConfig`, `ExperimentConfig` which stores the arguments passed when the user runs `python3 client.py` after instantiating an insecure gRPC instance with `python3 server.py`, and `DatasetConfig`, which creates the client partitions depending on the argument for the total number of clients, and passes the loaded client train & test partitions to the `ClientConfig` or `AdvRegClientConfig` object respectively. By default, the `HParams` utilities object is also used, which defines the adversarial and base network hyperparameters for the models used by the clients.
 - In `server.py`, the component at the server-level is split into the `ServerConfig` and `StrategyConfig` objects that configure the strategy and server-side trusted aggregator model that doesn't use adversarial regularization since it's the model used for server-side parameter evaluation.
@@ -44,6 +45,15 @@ for exp_config in exp_config_set:
 - structured signals (higher dimensionality of feature representation) + adaptive federated optimization --> more robust model with corrupted and sparse data;
 - strategy (when explaining/comparing GaussianNoise and without GaussianNoise): Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better (Goodfellow, et. al --> adversarial examples paper).
 - adversarial neighbors and NSL core protocol relation to fedAdagrad
+- how does convexity apply to the optimizer used to most efficiently aggregate the learnings of each client on local data? Surely important considering optimization formulation is interlinked with specifications that depend on measuring variability.
 
-## Todo
-- compile the math required for the paper
+## Misc
+- there are different regularization techniques, but keep technique constant
+- formalize relationship between adversarial input generation for a client and its server-side evaluation-under-attack.
+- adversarial regularization is very useful for defining an explicit structure e.g. structural signals rather than single samples.
+- nsl-ar structured signals provides more fine-grained information not available in feature inputs.
+- We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
+- adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
+- wrap the adversarial regularization model to train under two other conditions relating to GaussianNoise and specified perturbation attacks during training specifically.
+- graph the feature representation given graph with respect to the graph of the rest of its computations, and the trusted aggregator eval
+- diagrams for system architecture (NSL Graph Architecture --> Core DCNN --> Federated Environment --> Specification (Certification of Robustness))

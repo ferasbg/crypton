@@ -249,8 +249,8 @@ class Data:
                 # partition x_train and y_train based on the num_clients
                 partition = []
                 # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
-                x_train = x_train[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
-                y_train = y_train[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                x_train = x_train[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
+                y_train = y_train[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
                 partition = (x_train, y_train)
                 train_partitions.append(partition)
 
@@ -264,8 +264,8 @@ class Data:
                 # partition x_train and y_train based on the num_clients
                 partition = []
                 # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
-                x_test = x_test[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
-                y_test = y_test[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                x_test = x_test[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
+                y_test = y_test[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
                 partition = (x_test, y_test)
                 test_partitions.append(partition)
 
