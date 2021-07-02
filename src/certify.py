@@ -48,7 +48,7 @@ Variables:
   - checking server-side model (trusted aggregator) against server-side specifications for certification of adversarial robustness (both in terms of the examples and the accuracy under perturbation attacks --> extrapolate robustness via federated accuracy-under-attack to abstraction given decision formulation in decision_formulations (set of all specifications/checks))
 
 Statements:
-  - 
+  -
   -
   -
   -
@@ -59,8 +59,11 @@ Statements:
 def compute_admissibility_constraint(x):
   '''
   The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed inputs.
-  
+
   Eq: x∗ ∈ X˜
+
+  How do you know what's an "admissible" input? An input that maximizes loss? Remember how optimization desires for the opposite? Formulations here are contradicting each other, but these are general statements not included in any of the functions in this file.
+
 
   '''
 
@@ -68,7 +71,7 @@ def compute_admissibility_constraint(x):
 
 def compute_distance_constraint(adv_step_size, adv_grad_norm):
   '''
-  The Distance Constraint (2) constrains x∗ to be no more distant from x than α. 
+  The Distance Constraint (2) constrains x∗ to be no more distant from x than α.
 
   Eq: D(µ(x, x∗), α)
 
@@ -97,7 +100,7 @@ def compute_target_behavior_constraint(a, x, x_prime, beta):
         - robust kl-divergence: kl-divergence for server-side federated accuracy under perturbation attack
     - note: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]). : fancy way of checking if the property that wants an accurate label holds and robustness itself translates to a threshold given the batch_episode set per epoch or a set of epochs iterating over the defined # of rounds.
     - objective: just analyze how adversarial attacks affect convergence, and focus on nn optimization by having math to explain the phenomenon, e.g. confirming expectations or contradicting it with truth
-    - note: If the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing. 
+    - note: If the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing.
 
     References:
         - https://arxiv.org/pdf/1904.13215.pdf
