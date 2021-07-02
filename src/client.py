@@ -245,7 +245,7 @@ if (type(model) == AdversarialRegularization):
     adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
 
 if (type(model) == tf.keras.models.Model):
-    client_config = ClientConfig(model=build_base_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+    client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
 
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
@@ -303,7 +303,7 @@ class Client(flwr.client.KerasClient):
         train_cardinality = len(client_config.train_dataset)
         accuracy = results["sparse_categorical_accuracy"]
         accuracy = int(accuracy[0])
-        
+
         return client_config.model.get_weights(), train_cardinality, accuracy
 
     def evaluate(self, parameters, config):
