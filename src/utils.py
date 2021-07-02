@@ -30,7 +30,7 @@ import tensorflow_probability as tpb
 import tqdm
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import (  
+from flwr.server.strategy import (
     FaultTolerantFedAvg, FedAdagrad, FedAvg, FedFSv1, Strategy, fedopt)
 from keras import backend as K
 from keras import optimizers, regularizers
@@ -60,7 +60,7 @@ class HParams(object):
         adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
         adv_step_size: The magnitude of adversarial perturbation.
         adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
-    
+
     '''
 
     def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, adv_reg_state=True):
@@ -201,7 +201,7 @@ class Data:
 
     @staticmethod
     def perturb_adv_model_dataset(model, dataset, parameters : HParams):
-        IMAGE_INPUT_NAME = 'image'  
+        IMAGE_INPUT_NAME = 'image'
         LABEL_INPUT_NAME = 'label'
         for batch in dataset:
             perturbed_batch = model.perturb_on_batch(batch)
@@ -220,17 +220,22 @@ class Data:
         pass
 
     @staticmethod
-    def load_train_partition(idx: int):
-        raise NotImplementedError
+    def load_train_partition(train_partitions, idx: int):
+        # return a tuple given the target client (index to iterate over all clients)
+        # (x_train, y_train) are already partitioned with Data.create_train_partitions(). This is untested, but validate that the return type of Tuple is consistent with the logic written in DatasetConfig and for storing the partition for the client in ExperimentConfig and accessed by AdvRegClientConfig or ClientConfig.
+        # usage: train_partitions[0][0] --> x_train for client 0
+        client_train_partition = train_partitions[idx]
+        return client_train_partition
 
     @staticmethod
-    def load_test_partition(idx: int, dataset):
-        raise NotImplementedError
+    def load_test_partition(test_partitions, idx : int):
+        client_test_partition = test_partitions[idx]
+        return client_test_partition
 
     @staticmethod
     def create_train_partitions(x_train, y_train, num_clients : int):
         '''
-        Usage: 
+        Usage:
             - train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
             - current_train_dataset = train_partitions[current_client_idx]
 
@@ -239,20 +244,43 @@ class Data:
 
         '''
         train_partitions = []
-        # x_train = x_train[idx * (50000/num_clients): idx + 1 * (50000/num_clients)]
+        if (num_clients == 10):
+            for i in range(num_clients):
+                # partition x_train and y_train based on the num_clients
+                partition = []
+                # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
+                x_train = x_train[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                y_train = y_train[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                partition = (x_train, y_train)
+                train_partitions.append(partition)
 
         return train_partitions
 
     @staticmethod
     def create_test_partitions(x_test, y_test, num_clients : int):
-        return []
+        test_partitions = []
+        if (num_clients == 10):
+            for i in range(num_clients):
+                # partition x_train and y_train based on the num_clients
+                partition = []
+                # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
+                x_test = x_test[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                y_test = y_test[i * (50000/num_clients): (i + 1) * (50000/num_clients)]
+                partition = (x_test, y_test)
+                test_partitions.append(partition)
+
+        return test_partitions
 
     @staticmethod
-    def perturb_dataset_partition(partition):
+    def perturb_dataset_partition(partition, adv_model : nsl.keras.AdversarialRegularization, params : HParams):
         '''
         Server-side dataset perturbation.
         '''
-        pass
+        for batch in partition:
+            adv_model.perturb_on_batch(batch)
+            # clip_by_value --> depends on sample implementation
+
+        return partition    
 
     @staticmethod
     def get_mnist_image(image : np.ndarray):
