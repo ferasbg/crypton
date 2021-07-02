@@ -16,6 +16,10 @@ The purpose of this work is to certify the adversarial robustness of a server-si
 ## Results and Evaluation
 - Store results given each experiment configuration defined in `exp-config-run.sh` that will iteratively process train/test client partitions and client/model/server/strategy configurations to check what optimizations conform best to the specifications for the certification component.
 
+## Research Innovations
+- Implementing adversarial robustness certification for adversarially regularized deep convolutional networks in a federated setting, and using adaptive federated optimization to adapt to the real-world environment of data sparsity, corruptions, and heterogeneity. 
+- First implementation that formalizes neural structured learning algorithm as an adversarial regularization technique combined with other forms of regularization under federated setting with respect to adversarial robustness certifications for a server-side trusted aggregator model.
+
 ## Discussion
 - Statements must either disprove, prove, certify, or validate the behavior, properties, and entropy involved with the results that accounts for the default settings and experiment configs for each component.
 - Reason about why particular behavior was observed.

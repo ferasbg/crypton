@@ -5,6 +5,7 @@ NUM_CLIENTS = 10
 # essentially run the server.py file but then shut down the server after the client set has been executed. Note that partitions work the same, but the configurations specific to the strategy selected, adversarial hyperparameters, and so on, are all different and may iteratively increase, etc.
 # hardcode configurations without abstracting them to exp_config in this shell file
 # now you have to explicitly specify what you will keep constant and change in terms of image corruptions, adv_reg, gaussian_layer, norm, norm value, strategy, etc if applicable
+# each corruption is itself a transformation/perturbation that should be used in isolation. Then measure by changing adv_grad_norm and measuring within the range of 0-1 with incremental increases in the perturbation intensity.
 
 # for exp_config in exp_config_set:
     # python3 server.py --num_rounds=10 --strategy="fedavg" & 
