@@ -34,6 +34,9 @@ for exp_config in exp_config_set:
 
 
 ```
+## Technical Overview
+- In `client.py`, the component at the client-level is split into the following subcomponents: `AdvRegClient` which is the client that uses the model of type `nsl.AdversarialRegularization`, `AdvRegClientConfig` which stores configuration data for the `AdvRegClient`, `Client` which uses the base `tf.keras.models.Model` object for its model, `ClientConfig`, `ExperimentConfig` which stores the arguments passed when the user runs `python3 client.py` after instantiating an insecure gRPC instance with `python3 server.py`, and `DatasetConfig`, which creates the client partitions depending on the argument for the total number of clients, and passes the loaded client train & test partitions to the `ClientConfig` or `AdvRegClientConfig` object respectively. By default, the `HParams` utilities object is also used, which defines the adversarial and base network hyperparameters for the models used by the clients.
+- In `server.py`, the component at the server-level is split into the `ServerConfig` and `StrategyConfig` objects that configure the strategy and server-side trusted aggregator model that doesn't use adversarial regularization since it's the model used for server-side parameter evaluation.
 
 ## Research Notes
 - math is involved around decision formulations that use formal notation of functions used on client-level, the federated strategy, the nsl-specific math, and the formalization of different perturbations/configs as regularization etc
