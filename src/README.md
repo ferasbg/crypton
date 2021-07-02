@@ -9,7 +9,7 @@ Execute experimental configurations to assess the most optimal configuration for
 - working: server-side evaluation after fit_round and sample_round sampling of clients
 - working: writing funcs for formal robustness metrics
 - working: write simulation.py that takes in args per execution instance and runs client-server processes similar to flwr example for simulation.py
-- certification of adv. robustness: compute formal robustness metrics based on the formalization paper
+- certification of adv. robustness (formal statements are written and functions can be used to compute satisfiability of adversarial robustness properties): compute formal robustness metrics based on the formalization paper
 - exp-config-run.sh is an iterative for loop that starts a server, and runs the clients based on the partition specified by index and samples all the clients with the server/client/exp config as args to each target file and then shuts down the server and then starts a new one to run the next test, until all the configs are run (all combinations --> defined with itertools)
 
 ## Technical Notes
@@ -41,3 +41,6 @@ for exp_config in exp_config_set:
 - structured signals (higher dimensionality of feature representation) + adaptive federated optimization --> more robust model with corrupted and sparse data;
 - strategy (when explaining/comparing GaussianNoise and without GaussianNoise): Other implementations apply the perturbation epsilon deeper into the network, but for maintaining dimensionality (and other reasons specified in the paper), the earlier the perturbations applied, the better (Goodfellow, et. al --> adversarial examples paper).
 - adversarial neighbors and NSL core protocol relation to fedAdagrad
+
+## Todo
+- compile the math required for the paper

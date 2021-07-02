@@ -67,15 +67,15 @@ class DatasetConfig:
         self.y_test = y_test
         self.val_steps = self.x_test.shape[0] / 32
 
-        # type: BatchDataset
+        # train_dataset and test_dataset of type BatchDataset
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-        # todo: implement create_partitions for train and test given client index (num_clients)
-        self.adv_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
-        self.adv_test_partitions = Data.create_test_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
-        self.client_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
-        self.client_test_partitions = Data.create_test_partitions(self.x_train, self.y_train, self.x_test, self.y_test, num_clients=10)
+        # create a list of type tuple[tuple[np.ndarray, np.ndarray]]
+        self.adv_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, num_clients=10)
+        self.adv_test_partitions = Data.create_test_partitions(self.x_test, self.y_test, num_clients=10)
+        self.client_train_partitions = Data.create_train_partitions(self.x_train, self.y_train, num_clients=10)
+        self.client_test_partitions = Data.create_test_partitions(self.x_test, self.y_test, num_clients=10)
 
 class ExperimentConfig(object):
     '''
@@ -84,10 +84,11 @@ class ExperimentConfig(object):
     def __init__(self, client_config, args, client_partition : int, dataset_config=DatasetConfig()):
         self.client_config = client_config
         self.args = args
-        self.client_partition = client_partition
-        # pass tuples from (x_train, y_train), (x_test, y_test) and convert into partitioned BatchDataset objects when passing to AdvRegClientConfig object
-        self.client_train_partition_dataset = Data.load_train_partition(client_partition, dataset_config.x_train, dataset_config.y_train)
-        self.client_test_partition_dataset = Data.load_test_partition(client_partition, dataset_config.x_test, dataset_config.y_test)
+        self.client_train_partitions = dataset_config.client_train_partitions
+        self.client_test_partitions = dataset_config.client_test_partitions
+        self.client_partition_idx = client_partition
+        self.current_client_train_partition = Data.load_train_partition(client_partition=self.client_partition_idx)
+        self.current_client_test_partition = Data.load_test_partition(client_partition=self.client_partition_idx)
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -222,8 +223,30 @@ params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_gra
 dataset_config = DatasetConfig()
 
 # setup client configurations; hardcoded configs for now
-adv_client_config = AdvRegClientConfig(model=build_adv_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-client_config = ClientConfig(model=build_base_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+adv_model = build_adv_model(params=params)
+base_model = build_base_model(params=params)
+gaussian_base_model = build_gaussian_base_model()
+gaussian_adv_model = build_gaussian_adv_model()
+
+# select model
+if (params.adv_reg_state):
+    if (params.gaussian_state):
+        model = gaussian_adv_model
+    else:
+        model = adv_model
+
+elif (params.gaussian_state and params.adv_reg_state == False):
+    model = gaussian_base_model
+
+else:
+    model = base_model
+
+if (type(model) == AdversarialRegularization):
+    adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+
+if (type(model) == tf.keras.models.Model):
+    client_config = ClientConfig(model=build_base_model(params=params), params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+
 callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
 class AdvRegClient(flwr.client.KerasClient):

@@ -60,8 +60,8 @@ def main(args) -> None:
     # create model
     model = build_base_server_model(num_classes=10)
 
-    # # create strategy; later use args.strategy 
-    strategy = flwr.server.strategy.FedAvg(
+    # # create strategy; later use args.strategy
+    fedavg = flwr.server.strategy.FedAvg(
         fraction_fit=0.3,
         fraction_eval=0.2,
         min_fit_clients=3,
@@ -74,11 +74,13 @@ def main(args) -> None:
         initial_parameters=model.get_weights(),
     )
 
+    #fed_adagrad = FedAdagrad(initial_parameters=model.get_weights())
+
     # todo: write if (args.strategy == "fedavg"): strategy = FedAvg() elif (args.strategy == "fedadagrad"): strategy = FedAdagrad()
 
-    # Start Flower server for ten rounds of federated learning; 
+    # Start Flower server for ten rounds of federated learning;
     # todo: configure server.py with args and defaults settings defined in settings.py
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": 10})
+    flwr.server.start_server(strategy=fedavg, server_address="[::]:8080", config={"num_rounds": 10})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
@@ -88,11 +90,11 @@ def get_eval_fn(model):
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
-    
+
     # x_train, x_test = x_train / 255.0, x_test / 255.0
     # for batch in train_dataset_for_base_model:
         #     adv_model.perturb_on_batch(batch)
-        
+
         # for batch in test_dataset_for_base_model:
         #     adv_model.perturb_on_batch(batch)
 

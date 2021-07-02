@@ -63,7 +63,7 @@ class HParams(object):
     
     '''
 
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, **kwargs):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, adv_reg_state=True):
         # store model and its respective train/test dataset + metadata in parameters
         self.input_shape = [28, 28, 1]
         self.num_classes = num_classes
@@ -81,6 +81,7 @@ class HParams(object):
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.clip_value_min = 0.0
         self.clip_value_max = 1.0
+        self.adv_reg_state = adv_reg_state
 
 class Data:
     '''
@@ -219,7 +220,7 @@ class Data:
         pass
 
     @staticmethod
-    def load_train_partition(idx: int, x_train, y_train):
+    def load_train_partition(idx: int):
         raise NotImplementedError
 
     @staticmethod
@@ -227,7 +228,7 @@ class Data:
         raise NotImplementedError
 
     @staticmethod
-    def create_train_partitions(x_train, y_train, x_test, y_test, num_clients : int):
+    def create_train_partitions(x_train, y_train, num_clients : int):
         '''
         Usage: 
             - train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
@@ -237,22 +238,20 @@ class Data:
             - preprocess the partitions before wrapping them into the MapDataset / BatchDataset objects
 
         '''
-        return []
+        train_partitions = []
+        # x_train = x_train[idx * (50000/num_clients): idx + 1 * (50000/num_clients)]
+
+        return train_partitions
 
     @staticmethod
-    def create_test_partitions(x_train, y_train, x_test, y_test, num_clients : int):
+    def create_test_partitions(x_test, y_test, num_clients : int):
         return []
 
     @staticmethod
     def perturb_dataset_partition(partition):
         '''
-            Usage:
-            # for partition in train_dataset: 
-                # partition = perturb_dataset_partition(partition)
-            # for partition in test_dataset:
-                # partition = perturb_dataset_partition(partition)
+        Server-side dataset perturbation.
         '''
-
         pass
 
     @staticmethod
