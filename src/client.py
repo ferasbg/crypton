@@ -207,10 +207,6 @@ def setup_client_parse_args():
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--adv_reg", type=bool, required=False, default=True)
     parser.add_argument("--gaussian_layer", type=bool, required=False, default=False)
-    # nominal regularization shouldn't be configured at all
-    parser.add_argument("--weight_regularization", type=bool, required=False, default=True)
-    # FedAdagrad assumes Adam(lr=0.01) as the base optimizer on the client-level
-    parser.add_argument("--sgd_momentum", type=float, required=False, default=0.9)
     return parser
 
 def scheduler(epoch, lr):

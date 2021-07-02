@@ -137,7 +137,7 @@ def setup_server_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Server")
     # configurations
     parser.add_argument("--num_rounds", type=int, required=False, default=10)
-    parser.add_argument("--strategy", type=str, required=False, default="fedavg")
+    parser.add_argument("--strategy", type=str, required=False, default=None)
     parser.add_argument("--fraction_fit", type=float, required=False, default=0.05)
     parser.add_argument("--fraction_eval", type=float, required=False, default=0.5)
     parser.add_argument("--min_fit_clients", type=int, required=False, default=10)
