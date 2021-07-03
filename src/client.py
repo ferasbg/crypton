@@ -52,6 +52,10 @@ def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
 class DatasetConfig:
+    '''
+        m --> AdvRegClientConfig --> AdvRegClient
+        DatasetConfig --> ClientCOnfig --> Client
+    '''
     def __init__(self, client_partition_idx : int):
         self.datasets = tfds.load('mnist')
         self.map_train_dataset = self.datasets['train']
@@ -64,30 +68,23 @@ class DatasetConfig:
         x_test = tf.cast(x_test, dtype=tf.float32)
 
         self.val_steps = x_test.shape[0] / 32
+        self.client_partition_idx = client_partition_idx
         # partition the tuple[np.ndarray, np.ndarray] before passing it into the partitioned BatchDataset to process into the client model in the AdvRegClient
-        self.partition_x_train, self.partition_y_train, self.partition_x_test, self.partition_y_test = self.load_partition(idx=client_partition_idx)
-        self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.partition_x_train, 'label': self.partition_y_train}).batch(32)
-        self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.partition_x_test, 'label': self.partition_y_test}).batch(32)
-    
-    def load_partition(idx: int):
-        """Load 1/10th of the training and test data to simulate a partition."""
-        assert idx in range(10)
+        self.x_train, self.y_train = self.load_train_partition(x_train, y_train)
+        self.x_test, self.y_test = self.load_test_partition(x_test, y_test)
+        # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig
+        self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.x_train, 'label': self.y_train}).batch(32)
+        self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.x_test, 'label': self.y_test}).batch(32)
+ 
+    def load_train_partition(self, x_train, y_train):
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
-        
-        # process the same dataset
-        return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000],), (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000],)
+        return (x_train[self.client_partition_idx * 5000 : (self.client_partition_idx + 1) * 5000], y_train[self.client_partition_idx * 5000 : (self.client_partition_idx + 1) * 5000])
 
-class ExperimentConfig(object):
-    '''
-    DatasetConfig --> ExperimentConfig --> AdvRegClientConfig --> AdvRegClient
-    '''
-    def __init__(self, client_config, args, dataset_config : DatasetConfig):
-        self.client_config = client_config
-        # experiment config should store the BatchDataset that has already been partitioned in DatasetConfig
-        self.client_train_partition_dataset = [] # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig; these are all dependent on the client in question
-        self.client_test_partition = []
+    def load_test_partition(self, x_test, y_test):
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_test = tf.cast(x_test, dtype=tf.float32)
+        return (x_test[self.client_partition_idx * 1000 : (self.client_partition_idx + 1) * 1000], y_test[self.client_partition_idx * 1000 : (self.client_partition_idx + 1) * 1000])
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -139,7 +136,7 @@ def build_adv_model(params : HParams):
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
-def build_gaussian_base_model():
+def build_gaussian_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
@@ -163,7 +160,7 @@ def build_gaussian_base_model():
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-def build_gaussian_adv_model():
+def build_gaussian_adv_model(params : HParams):
     # precondition matches state check
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
@@ -196,133 +193,136 @@ def setup_client_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
     parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
-    parser.add_argument("--client_partition", type=int, required=False, default=0)
-    parser.add_argument("--adv_grad_norm", type=str, required=False)
+    parser.add_argument("--client_partition_idx", type=int, choices=range(0,10), required=False, default=0)
+    parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
     parser.add_argument("--batch_size", type=int, required=False, default=32)
-    parser.add_argument("--epochs", type=int, required=False, default=10)
+    parser.add_argument("--epochs", type=int, required=False, default=1)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
+    parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--adv_reg", type=bool, required=False, default=True)
     parser.add_argument("--gaussian_layer", type=bool, required=False, default=False)
     return parser
 
-def scheduler(epoch, lr):
-    if epoch < 5:
-        return lr
-    else:
-        return lr * tf.math.exp(-0.1)
-
-# setup models; configure so that it can be setup with args; we could create an args object
-params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
-dataset_config = DatasetConfig()
-
-# setup client configurations; hardcoded configs for now
-adv_model = build_adv_model(params=params)
-base_model = build_base_model(params=params)
-gaussian_base_model = build_gaussian_base_model()
-gaussian_adv_model = build_gaussian_adv_model()
-
-# select model
-if (params.adv_reg_state):
-    if (params.gaussian_state):
-        model = gaussian_adv_model
-    else:
-        model = adv_model
-
-elif (params.gaussian_state and params.adv_reg_state == False):
-    model = gaussian_base_model
-
-else:
-    model = base_model
-
-callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
-
-# todo: use args as params for config objects
-adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
-client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+# config object store resetted after each client execution
+client_configs = []
+dataset_configs = []
 
 def main(args):
-    # update the args state that can be used to configure the clients below
-    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
+    '''
+    Use the `args` parameter to configure the experiment variables. Store configuration objects in their temporary lists to be accessed upon execution outside of the main(args) function.
+    
+    '''
 
-class AdvRegClient(flwr.client.KerasClient):
-    def get_weights(self):
-        return adv_client_config.model.get_weights()
+    # setup models; configure so that it can be setup with args; we could create an args object
+    params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
+    # configure client train/test partition based on the client partition idx
+    dataset_config = DatasetConfig(args.client_partition_idx)
+    dataset_configs.append(dataset_config)
+    
+    # build models
+    adv_model = build_adv_model(params=params)
+    base_model = build_base_model(params=params)
+    gaussian_base_model = build_gaussian_base_model(params=params)
+    gaussian_adv_model = build_gaussian_adv_model(params=params)
 
-    def fit(self, parameters, config):
-        adv_client_config.model.set_weights(parameters)
-        # dataset_config creates the partitions, and loads the partition based on the index (in .sh loop) for the train/val data BatchDataset objects to be passed in the adv_client_config object, so that the data in each client config object is the partition only, not the original dataset
-        history = adv_client_config.model.fit(adv_client_config.train_dataset, validation_data=adv_client_config.test_dataset, validation_steps=dataset_config.val_steps, epochs=1)
-        results = {
-            "loss": history.history["loss"],
-            "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
-            "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
-            "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
-        }
+    # select model
+    if (args.adv_reg):
+        if (args.gaussian_layer):
+            model = gaussian_adv_model
+        else:
+            model = adv_model
 
-        train_cardinality = len(adv_client_config.train_dataset)
-        accuracy = results["sparse_categorical_accuracy"]
-        accuracy = int(accuracy[0])
-        return adv_client_config.model.get_weights(), train_cardinality, accuracy
+    elif (args.gaussian_layer and args.adv_reg == False):
+        model = gaussian_base_model
 
-    def evaluate(self, parameters, config):
-        adv_client_config.model.set_weights(parameters)
-        results = adv_client_config.model.evaluate(adv_client_config.test_dataset, verbose=1)
-        # only fit uses validation accuracy and sce loss
-        results = {
-                "loss": results[0],
-                "sparse_categorical_crossentropy": results[1],
-                "sparse_categorical_accuracy": results[2],
-                "scaled_adversarial_loss": results[3],
-        }
-
-        loss = int(results["loss"])
-        accuracy = int(results["sparse_categorical_accuracy"])
-        test_cardinality = len(adv_client_config.test_dataset)
-
-        return loss, test_cardinality, accuracy
-
-class Client(flwr.client.KerasClient):
-    def get_weights(self):
-        return adv_client_config.model.get_weights()
-
-    def fit(self, parameters, config):
-        client_config.model.set_weights(parameters)
-        history = client_config.model.fit(client_config.train_dataset, validation_data=client_config.test_dataset, validation_steps=dataset_config.val_steps, epochs=1)
-        results = {
-            "loss": history.history["loss"],
-            "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
-            "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
-            "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
-        }
-
-        train_cardinality = len(client_config.train_dataset)
-        accuracy = results["sparse_categorical_accuracy"]
-        accuracy = int(accuracy[0])
-
-        return client_config.model.get_weights(), train_cardinality, accuracy
-
-    def evaluate(self, parameters, config):
-        client_config.model.set_weights(parameters)
-        results = client_config.model.evaluate(client_config.test_dataset, verbose=1)
-        results = {
-                "loss": results[0],
-                "sparse_categorical_crossentropy": results[1],
-                "sparse_categorical_accuracy": results[2],
-                "scaled_adversarial_loss": results[3],
-        }
-
-        loss = int(results["loss"])
-        accuracy = int(results["sparse_categorical_accuracy"])
-        test_cardinality = len(client_config.test_dataset)
-
-        return loss, test_cardinality, accuracy
-
+    else:
+        model = base_model
+        
+    adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+    client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
+    client_configs.append(adv_client_config)
+    client_configs.append(client_config)
 
 if __name__ == '__main__':
+    # setup client parser to handle user args
     client_parser = setup_client_parse_args()
-    # args store client partition index
     args = client_parser.parse_args()
-    # experiment_config  = ExperimentConfig(client_config=adv_client_config, args=args, client_partition=0)
+    # setup config objects to be used for the target clients
     main(args)
+        
+    class AdvRegClient(flwr.client.KerasClient):
+        def get_weights(self):
+            return client_configs[0].model.get_weights()
+
+        def fit(self, parameters, config):
+            client_configs[0].model.set_weights(parameters)
+            # dataset_config creates the partitions, and loads the partition based on the index (in .sh loop) for the train/val data BatchDataset objects to be passed in the client_configs[0] object, so that the data in each client config object is the partition only, not the original dataset
+            history = client_configs[0].model.fit(client_configs[0].train_dataset, validation_data=client_configs[0].test_dataset, validation_steps=dataset_configs[0].val_steps, epochs=args.epochs)
+            results = {
+                "loss": history.history["loss"],
+                "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
+                "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
+                "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
+            }
+
+            train_cardinality = len(client_configs[0].train_dataset)
+            accuracy = results["sparse_categorical_accuracy"]
+            accuracy = int(accuracy[0])
+            return client_configs[0].model.get_weights(), train_cardinality, accuracy
+
+        def evaluate(self, parameters, config):
+            client_configs[0].model.set_weights(parameters)
+            results = client_configs[0].model.evaluate(client_configs[0].test_dataset, verbose=1)
+            # only fit uses validation accuracy and sce loss
+            results = {
+                    "loss": results[0],
+                    "sparse_categorical_crossentropy": results[1],
+                    "sparse_categorical_accuracy": results[2],
+                    "scaled_adversarial_loss": results[3],
+            }
+
+            loss = int(results["loss"])
+            accuracy = int(results["sparse_categorical_accuracy"])
+            test_cardinality = len(client_configs[0].test_dataset)
+
+            return loss, test_cardinality, accuracy
+
+    class Client(flwr.client.KerasClient):
+        def get_weights(self):
+            return client_configs[1].model.get_weights()
+
+        def fit(self, parameters, config):
+            client_configs[1].model.set_weights(parameters)
+            history = client_configs[1].model.fit(client_configs[1].train_dataset, validation_data=client_configs[1].test_dataset, validation_steps=dataset_configs[0].val_steps, epochs=args.epochs)
+            results = {
+                "loss": history.history["loss"],
+                "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
+                "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
+                "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
+            }
+
+            train_cardinality = len(client_configs[1].train_dataset)
+            accuracy = results["sparse_categorical_accuracy"]
+            accuracy = int(accuracy[0])
+
+            return client_configs[1].model.get_weights(), train_cardinality, accuracy
+
+        def evaluate(self, parameters, config):
+            client_configs[1].model.set_weights(parameters)
+            results = client_configs[1].model.evaluate(client_configs[1].test_dataset, verbose=1)
+            results = {
+                    "loss": results[0],
+                    "sparse_categorical_crossentropy": results[1],
+                    "sparse_categorical_accuracy": results[2],
+                    "scaled_adversarial_loss": results[3],
+            }
+
+            loss = int(results["loss"])
+            accuracy = int(results["sparse_categorical_accuracy"])
+            test_cardinality = len(client_configs[1].test_dataset)
+
+            return loss, test_cardinality, accuracy
+    
+    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())

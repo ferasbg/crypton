@@ -58,26 +58,28 @@ def build_base_server_model(num_classes : int):
 # todo: test the corruptions for corruption regularization
 # todo: fix strategy that is freezing up GRPC
 # todo: setup exp configs; hardcode the graphs that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
-
-# create a list of type tuple[tuple[np.ndarray, np.ndarray]]
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 # todo: test partition code given client idx
 
-# partition is in iterable value from the range of 0 to 9
+def load_train_partition(idx: int):
+    # the declaration is in terms of a tuple to the assignment with the respective load partition function
+    assert idx in range(10)
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    x_train = tf.cast(x_train, dtype=tf.float32)
+    x_test = tf.cast(x_test, dtype=tf.float32)
+    
+    # process the same dataset
+    return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
+
+def load_test_partition(idx : int):
+    assert idx in range(10)
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    x_train = tf.cast(x_train, dtype=tf.float32)
+    x_test = tf.cast(x_test, dtype=tf.float32)
+    return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
 dataset_config = DatasetConfig(client_partition_idx=0)
-partition_x_train, partition_y_train, partition_x_test, partition_y_test = dataset_config.load_partition(0)  
-print(type(partition_x_train))
-print(len(partition_x_train))
+x_train, y_train = load_train_partition(0)
+x_test, y_test = load_test_partition(0)
+train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-print(type(partition_y_train))
-print(len(partition_y_train))
-
-print(type(partition_x_test))
-print(len(partition_x_test))
-
-print(type(partition_y_test))
-print(len(partition_y_test))
-
-train_data = tf.data.Dataset.from_tensor_slices({'image': partition_x_train, 'label': partition_y_train}).batch(32)
-val_data = tf.data.Dataset.from_tensor_slices({'image': partition_x_test, 'label': partition_y_test}).batch(32)

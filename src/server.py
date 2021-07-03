@@ -73,26 +73,23 @@ def main(args) -> None:
     # create model
     model = build_base_server_model(num_classes=10)
 
-    # # create strategy; later use args.strategy
+    if ((args.strategy).lower() == "fedavg"):
+        strategy = FedAvg()    
+        # strategy = flwr.server.strategy.FedAvg(
+        #     fraction_fit=0.3,
+        #     fraction_eval=0.2,
+        #     min_fit_clients=3,
+        #     min_eval_clients=2,
+        #     min_available_clients=10,
+        #     eval_fn=get_eval_fn(model),
+        #     # strategy based on user-written wrapper functions
+        #     on_fit_config_fn=fit_config,
+        #     on_evaluate_config_fn=evaluate_config,
+        #     initial_parameters=model.get_weights(),
+        # )
 
     #fed_adagrad = FedAdagrad(initial_parameters=model.get_weights())
-
-    # todo: write if (args.strategy == "fedavg"): strategy = FedAvg() elif (args.strategy == "fedadagrad"): strategy = FedAdagrad()
-    if ((args.strategy).lower() == "fedavg"):
-        strategy = flwr.server.strategy.FedAvg(
-            fraction_fit=0.3,
-            fraction_eval=0.2,
-            min_fit_clients=3,
-            min_eval_clients=2,
-            min_available_clients=10,
-            eval_fn=get_eval_fn(model),
-            # strategy based on user-written wrapper functions
-            on_fit_config_fn=fit_config,
-            on_evaluate_config_fn=evaluate_config,
-            initial_parameters=model.get_weights(),
-        )
-
-    if ((args.strategy).lower() == "fedadagrad"):
+    if (args.strategy == "fedadagrad"):
         # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor 
         initial_parameters = model.get_weights()
         tensor_parameters = []
@@ -100,13 +97,11 @@ def main(args) -> None:
         for element in initial_parameters:
             tensor_list.append(element)
         
-        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding
-        
+        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding in odd weight list elements.
         strategy = FedAdagrad(initial_parameters=tensor_parameters)
     
-    default_strategy = FedAvg()    
     # todo: pass strategy when testing for gRPC freeze and resolve error    
-    flwr.server.start_server(strategy=default_strategy, server_address="[::]:8080", config={
+    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
                              "num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
@@ -117,6 +112,8 @@ def get_eval_fn(model):
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
+    
+    # todo: perturb the dataset with perturb_on_batch() and adv_model; the parameters must be consistent with the existing experiment; we are running python3 server.py and client.py, so this means that the adv_step_size and adv_grad_norm must be consistent during the iteration.
 
     # x_train, x_test = x_train / 255.0, x_test / 255.0
     # for batch in train_dataset_for_base_model:
@@ -131,7 +128,7 @@ def get_eval_fn(model):
     ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
 
         model.set_weights(weights)  # Update model with the latest parameters
-        # convert from tuples to dicts if this
+        # this inner function unpacks the tuples into the loss and accuracy just fine it seems
         loss, accuracy = model.evaluate(x_test, y_test)
         # get dict of history in evaluation, and return
         return loss, {"accuracy": accuracy}
@@ -167,7 +164,7 @@ def setup_server_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Server")
     # configurations
     parser.add_argument("--num_rounds", type=int, required=False, default=3)
-    parser.add_argument("--strategy", type=str, required=False, default=None)
+    parser.add_argument("--strategy", type=str, required=False, default="fedavg")
     # hardcode or configure with args? optional
     parser.add_argument("--fraction_fit", type=float,
                         required=False, default=0.05)
@@ -181,7 +178,6 @@ def setup_server_parse_args():
                         type=int, required=False, default=2)
     args = parser.parse_args()
     return args
-
 
 if __name__ == "__main__":
     # configure the args object when the file is run and it'll be processed into main function and into target objects in question
