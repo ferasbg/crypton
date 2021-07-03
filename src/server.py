@@ -95,16 +95,13 @@ def main(args) -> None:
         #     initial_parameters=model.get_weights(),
         # )
 
-    #fed_adagrad = FedAdagrad(initial_parameters=model.get_weights())
+    # todo: resolve fedadagrad error 
     if (args.strategy == "fedadagrad"):
         # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor 
         initial_parameters = model.get_weights()
-        initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters))
-
-        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding in odd weight list elements. Get FedAdagrad functional.
+        initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters, dtype=tf.float32))
         strategy = FedAdagrad(initial_parameters=initial_parameters)
     
-    # todo: pass strategy when testing for gRPC freeze and resolve error    
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
                              "num_rounds": args.num_rounds})
 
@@ -122,15 +119,6 @@ def get_eval_fn(model):
 
     for batch in val_data:
         adv_model.perturb_on_batch(batch)
-
-    # todo: perturb the dataset with perturb_on_batch() and adv_model; the parameters must be consistent with the existing experiment; we are running python3 server.py and client.py, so this means that the adv_step_size and adv_grad_norm must be consistent during the iteration.
-
-    # x_train, x_test = x_train / 255.0, x_test / 255.0
-    # for batch in train_dataset_for_base_model:
-    #     adv_model.perturb_on_batch(batch)
-
-    # for batch in test_dataset_for_base_model:
-    #     adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(

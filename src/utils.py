@@ -133,12 +133,6 @@ class Data:
 
     "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
-    Usage:
-        # for batch in train_set_for_adv_model:
-        #     adv_model.perturb_on_batch(batch)
-        #     for element in batch:
-        #         element = Data.apply_noise_image_degrade(element, noisa_sigma=0.05)
-        #         element = Data.apply_blur_corruption(element, "gaussian_blur")
 
 
 
@@ -281,6 +275,21 @@ class Data:
     def perturb_dataset_partition(partition, adv_model : nsl.keras.AdversarialRegularization, params : HParams):
         '''
         Server-side dataset perturbation.
+
+        Usage:
+            
+            # perturb dataset for server model
+            (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+            #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+            x_test, y_test = x_train[-10000:], y_train[-10000:]
+            # make BatchDataset
+            val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+            params = HParams(10, 0.02, 0.05, "infinity")
+            adv_model = build_adv_model(params=params)
+
+            for batch in val_data:
+                adv_model.perturb_on_batch(batch)
+
         '''
         for batch in partition:
             adv_model.perturb_on_batch(batch)

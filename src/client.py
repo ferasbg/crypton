@@ -13,6 +13,11 @@ from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1
 
+# todo: add support for the corruptions (as baseline adversarial regularization technique)
+# todo: test all corruption functions in utils.Data
+# todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
+
+
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
         # when we iteratively update params and the dataset in terms of the current client being sampled for fit_round and eval_round, the config simplifies accessing the variables' state
@@ -34,6 +39,7 @@ class ClientConfig(object):
         self.validation_steps = validation_steps
         self.validation_split = validation_split
 
+# functions to convert tuple into BatchDataset to be processed in the client models
 def normalize(features):
   features['image'] = tf.cast(
       features['image'], dtype=tf.float32) / 255.0
@@ -47,8 +53,8 @@ def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_
 
 class DatasetConfig:
     '''
-        m --> AdvRegClientConfig --> AdvRegClient
-        DatasetConfig --> ClientCOnfig --> Client
+        DatasetConfig --> AdvRegClientConfig --> AdvRegClient
+        DatasetConfig --> ClientConfig --> Client
     '''
     def __init__(self, client_partition_idx : int):
         self.datasets = tfds.load('mnist')
@@ -62,23 +68,25 @@ class DatasetConfig:
         x_test = tf.cast(x_test, dtype=tf.float32)
 
         self.val_steps = x_test.shape[0] / 32
-        self.client_partition_idx = client_partition_idx
         # partition the tuple[np.ndarray, np.ndarray] before passing it into the partitioned BatchDataset to process into the client model in the AdvRegClient
-        self.x_train, self.y_train = self.load_train_partition(x_train, y_train)
+        self.x_train, self.y_train = self.load_train_partition(idx=client_partition_idx)
         self.x_test, self.y_test = self.load_test_partition(x_test, y_test)
         # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.x_train, 'label': self.y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.x_test, 'label': self.y_test}).batch(32)
  
-    def load_train_partition(self, x_train, y_train):
+    def load_train_partition(idx: int):
+        assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
-        return (x_train[self.client_partition_idx * 5000 : (self.client_partition_idx + 1) * 5000], y_train[self.client_partition_idx * 5000 : (self.client_partition_idx + 1) * 5000])
+        # process the same dataset
+        return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
 
-    def load_test_partition(self, x_test, y_test):
+    def load_test_partition(idx : int):
+        assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_test = tf.cast(x_test, dtype=tf.float32)
-        return (x_test[self.client_partition_idx * 1000 : (self.client_partition_idx + 1) * 1000], y_test[self.client_partition_idx * 1000 : (self.client_partition_idx + 1) * 1000])
+        return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -186,13 +194,13 @@ def build_gaussian_adv_model(params : HParams):
 def setup_client_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
-    parser.add_argument("--num_partitions", type=int, choices=range(0, 10), required=False)
-    parser.add_argument("--client_partition_idx", type=int, choices=range(0,10), required=False, default=0)
+    parser.add_argument("--client_partition_idx", type=int, choices=range(0,10), required=False, default=1)
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
     parser.add_argument("--batch_size", type=int, required=False, default=32)
     parser.add_argument("--epochs", type=int, required=False, default=1)
+    parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--adv_reg", type=bool, required=False, default=True)
@@ -209,7 +217,6 @@ def main(args):
     
     '''
 
-    # setup models; configure so that it can be setup with args; we could create an args object
     params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     # configure client train/test partition based on the client partition idx
     dataset_config = DatasetConfig(args.client_partition_idx)
@@ -233,7 +240,8 @@ def main(args):
 
     else:
         model = base_model
-        
+    
+    # setup config objects for clients 
     adv_client_config = AdvRegClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
     client_config = ClientConfig(model=model, params=params, train_dataset=dataset_config.train_data, test_dataset=dataset_config.val_data, validation_steps=dataset_config.val_steps)
     client_configs.append(adv_client_config)
@@ -243,7 +251,6 @@ if __name__ == '__main__':
     # setup client parser to handle user args
     client_parser = setup_client_parse_args()
     args = client_parser.parse_args()
-    # setup config objects to be used for the target clients
     main(args)
         
     class AdvRegClient(flwr.client.KerasClient):
@@ -253,7 +260,7 @@ if __name__ == '__main__':
         def fit(self, parameters, config):
             client_configs[0].model.set_weights(parameters)
             # dataset_config creates the partitions, and loads the partition based on the index (in .sh loop) for the train/val data BatchDataset objects to be passed in the client_configs[0] object, so that the data in each client config object is the partition only, not the original dataset
-            history = client_configs[0].model.fit(client_configs[0].train_dataset, validation_data=client_configs[0].test_dataset, validation_steps=dataset_configs[0].val_steps, epochs=args.epochs)
+            history = client_configs[0].model.fit(client_configs[0].train_dataset, validation_data=client_configs[0].test_dataset, validation_steps=dataset_configs[0].val_steps, steps_per_epoch=args.steps_per_epoch, epochs=args.epochs)
             results = {
                 "loss": history.history["loss"],
                 "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],
@@ -289,7 +296,7 @@ if __name__ == '__main__':
 
         def fit(self, parameters, config):
             client_configs[1].model.set_weights(parameters)
-            history = client_configs[1].model.fit(client_configs[1].train_dataset, validation_data=client_configs[1].test_dataset, validation_steps=dataset_configs[0].val_steps, epochs=args.epochs)
+            history = client_configs[1].model.fit(client_configs[1].train_dataset, validation_data=client_configs[1].test_dataset, validation_steps=dataset_configs[0].val_steps, steps_per_epoch=args.steps_per_epoch, epochs=args.epochs)
             results = {
                 "loss": history.history["loss"],
                 "sparse_categorical_crossentropy": history.history["sparse_categorical_crossentropy"],

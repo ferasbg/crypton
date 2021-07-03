@@ -32,6 +32,9 @@ from client import *
 
 warnings.filterwarnings("ignore")
 
+# todo: test the corruptions for corruption regularization
+# todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
+
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
@@ -54,12 +57,6 @@ def build_base_server_model(num_classes : int):
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-# todo: setup the client train and test partitions based on the idx; assume 10 clients only
-# todo: test the corruptions for corruption regularization
-# todo: fix strategy that is freezing up GRPC
-# todo: setup exp configs; hardcode the graphs that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
-# todo: test partition code given client idx
-
 def load_train_partition(idx: int):
     # the declaration is in terms of a tuple to the assignment with the respective load partition function
     assert idx in range(10)
@@ -77,29 +74,23 @@ def load_test_partition(idx : int):
     x_test = tf.cast(x_test, dtype=tf.float32)
     return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
-# todo: test if the partitions are functional
+for i in range(10):
+    print("iterating over the train and test partition creation....")
+    x_train, y_train = load_train_partition(idx=i)
+    assert len(x_train) == 5000
+    if (len(x_train) == 5000 and len(y_train) == 5000):
+        print("the train data has been partitioned")
+    assert len(y_train) == 5000
+    x_test, y_test = load_test_partition(i)
+    assert len(x_test) == 1000
+    assert len(y_test) == 1000
 
-dataset_config = DatasetConfig(client_partition_idx=0)
-x_train, y_train = load_train_partition(0)
-x_test, y_test = load_test_partition(0)
-train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
-val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+    if (len(x_test) == 1000 and len(y_test) == 1000):
+        print("the test data has been partitioned")
 
 
-# todo: test if the perturbation attack works on the data
+    train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-# perturb dataset for server model
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-#x_test, y_test = x_train[45000:50000], y_train[45000:50000]
-x_test, y_test = x_train[-10000:], y_train[-10000:]
-# make BatchDataset
-val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-params = HParams(10, 0.02, 0.05, "infinity")
-adv_model = build_adv_model(params=params)
-
-for batch in val_data:
-    adv_model.perturb_on_batch(batch)
-
-print(len(val_data))
-for element in val_data:
-    print(element)
+xx_train, yy_train = load_train_partition(idx=0)
+print(len(xx_train), len(yy_train))

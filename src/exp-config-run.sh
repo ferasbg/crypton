@@ -1,6 +1,36 @@
 #!/bin/bash
 
 NUM_CLIENTS = 10
+
+# setup iterative for loops dependent on the variables you are testing for > nesting particular exp configs where 1 variable is changed, etc;
+    # example: you iterate over all the combinations of configs given that 1 variable and the other variables that ofc are not touched are held constant
+
+# base exp config 1: l-infinity epsilon perturbation norm; should the magnitude of perturbation norms change per client? These questions should be ironed out.
+python3 server.py --num_rounds=1 --strategy="fedavg" &
+python3 client.py --client_partition_idx=0 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=1 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=2 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=3 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=4 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=5 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=6 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=7 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=8 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=9 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+
+# l2 epsilon perturbation norm
+python3 server.py --num_rounds=1 --strategy="fedavg" &
+python3 client.py --client_partition_idx=0 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=1 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=2 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=3 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=4 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=5 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=6 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=7 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=8 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+python3 client.py --client_partition_idx=9 --adv_grad_norm="l2" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --adv_reg=True --epochs=1 --gaussian_layer=False 
+
 # process args from client.py and server.py such that they edit the variables passed to the target objects in each "component" file
 # essentially run the server.py file but then shut down the server after the client set has been executed. Note that partitions work the same, but the configurations specific to the strategy selected, adversarial hyperparameters, and so on, are all different and may iteratively increase, etc.
 # hardcode configurations without abstracting them to exp_config in this shell file
