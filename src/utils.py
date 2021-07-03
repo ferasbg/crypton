@@ -54,6 +54,8 @@ import imagedegrade
 from imagedegrade import np as degrade
 from imagecorruptions import corrupt
 
+# todo: add support for shards for partitioning client model data
+
 def scheduler(epoch, lr):
     if epoch < 5:
         return lr
@@ -107,22 +109,29 @@ class Data:
     '''
     This class handles processing data corruption, data preprocessing, and data utilities.
 
-    - goal: using image processing techniques as a form of regularization through the data sent through the client models to evaluate better on real-world "adversarial examples". Structured signals from adv. regularization relation to entropy and adaptive federated optimization and effects from combined methods of data "regularization" to generate robust adversarial examples for the purpose of building a robust server-client model infrastructure.
-    - process: perturb dtype=uint8 x_train before it's casted to tf.float32
-    - note: modifying image fidelity as a means of regularization through the data and not the model
-    - note: Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
-    - note: u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
-    - note: if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
-    - note: use np.random.seed() to generate a seed value for noise vector to apply
-    - note: image degradation and corruptions ARE perturbations/transformations etc. (perhaps by the means of distortion, blur, etc)
-    - question: how do ppl generally map the gradients of the network with its image data processed to maximize its loss? fgsm
-    - question: how do ppl tell the difference between how model architecture affects robustness ? under an attack of course and assuming adv. reg. in training
-    - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
-    - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
-    - FedAdagrad helps server model converge on heteregeneous data better; that's all
-    - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+    Notes:
+        
+        - goal: using image processing techniques as a form of regularization through the data sent through the client models to evaluate better on real-world "adversarial examples". Structured signals from adv. regularization relation to entropy and adaptive federated optimization and effects from combined methods of data "regularization" to generate robust adversarial examples for the purpose of building a robust server-client model infrastructure.
+        - process: perturb dtype=uint8 x_train before it's casted to tf.float32
+        - note: modifying image fidelity as a means of regularization through the data and not the model
+        - note: Perturbation Theory is relevant if we view the lense of our network through a dynamical systems perspective and evaluate it on those terms, also with respect to its adversarial robustness (its components contributions to it at the very least)
+        - note: u can either generalize well to optimized resolution passed to ur model or fit well to the existing data that was damaged
+        - note: if we can apply random transformations with a gaussian distribution ALONG with randomness, I think the model will do a lot better with a norm-bounded and mathematically fixed perturbation radius for each scalar in the image codec's matrix
+        - note: use np.random.seed() to generate a seed value for noise vector to apply
+        - note: image degradation and corruptions ARE perturbations/transformations etc. (perhaps by the means of distortion, blur, etc)
+        - question: how do ppl generally map the gradients of the network with its image data processed to maximize its loss? fgsm
+        - question: how do ppl tell the difference between how model architecture affects robustness ? under an attack of course and assuming adv. reg. in training
+        - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
+        - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
+        - FedAdagrad helps server model converge on heteregeneous data better; that's all
+        - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+
+    Research Notes:
+        - In leu of structured signals, graph representations, and graph learning, here's a reference for the paper nsl depends on:
+        - "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
     References:
+
         @article{michaelis2019dragon,
         title={Benchmarking Robustness in Object Detection:
             Autonomous Driving when Winter is Coming},
@@ -134,58 +143,46 @@ class Data:
         year={2019}
         }
 
-    In leu of structured signals, graph representations, and graph learning, here's a reference for the paper nsl depends on:
-
-    "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
-
-
-
-
+    
     '''
+
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
 
     @staticmethod
-    def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
-        '''For the paper, misc corruptions will not be used.'''
-        # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
-        misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
-        for corruption_str in misc_corruption_set:
-            if (corruption_name == corruption_str):
-                image = imagecorruptions.corrupt(image, corruption_name=corruption_str, severity=1)
-
-        return image
-
-    @staticmethod
-    def apply_blur_corruption(image : np.ndarray, blur_corruption_name : str) -> np.ndarray:
+    def apply_blur_corruption(image, corruption_name : str):
         # iter over blur corruptions
+        # photons, fidelity reference for image data and non-convex transformations
         # support a subset that is relevant to imperceptible fidelity change from source np.ndarray matrix distribution
         blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+        image = corrupt(image, corruption_name=corruption_name, severity=1)
         return image
 
     @staticmethod
-    def apply_data_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
+    def apply_data_corruption(image, corruption_name : str):
         # apply_data_corruptions --> jpeg_compression
         data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+        image = corrupt(image, corruption_name=corruption_name, severity=1)
         return image
 
     @staticmethod
-    def apply_noise_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:
-        # apply_noise_corruptions --> gaussian noise (omit and figure out nsl backend implementation with tf.GradientTape as tape), shot noise, impulse noise, etc
+    def apply_noise_corruption(image, corruption_name : str):
+        # args.gaussian_reg --> invokes gaussian_base_model with tf.keras.GaussianNoise(stddev=0.2) which is an equivalent of imagecorruptions.corrupt(image, corruption_name="gaussian_noise")
         # iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
-        noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
+        noise_corruption_set = ["shot_noise", "impulse_noise", "speckle_noise"]
+        image = corrupt(image, corruption_name=corruption_name, severity=1)
         return image
 
     @staticmethod
-    def apply_noise_image_degrade(image : np.ndarray, noise_sigma : float):
+    def apply_noise_image_degrade(image, noise_sigma : float):
         # noise_sigma specifies gaussian_noise_stdev
         image = imagedegrade.np.noise(image, noise_sigma)
         return image
 
     @staticmethod
-    def image_compression_distortion(image : np.ndarray, intensity_range=0.1):
+    def image_compression_distortion(image, intensity_range=0.1):
         # either process per batch or the entire dataset before it's processed into network's input layer
         # distortion is not the same as data/resolution loss
         jpeg_quality = 85 # 85% distortion
@@ -310,4 +307,17 @@ class Data:
         # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
         return []
 
-    
+    @staticmethod    
+    def load_train_partition_for_100_clients(idx: int):
+        # 500/100 train/test split per partition e.g. per client
+        # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        assert idx in range(100)
+        # 5000/50000 --> 500/50000
+        return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
+
+    @staticmethod    
+    def load_test_partition_for_100_clients(idx : int):
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        assert idx in range(100)
+        return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])

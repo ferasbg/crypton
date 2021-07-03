@@ -17,7 +17,7 @@ NUM_CLIENTS = 10
 
 python3 server.py --num_rounds=1 --strategy="fedavg" &
 python3 client.py --client_partition_idx=0 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1 
-python3 client.py --client_partition_idx=1 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1 
+python3 client.py --client_partition_idx=1 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1
 python3 client.py --client_partition_idx=2 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1 
 python3 client.py --client_partition_idx=3 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1 
 python3 client.py --client_partition_idx=4 --adv_grad_norm="infinity" --adv_step_size=0.05 --steps_per_epoch=1 --num_clients=10 --nsl_reg=True --epochs=1 

@@ -60,48 +60,41 @@ class DatasetConfig(object):
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
         x_test = tf.cast(x_test, dtype=tf.float32)
+
         self.val_steps = x_test.shape[0] / 32
-
-        # partition data before passing into BatchDataset object
-        if (args.num_clients in range(10) and args.num_clients < 11):
-            self.x_train, self.y_train = self.load_train_partition_for_10_clients(idx=client_partition_idx)
-            self.x_test, self.y_test = self.load_test_partition_for_10_clients(idx=client_partition_idx)
-            # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig
+        (x_train, y_train), (x_test, y_test) = self.load_partition(idx=client_partition_idx)
         
-        if (args.num_clients in range(100) and args.num_clients > 10):
-            (self.x_train, self.y_train) = self.load_train_partition_for_100_clients(idx=client_partition_idx)
-            (self.x_test, self.y_test) = self.load_test_partition_for_100_clients(idx=client_partition_idx)
-
         # Partitioned BatchDataset
-        self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.x_train, 'label': self.y_train}).batch(32)
-        self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.x_test, 'label': self.y_test}).batch(32)
+        self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+        self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-    def load_train_partition_for_10_clients(idx: int):
+    def load_partition(self, idx : int):
+        assert idx in range(10)
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        return (
+            x_train[idx * 5000 : (idx + 1) * 5000],
+            y_train[idx * 5000 : (idx + 1) * 5000],
+        ), (
+            x_test[idx * 1000 : (idx + 1) * 1000],
+            y_test[idx * 1000 : (idx + 1) * 1000],
+        )
+
+    def load_train_partition(self, idx: int):
+        # the declaration is in terms of a tuple to the assignment with the respective load partition function
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+        
         # process the same dataset
         return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
 
-    def load_test_partition_for_10_clients(idx : int):
+    def load_test_partition(self, idx : int):
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
         x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
-    
-    def load_train_partition_for_100_clients(idx: int):
-        # 500/100 train/test split per partition e.g. per client
-        # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        assert idx in range(100)
-        # 5000/50000 --> 500/50000
-        return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
-
-    def load_test_partition_for_100_clients(idx : int):
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        assert idx in range(100)
-        return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])
-
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -209,17 +202,17 @@ def build_gaussian_adv_model(params : HParams):
 def setup_client_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
-    parser.add_argument("--client_partition_idx", type=int, choices=range(0,10), required=False, default=1)
+    parser.add_argument("--client_partition_idx", type=int, required=False, default=0)
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
-    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
+    parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
     parser.add_argument("--batch_size", type=int, required=False, default=32)
     parser.add_argument("--epochs", type=int, required=False, default=1)
     parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--nsl_reg", type=bool, required=False, default=True)
-    parser.add_argument("--gaussian_reg", type=bool, required=False, default=True)
+    parser.add_argument("--gaussian_reg", type=bool, required=False, default=False)
     # given that there's a set of image corruptions and that 1 can only be applied at a time, should we measure with different types of image corruptions then? Perhaps test the idea of non-convex transformations and their effect on CNN mechanics, or perhaps sets up the discussion to address these situational nuances as a result of the corruption of choice.
     parser.add_argument("--corruption_reg", type=bool, required=False, default=True)
     # todo: add specific corruption attacks for regularization rather than "corruption as regularization" 
@@ -237,7 +230,7 @@ def main(args):
 
     params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     # configure client train/test partition based on the client partition idx
-    dataset_config = DatasetConfig(args.client_partition_idx)
+    dataset_config = DatasetConfig(args.client_partition_idx, args)
     dataset_configs.append(dataset_config)
     
     # build models
@@ -246,15 +239,12 @@ def main(args):
     gaussian_base_model = build_gaussian_base_model(params=params)
     gaussian_adv_model = build_gaussian_adv_model(params=params)
 
-    # select model
-    if (args.adv_reg):
-        if (args.gaussian_layer):
-            model = gaussian_adv_model
-        else:
-            model = adv_model
+    # select model; the exp config restricts to 1 adv reg technique per client execution for a client set
+    if (args.nsl_reg):
+        model = adv_model
 
-    elif (args.gaussian_layer and args.adv_reg == False):
-        model = gaussian_base_model
+    if (args.gaussian_reg):
+        model = gaussian_base_model 
 
     else:
         model = base_model

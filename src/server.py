@@ -80,8 +80,8 @@ def main(args) -> None:
     # create model
     model = build_base_server_model(num_classes=10)
 
-    if ((args.strategy).lower() == "fedavg"):
-        strategy = FedAvg()    
+    if (args.strategy == "fedavg"):
+        strategy = FedAvg()
         # strategy = flwr.server.strategy.FedAvg(
         #     fraction_fit=0.3,
         #     fraction_eval=0.2,
@@ -95,14 +95,16 @@ def main(args) -> None:
         #     initial_parameters=model.get_weights(),
         # )
 
-    # todo: resolve fedadagrad error 
+    # todo: resolve fedadagrad error
     if (args.strategy == "fedadagrad"):
-        # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor 
+        # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor
         initial_parameters = model.get_weights()
         initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters, dtype=tf.float32))
         strategy = FedAdagrad(initial_parameters=initial_parameters)
-    
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
+
+    # remove strategy parameter
+    # todo: add strategy parameter without gRPC freeze; happens because of infinite loop running in some library backend or an supported ValueError
+    flwr.server.start_server(server_address="[::]:8080", config={
                              "num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
@@ -177,7 +179,7 @@ def setup_server_parse_args():
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
-    
+
     args = parser.parse_args()
     return args
 
