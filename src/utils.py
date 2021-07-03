@@ -59,7 +59,7 @@ def scheduler(epoch, lr):
         return lr
     else:
         return lr * tf.math.exp(-0.1)
-
+        
 class HParams(object):
     '''
         adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.

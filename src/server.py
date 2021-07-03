@@ -25,9 +25,17 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
+from utils import *
+from client import *
+
+class ServerConfig(object):
+    # server-side model and server configurations
+    def __init__(self):
+        self.fed_adagrad = FedAdagrad()
+        self.fed_avg = FedAvg()
+
 
 warnings.filterwarnings("ignore")
-
 
 def build_base_server_model(num_classes: int):
     input_layer = layers.Input(
@@ -62,7 +70,6 @@ def build_base_server_model(num_classes: int):
                   loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-
 def main(args) -> None:
     # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
 
@@ -92,13 +99,10 @@ def main(args) -> None:
     if (args.strategy == "fedadagrad"):
         # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor 
         initial_parameters = model.get_weights()
-        tensor_parameters = []
-        tensor_list = []
-        for element in initial_parameters:
-            tensor_list.append(element)
-        
-        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding in odd weight list elements.
-        strategy = FedAdagrad(initial_parameters=tensor_parameters)
+        initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters))
+
+        # todo: convert each element into a tf.Tensor regardless of one-hot vector embedding in odd weight list elements. Get FedAdagrad functional.
+        strategy = FedAdagrad(initial_parameters=initial_parameters)
     
     # todo: pass strategy when testing for gRPC freeze and resolve error    
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
@@ -112,7 +116,13 @@ def get_eval_fn(model):
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
-    
+    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+    params = HParams(10, 0.02, 0.05, "infinity")
+    adv_model = build_adv_model(params=params)
+
+    for batch in val_data:
+        adv_model.perturb_on_batch(batch)
+
     # todo: perturb the dataset with perturb_on_batch() and adv_model; the parameters must be consistent with the existing experiment; we are running python3 server.py and client.py, so this means that the adv_step_size and adv_grad_norm must be consistent during the iteration.
 
     # x_train, x_test = x_train / 255.0, x_test / 255.0
@@ -148,7 +158,6 @@ def fit_config(rnd: int):
     }
     return config
 
-
 def evaluate_config(rnd: int):
     """Return evaluation configuration dict for each round.
 
@@ -158,7 +167,6 @@ def evaluate_config(rnd: int):
     """
     val_steps = 5 if rnd < 4 else 10
     return {"val_steps": val_steps}
-
 
 def setup_server_parse_args():
     parser = argparse.ArgumentParser(description="Crypton Server")
@@ -176,6 +184,10 @@ def setup_server_parse_args():
                         required=False, default=2)
     parser.add_argument("--min_available_clients",
                         type=int, required=False, default=2)
+    parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
+    parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
+    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
+    
     args = parser.parse_args()
     return args
 

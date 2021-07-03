@@ -28,7 +28,7 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 from keras import backend as K
 
 from utils import *
-from client import DatasetConfig, ServerConfig, ClientConfig, AdvRegClientConfig, AdvRegClient, ExperimentConfig
+from client import *
 
 warnings.filterwarnings("ignore")
 
@@ -77,9 +77,29 @@ def load_test_partition(idx : int):
     x_test = tf.cast(x_test, dtype=tf.float32)
     return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
+# todo: test if the partitions are functional
+
 dataset_config = DatasetConfig(client_partition_idx=0)
 x_train, y_train = load_train_partition(0)
 x_test, y_test = load_test_partition(0)
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
+
+# todo: test if the perturbation attack works on the data
+
+# perturb dataset for server model
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+#x_test, y_test = x_train[45000:50000], y_train[45000:50000]
+x_test, y_test = x_train[-10000:], y_train[-10000:]
+# make BatchDataset
+val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+params = HParams(10, 0.02, 0.05, "infinity")
+adv_model = build_adv_model(params=params)
+
+for batch in val_data:
+    adv_model.perturb_on_batch(batch)
+
+print(len(val_data))
+for element in val_data:
+    print(element)
