@@ -50,42 +50,58 @@ def convert_to_tuples(features):
 def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
   return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
-class DatasetConfig:
+class DatasetConfig(object):
     '''
         DatasetConfig --> AdvRegClientConfig --> AdvRegClient
         DatasetConfig --> ClientConfig --> Client
     '''
-    def __init__(self, client_partition_idx : int):
-        self.datasets = tfds.load('mnist')
-        self.map_train_dataset = self.datasets['train']
-        self.map_test_dataset = self.datasets['test']
-        self.train_dataset_for_base_model = self.map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
-        self.test_dataset_for_base_model = self.map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
+    def __init__(self, client_partition_idx : int, args):
         
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
         x_test = tf.cast(x_test, dtype=tf.float32)
-
         self.val_steps = x_test.shape[0] / 32
-        # partition the tuple[np.ndarray, np.ndarray] before passing it into the partitioned BatchDataset to process into the client model in the AdvRegClient
-        self.x_train, self.y_train = self.load_train_partition(idx=client_partition_idx)
-        self.x_test, self.y_test = self.load_test_partition(x_test, y_test)
-        # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig
+
+        # partition data before passing into BatchDataset object
+        if (args.num_clients in range(10) and args.num_clients < 11):
+            self.x_train, self.y_train = self.load_train_partition_for_10_clients(idx=client_partition_idx)
+            self.x_test, self.y_test = self.load_test_partition_for_10_clients(idx=client_partition_idx)
+            # train_data that processes the BatchDataset using x_train and y_train in DatasetConfig
+        
+        if (args.num_clients in range(100) and args.num_clients > 10):
+            (self.x_train, self.y_train) = self.load_train_partition_for_100_clients(idx=client_partition_idx)
+            (self.x_test, self.y_test) = self.load_test_partition_for_100_clients(idx=client_partition_idx)
+
+        # Partitioned BatchDataset
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': self.x_train, 'label': self.y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': self.x_test, 'label': self.y_test}).batch(32)
- 
-    def load_train_partition(idx: int):
+
+    def load_train_partition_for_10_clients(idx: int):
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
         # process the same dataset
         return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
 
-    def load_test_partition(idx : int):
+    def load_test_partition_for_10_clients(idx : int):
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
+    
+    def load_train_partition_for_100_clients(idx: int):
+        # 500/100 train/test split per partition e.g. per client
+        # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        assert idx in range(100)
+        # 5000/50000 --> 500/50000
+        return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
+
+    def load_test_partition_for_100_clients(idx : int):
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        assert idx in range(100)
+        return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])
+
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")

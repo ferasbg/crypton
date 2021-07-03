@@ -58,6 +58,10 @@ for exp_config in exp_config_set:
 - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
 
 ## Adversarial Regularization Techniques
+The goal is to assess what optimization techniques (as regularization) help model convergence at the client-level to start answering the question with what strategy it works best with in order to help the server-side model against norm-bounded perturbation attacks during evaluation.
+
+Theoretically, you can make relationships between the ideas of surface variations as non-uniform perturbations that help the models converge well without overfitting. But you can also argue that forms of "data augmentation" done through the technique formalized by neural structured learning (which generates non-convex norm-bounded sets based on the input sample as neighbors to regularize the model). You can then relate these ideas to the data and the strategy. For an example, if your aggregation strategy to update the server model with the least amount of data (sparsity) and computation (in a production system, this is crucial), then relating both the ideas of the most optimal adversarial regularization technique and what strategy it works best with based on how it configures client-level data can help build more robust federated learning systems in general.
+
 - Target Technique: Neural Structured Learning
 - Baseline Set C: Image Degradation
 - Baseline Set N: Gaussian Noise Regularization

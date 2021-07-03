@@ -62,13 +62,19 @@ def scheduler(epoch, lr):
         
 class HParams(object):
     '''
+    Args:
         adv_multiplier: The weight of adversarial loss in the training objective, relative to the labeled loss.
         adv_step_size: The magnitude of adversarial perturbation.
         adv_grad_norm: The norm to measure the magnitude of adversarial perturbation.
 
+    Notes:
+        - Note that a convolutional neural network is generally defined by a function F(x, θ) = Y which takes an input (x) and returns a probability vector (Y = [y1, · · · , ym] s.t. P i yi = 1) representing the probability of the input belonging to each of the m classes. The input is assigned to the class with maximum probability (Rajabi et. al, 2021).
+
+    References:
+            - https://arxiv.org/abs/1409.1556
     '''
 
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, adv_reg_state=True):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
         # store model and its respective train/test dataset + metadata in parameters
         self.input_shape = [28, 28, 1]
         self.num_classes = num_classes
@@ -82,12 +88,20 @@ class HParams(object):
         self.adv_step_size = adv_step_size
         self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity" = l2_clip_norm if "l2"
         self.gaussian_state : bool = False
-        # if (params.gaussian_state): model = tf.keras.models.Model.add(params.gaussian_layer, stack_index=1)
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.clip_value_min = 0.0
         self.clip_value_max = 1.0
-        self.adv_reg_state = adv_reg_state
         self.callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
+        self.stride = 2
+        self.padding = 1
+        self.dilation = 1
+        self.epochs = 500
+        self.input_channels = 3
+        self.output_channels = 64  # number of channels produced by convolution
+        self.bias = False
+        # stabilize convergence to local minima for gradient descent
+        self.weight_decay_regularization = 0.003 
+        self.momentum = 0.05  # gradient descent convergence optimizer
 
 class Data:
     '''
@@ -103,19 +117,10 @@ class Data:
     - note: image degradation and corruptions ARE perturbations/transformations etc. (perhaps by the means of distortion, blur, etc)
     - question: how do ppl generally map the gradients of the network with its image data processed to maximize its loss? fgsm
     - question: how do ppl tell the difference between how model architecture affects robustness ? under an attack of course and assuming adv. reg. in training
-    - common corruptions:
-    - surface variations within corruptions for adv. reg. via data
     - goal: use corruptions/transformations/perturbations as adv.regularization other than nsl internal methods and GaussianNoise layer
     - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
     - FedAdagrad helps server model converge on heteregeneous data better; that's all
-
-    - iteratively use the subset of corruptions that can have psuedorandom noise vectors applied e.g. severity
     - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
-    - each config has 1 specific corruption applied along with structured signals for adv. regularization
-    - each config also has 1 specific federated strategy of course
-    - either way test all permutations iteratively
-    - first get base config working before extending to parse_args
-    - also define the setup so that parse_args can process correctly with simulation.py
 
     References:
         @article{michaelis2019dragon,
@@ -133,7 +138,6 @@ class Data:
 
     "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
-        blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
 
 
 
@@ -207,10 +211,6 @@ class Data:
             perturbed_batch[IMAGE_INPUT_NAME] = tf.clip_by_value(perturbed_batch[IMAGE_INPUT_NAME], 0.0, 1.0)
 
         return dataset
-
-    @staticmethod
-    def perturb_base_model_dataset(dataset, parameters : HParams):
-        pass
 
     @staticmethod
     def apply_corruptions_to_dataset(dataset, model, corruption_name : str):

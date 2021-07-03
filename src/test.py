@@ -95,3 +95,8 @@ def test_partition_functions():
 
 # todo: test corruption functions
 # given tuple of np.ndarrays for image, label iterables, apply a specified image degradation technique to test corruption functionality (print with cv2.imread(img) for img is img = array_to_img(element))
+datasets = tfds.load('mnist')
+map_train_dataset = datasets['train']
+map_test_dataset = datasets['test']
+train_dataset_for_base_model = map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
+test_dataset_for_base_model = map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
