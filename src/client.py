@@ -34,12 +34,6 @@ class ClientConfig(object):
         self.validation_steps = validation_steps
         self.validation_split = validation_split
 
-class ServerConfig(object):
-    # server-side model and server configurations
-    def __init__(self):
-        self.fed_adagrad = FedAdagrad()
-        self.fed_avg = FedAvg()
-
 def normalize(features):
   features['image'] = tf.cast(
       features['image'], dtype=tf.float32) / 255.0
