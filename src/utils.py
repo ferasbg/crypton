@@ -133,6 +133,7 @@ class Data:
 
     "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
 
+        blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
 
 
 
@@ -142,10 +143,9 @@ class Data:
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
 
-    # applying image corruptions is less of a priority than setting up adv. reg client and seeing errors there and ironing vs. dataset specific reg.
-    # the goal here is categorized corruptions; rather than just ad-hoc using every corruption there is
     @staticmethod
     def apply_misc_corruptions(image : np.ndarray, corruption_name : str) -> np.ndarray:
+        '''For the paper, misc corruptions will not be used.'''
         # apply_misc_corruptions (lighting, env conditions, edited/filtered data) --> spatter, saturate, fog, brightness, contrast
         misc_corruption_set = ["spatter", "saturate", "fog", "brightness", "contrast"]
         for corruption_str in misc_corruption_set:
@@ -160,7 +160,6 @@ class Data:
         # support a subset that is relevant to imperceptible fidelity change from source np.ndarray matrix distribution
         blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
         return image
-
 
     @staticmethod
     def apply_data_corruption(image : np.ndarray, corruption_name : str) -> np.ndarray:

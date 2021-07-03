@@ -32,9 +32,6 @@ from client import *
 
 warnings.filterwarnings("ignore")
 
-# todo: test the corruptions for corruption regularization
-# todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
-
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
@@ -74,23 +71,27 @@ def load_test_partition(idx : int):
     x_test = tf.cast(x_test, dtype=tf.float32)
     return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
-for i in range(10):
-    print("iterating over the train and test partition creation....")
-    x_train, y_train = load_train_partition(idx=i)
-    assert len(x_train) == 5000
-    if (len(x_train) == 5000 and len(y_train) == 5000):
-        print("the train data has been partitioned")
-    assert len(y_train) == 5000
-    x_test, y_test = load_test_partition(i)
-    assert len(x_test) == 1000
-    assert len(y_test) == 1000
+def test_partition_functions():
+    for i in range(10):
+        print("iterating over the train and test partition creation....")
+        x_train, y_train = load_train_partition(idx=i)
+        assert len(x_train) == 5000
+        if (len(x_train) == 5000 and len(y_train) == 5000):
+            print("the train data has been partitioned")
+        assert len(y_train) == 5000
+        x_test, y_test = load_test_partition(i)
+        assert len(x_test) == 1000
+        assert len(y_test) == 1000
 
-    if (len(x_test) == 1000 and len(y_test) == 1000):
-        print("the test data has been partitioned")
+        if (len(x_test) == 1000 and len(y_test) == 1000):
+            print("the test data has been partitioned")
 
 
-    train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
-    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+        train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+        val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-xx_train, yy_train = load_train_partition(idx=0)
-print(len(xx_train), len(yy_train))
+    xx_train, yy_train = load_train_partition(idx=0)
+    print(len(xx_train), len(yy_train))
+
+# todo: test corruption functions
+# given tuple of np.ndarrays for image, label iterables, apply a specified image degradation technique to test corruption functionality (print with cv2.imread(img) for img is img = array_to_img(element))

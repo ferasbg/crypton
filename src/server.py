@@ -119,6 +119,8 @@ def get_eval_fn(model):
 
     for batch in val_data:
         adv_model.perturb_on_batch(batch)
+        # untested function to clip norm values during perturbation to range(0, 1)
+        # batch['image'] = tf.clip_by_value(batch['image'], 0.0, 1.0)
 
     # The `evaluate` function will be called after every round
     def evaluate(

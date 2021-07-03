@@ -57,6 +57,19 @@ for exp_config in exp_config_set:
 - We can assume training with robust adversarial examples makes it robust against adversarial perturbations during inference (eval), but how does this process fair when there's a privacy-specific step of using client models to locally train on this data and use a federated optimization technique for server-side evaluation? How can we utilize unsupervised/semi-supervised learning and these "structured signals" to learn hidden representations in perturbed or otherwise corrupted data (image transformations) with applied gaussian noise (these configurations exist to simulate a real-world scenario). We want to then formalize this phenomenon and the results between each experimental configuration.
 - adv reg. --> how does this affect fed optimizer (regularized against adversarial attacks) and how would differences in fed optimizer affect adv. reg model? Seems like FedAdagrad is better on het. data, so if it was regularized anyway with adv. perturbation attacks, it should perform well against any uniform of non-uniform or non-bounded real-world or fixed norm perturbations.
 
+## Adversarial Regularization Techniques
+- Target Technique: Neural Structured Learning
+- Baseline Set C: Image Degradation
+- Baseline Set N: Gaussian Noise Regularization
+
+```python3
+blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
+
+```
+
+
 ## ExperimentalConfig
 - It's important to formalize both what experimental configs must be defined and how they map and translate into the graphs that will be plotted and tables that will be defined (when comparing against baseline, etc)
 - It depends on what variables need to be isolated and held constant. The main variables in question for the client and server are the strategy, adv_grad_norm, adv_step_size, 

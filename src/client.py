@@ -17,7 +17,6 @@ from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv
 # todo: test all corruption functions in utils.Data
 # todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
 
-
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
         # when we iteratively update params and the dataset in terms of the current client being sampled for fit_round and eval_round, the config simplifies accessing the variables' state
@@ -203,8 +202,11 @@ def setup_client_parse_args():
     parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--num_classes", type=int, required=False, default=10)
-    parser.add_argument("--adv_reg", type=bool, required=False, default=True)
-    parser.add_argument("--gaussian_layer", type=bool, required=False, default=False)
+    parser.add_argument("--nsl_reg", type=bool, required=False, default=True)
+    parser.add_argument("--gaussian_reg", type=bool, required=False, default=True)
+    # given that there's a set of image corruptions and that 1 can only be applied at a time, should we measure with different types of image corruptions then? Perhaps test the idea of non-convex transformations and their effect on CNN mechanics, or perhaps sets up the discussion to address these situational nuances as a result of the corruption of choice.
+    parser.add_argument("--corruption_reg", type=bool, required=False, default=True)
+    # todo: add specific corruption attacks for regularization rather than "corruption as regularization" 
     return parser
 
 # config object store resetted after each client execution
