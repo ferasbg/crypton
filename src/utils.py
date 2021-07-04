@@ -74,9 +74,10 @@ class HParams(object):
             - https://arxiv.org/abs/1409.1556
     '''
 
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, input_shape=[28, 28, 1]):
         # store model and its respective train/test dataset + metadata in parameters
-        self.input_shape = [28, 28, 1]
+        # by default it's 28x28x1 but if specified, it can change to 32x32x3
+        self.input_shape = input_shape
         self.num_classes = num_classes
         self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
         self.kernel_size = (3, 3)
@@ -87,7 +88,6 @@ class HParams(object):
         self.adv_multiplier = adv_multiplier
         self.adv_step_size = adv_step_size
         self.adv_grad_norm = adv_grad_norm  # "l2" or "infinity" = l2_clip_norm if "l2"
-        self.gaussian_state : bool = False
         self.gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)
         self.clip_value_min = 0.0
         self.clip_value_max = 1.0
@@ -307,15 +307,19 @@ class Data:
 
     @staticmethod    
     def load_train_partition_for_100_clients(idx: int):
+        assert idx in range(100)
         # 500/100 train/test split per partition e.g. per client
         # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        assert idx in range(100)
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
         # 5000/50000 --> 500/50000
         return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
 
     @staticmethod    
     def load_test_partition_for_100_clients(idx : int):
+        assert idx in range(100) 
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        assert idx in range(100)
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])

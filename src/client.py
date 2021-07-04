@@ -12,11 +12,17 @@ import numpy as np
 from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1
+import bokeh
+import seaborn as sns
+import pandas as pd
+import chartify
+import matplotlib.pyplot as plt
 
 # todo: add FedAdagrad support
 # todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
 # todo: write test_plot_creation_with_dummy_data_for_exp_config():
 # todo: apply corruptions to feature tuples given args in DatasetConfig
+# todo: create sample plots based on target plots required for paper, then add with data from running exp-config-run.sh
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -57,10 +63,14 @@ class DatasetConfig(object):
         DatasetConfig --> ClientConfig --> Client
     '''
     def __init__(self, client_partition_idx : int, args):
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
-        (x_train, y_train), (x_test, y_test) = self.load_partition(idx=client_partition_idx)
+        # server.py params for strategy map to the partitions that depend on num_clients 
+        if (args.num_clients in range(10)):
+            (x_train, y_train) = self.load_train_partition(idx=client_partition_idx)
+            (x_test, y_test) = self.load_test_partition(idx=client_partition_idx) 
+
+        if (args.num_clients in range(11, 100)):
+            (x_train, y_train) = Data.load_train_partition_for_100_clients(idx=client_partition_idx)
+            (x_test, y_test) = Data.load_test_partition_for_100_clients(idx=client_partition_idx) 
 
         # Partitioned BatchDataset
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
@@ -70,6 +80,9 @@ class DatasetConfig(object):
     def load_partition(self, idx : int):
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+
         return (
             x_train[idx * 5000 : (idx + 1) * 5000],
             y_train[idx * 5000 : (idx + 1) * 5000],
@@ -95,8 +108,37 @@ class DatasetConfig(object):
         x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
-def build_base_model(params : HParams):
-    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+class MetricsConfig(object):
+    @staticmethod
+    def create_table(header: list, csv, norm_type="l-inf", options=["l-inf", "l2"]):
+        # every set of rounds maps to a hardcoded adv_step_size, so we can measure this round set in terms of the adv_step_size set we want to iterate over
+        headers = ["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"]
+        # define options per variable; adv reg shares pattern of adversarial augmentation, noise (non-uniform, uniform) perturbations/corruptions/degradation as regularization
+        adv_reg_options = ["Neural Structured Learning", "Gaussian Regularization", "Data Corruption Regularization", "Noise Regularization", "Blur Regularization"]
+        strategy_options = ["FedAvg", "FedAdagrad", "FaultTolerantFedAvg", "FedFSV1"]
+        metrics = ["server_loss", "server_accuracy_under_attack", "server_certified_loss"]
+        # norm type used to define the line graph in the plot rather than an x or y axis label
+        variables = ["epochs", "communication_rounds", "client_learning_rate", "server_learning_rate", "adv_grad_norm", "adv_step_size"]
+        nsl_variables = ["neighbor_loss"]
+        # measure severity as an epsilon when labeling the line graph in plot
+        baseline_adv_reg_variables = ["severity", "noise_sigma"]
+
+    @staticmethod
+    def plot_client_model(model):
+        file = keras.utils.plot_model(model, to_file='model.png')
+        save_path = '/media'
+        file_name = "model.png"
+        os.path.join(save_path, file_name)
+
+    @staticmethod
+    def plot_mnist_image(image : np.ndarray):
+    #    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        plt.figure(figsize=(28, 28))
+        # iteratively get perturbed images based on their norm type and norm values (l∞-p_ε; norm_type, adv_step_size)
+        plt.imshow(image, cmap=plt.get_cmap('gray'))
+
+def build_base_model(params : HParams, input_shape=(28,28,1)):
+    input_layer = layers.Input(shape=input_shape, batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -118,8 +160,8 @@ def build_base_model(params : HParams):
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-def build_adv_model(params : HParams):
-    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+def build_adv_model(params : HParams, input_shape=(28,28,1)):
+    input_layer = layers.Input(shape=input_shape, batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -145,8 +187,8 @@ def build_adv_model(params : HParams):
     adv_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     return adv_model
 
-def build_gaussian_base_model(params : HParams):
-    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+def build_gaussian_base_model(params : HParams, input_shape=(28,28,1)):
+    input_layer = layers.Input(shape=input_shape, batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
@@ -169,9 +211,9 @@ def build_gaussian_base_model(params : HParams):
     model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-def build_gaussian_adv_model(params : HParams):
+def build_gaussian_adv_model(params : HParams, input_shape=(28,28,1)):
     # precondition matches state check
-    input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
+    input_layer = layers.Input(shape=input_shape, batch_size=None, name="image")
     regularizer = tf.keras.regularizers.l2()
     gaussian_layer = keras.layers.GaussianNoise(stddev=0.2)(input_layer)
     conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(gaussian_layer)
@@ -210,11 +252,12 @@ def setup_client_parse_args():
     parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--num_classes", type=int, required=False, default=10)
-    parser.add_argument("--nsl_reg", type=bool, required=False, default=True)
+    parser.add_argument("--nsl_reg", type=bool, required=False, default=False)
     parser.add_argument("--gaussian_reg", type=bool, required=False, default=False)
+    # corruptions affect input_shape of model used for client
     parser.add_argument("--data_corruption_reg", type=str, required=False, default="jpeg_compression")
     parser.add_argument("--noise_corruption_reg", type=str, required=False, default="shot_noise")
-    parser.add_argument("--blur_corruption_reg", type=str, required=False, default="gaussian_blur")
+    parser.add_argument("--blur_corruption_reg", type=str, required=False, default="motion_blur")
     return parser
 
 # config object store resetted after each client execution
@@ -226,25 +269,35 @@ def main(args):
     Use the `args` parameter to configure the experiment variables. Store configuration objects in their temporary lists to be accessed upon execution outside of the main(args) function.
     
     '''
+    if (args.data_corruption_reg):
+        # it's possible that passing in 3 channels could result in error in input_layer
+        input_shape = (32,32,3)
 
-    params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
+    if (args.noise_corruption_reg):
+        input_shape = (32,32,3)
+
+    if (args.blur_corruption_reg):
+        input_shape = (32,32,3)
+
+    params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm, input_shape=input_shape)
     # configure client train/test partition based on the client partition idx
     dataset_config = DatasetConfig(args.client_partition_idx, args)
     dataset_configs.append(dataset_config)
     
     # build models
-    adv_model = build_adv_model(params=params)
-    base_model = build_base_model(params=params)
+    nsl_model = build_adv_model(params=params)
+    base_model = build_base_model(params=params, input_shape=params.input_shape)
     gaussian_base_model = build_gaussian_base_model(params=params)
     gaussian_adv_model = build_gaussian_adv_model(params=params)
 
     # select model; the exp config restricts to 1 adv reg technique per client execution for a client set
     if (args.nsl_reg):
-        model = adv_model
+        model = nsl_model
 
     if (args.gaussian_reg):
         model = gaussian_base_model 
 
+    # baseline adv reg options that change the input layer and modify the training data (partition) and not the model architecture
     else:
         model = base_model
     

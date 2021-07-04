@@ -73,7 +73,13 @@ noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckl
 
 ```
 
-
 ## ExperimentalConfig
 - It's important to formalize both what experimental configs must be defined and how they map and translate into the graphs that will be plotted and tables that will be defined (when comparing against baseline, etc)
-- It depends on what variables need to be isolated and held constant. The main variables in question for the client and server are the strategy, adv_grad_norm, adv_step_size, 
+- It depends on what variables need to be isolated and held constant. The main variables in question for the client and server are the strategy, adv_grad_norm, adv_step_size
+
+## Remaining
+- .sh fit to exp configs 
+- metrics fit to exp configs; relevant graph plots stored in dir resolved
+- fedadagrad, corruptions processing with args resolved
+- add remaining formulations for certify.py, then implemented for use against server-side model evaluation, and checked out for all robustness checks 
+

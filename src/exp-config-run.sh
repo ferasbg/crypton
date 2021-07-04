@@ -6,6 +6,7 @@
 # each corruption is itself a transformation/perturbation that should be used in isolation. Then measure by changing adv_grad_norm and measuring within the range of 0-1 with incremental increases in the perturbation intensity.
 
 NUM_CLIENTS = 10
+# DEFINE LOOP GIVEN NORM TYPE AND ADV. REG. TECHNIQUE APPLIED; increment magnitude based on each ROUND SO WRITE IN TERMS OF ROUNDS --> considering that we increment our adv_step_size every round
 
 # setup iterative for loops dependent on the variables you are testing for > nesting particular exp configs where 1 variable is changed, etc;
     # example: you iterate over all the combinations of configs given that 1 variable and the other variables that ofc are not touched are held constant
