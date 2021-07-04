@@ -45,3 +45,7 @@ The first formal statement and definition.
 #### Property 3: Target Behavior Constraint
 - The Target Behavior Constraint (3) captures the target behavior of the adversary as a predicate A(x, x∗, β) which is true if the adversary changes the behavior of the ML model by at least β modifying x to x∗. If the three constraints hold, then we say that the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
 - Eq: A(x, x∗, β)
+
+
+## Mathematical Notes
+ 
