@@ -112,7 +112,7 @@ def main(args) -> None:
         strategy = FedAdagrad(initial_parameters=initial_parameters)
 
     # remove strategy parameter
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
+    flwr.server.start_server(server_address="[::]:8080", config={
                              "num_rounds": args.num_rounds})
 
 def get_eval_fn(model):

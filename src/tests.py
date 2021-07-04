@@ -60,16 +60,16 @@ def build_base_server_model(num_classes : int):
 def load_train_partition(idx: int):
     # the declaration is in terms of a tuple to the assignment with the respective load partition function
     assert idx in range(10)
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     x_train = tf.cast(x_train, dtype=tf.float32)
     x_test = tf.cast(x_test, dtype=tf.float32)
-    
+
     # process the same dataset
     return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
 
 def load_test_partition(idx : int):
     assert idx in range(10)
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     x_train = tf.cast(x_train, dtype=tf.float32)
     x_test = tf.cast(x_test, dtype=tf.float32)
     return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
@@ -120,53 +120,52 @@ corruptions = ["shot_noise", "impulse_noise", "defocus_blur",
                 "glass_blur", "motion_blur", "zoom_blur", "elastic_transform", "pixelate",
                 "jpeg_compression", "gaussian_blur"]
 
-def resize_partition(partitioned_samples):
-    for i in range(len(partitioned_samples)):
-        # pad 1d tensor 
-        pass
-    
+
+## either figure out how to pad 1d tensors or re-write the entire client dataset process with the model and processing edit
+
+# when specifying corruptions in DatasetConfig
 def corrupt_train_partition(train_samples, corruption_name: str):
-    # precondition: dataset has been padded to the model given baseline corruption regularization technique being used
     for i in range(len(train_samples)):
-        # 28,28, 1 --> 32,32,3 gives an error
         train_samples[i] = imagecorruptions.corrupt(train_samples[i], corruption_name=corruption_name)
 
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 train_partition = load_train_partition(0)
-train_partition = resize_partition(train_partition)
+blur_corruption_set = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckle_noise"]
 
-# for corruption in corruptions:
-#     train_samples = corrupt_train_partition(x_train, corruption_name=corruption)
+# for i in range(len(x_train)):
+#     for corruption_name in data_corruption_set:
+#         print("corrupting data....")
+#         x_train[i] = imagecorruptions.corrupt(x_train[i], corruption_name=corruption_name)
 
-#         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
-#         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
-#         element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
-#         element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
-#         element = Data.apply_data_corruption(element, corruption_name="pixelate")
-#         element = Data.apply_data_corruption(element, corruption_name="pixelate")
-#         element = Data.apply_noise_corruption(element, corruption_name="shot_noise")
-#         element = Data.apply_data_corruption(element, corruption_name="shot_noise")
-#         element = Data.apply_noise_corruption(element, corruption_name="impulse_noise")
-#         element = Data.apply_data_corruption(element, corruption_name="impulse_noise")
-#         element = Data.apply_noise_corruption(element, corruption_name="speckle_noise")
-#         element = Data.apply_data_corruption(element, corruption_name="speckle_noise")
-#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="glass_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")
-#         element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")
+#     for corruption_name in blur_corruption_set:
+#         print("corrupting blur....")
 
-train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
-val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+#         x_train[i] = imagecorruptions.corrupt(x_train[i], corruption_name=corruption_name)
 
+#     for corruption_name in noise_corruption_set:
+#         print("corrupting noise....")
+#         x_train[i] = imagecorruptions.corrupt(x_train[i], corruption_name=corruption_name)
 
+# # this works
+# for i in range(len(x_train)):
+#     for corruption in imagecorruptions.get_corruption_names():
+#         print("corrupting image in train_sample set using" + "" + corruption)
+#         x_train[i] = corrupt(x_train[i], corruption_name=corruption)
+
+# setup dataset
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-# 313 and 1563
-print(len(val_data), len(train_data))
+
+# setup parser
+client_parser = setup_client_parse_args()
+args = client_parser.parse_args()
+# the data is partitioned such that 
+dataset_config = DatasetConfig(args=args)
+# why are the types empty? is the model not fit to the data?
+print(len(dataset_config.train_data))
+print(type(dataset_config.train_data))
+print(len(dataset_config.val_data))
+print(type(dataset_config.val_data))
