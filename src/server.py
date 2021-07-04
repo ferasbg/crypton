@@ -95,7 +95,6 @@ def main(args) -> None:
         #     initial_parameters=model.get_weights(),
         # )
 
-    # todo: resolve fedadagrad error
     if (args.strategy == "fedadagrad"):
         # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor
         initial_parameters = model.get_weights()
@@ -103,8 +102,7 @@ def main(args) -> None:
         strategy = FedAdagrad(initial_parameters=initial_parameters)
 
     # remove strategy parameter
-    # todo: add strategy parameter without gRPC freeze; happens because of infinite loop running in some library backend or an supported ValueError
-    flwr.server.start_server(server_address="[::]:8080", config={
+    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
                              "num_rounds": args.num_rounds})
 
 def get_eval_fn(model):

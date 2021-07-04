@@ -54,8 +54,6 @@ import imagedegrade
 from imagedegrade import np as degrade
 from imagecorruptions import corrupt
 
-# todo: add support for shards for partitioning client model data
-
 def scheduler(epoch, lr):
     if epoch < 5:
         return lr

@@ -27,6 +27,7 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
 from keras import backend as K
 import pytest
+import cv2
 from imagecorruptions import corrupt
 
 from utils import *
@@ -34,11 +35,6 @@ from client import *
 
 warnings.filterwarnings("ignore")
 
-datasets = tfds.load('mnist')
-map_train_dataset = datasets['train']
-map_test_dataset = datasets['test']
-train_dataset_for_base_model = map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
-test_dataset_for_base_model = map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
 
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
@@ -101,39 +97,51 @@ def test_partition_functions():
     xx_train, yy_train = load_train_partition(idx=0)
     print(len(xx_train), len(yy_train))
 
-def test_plot_creation_with_dummy_data_for_exp_config():
-    pass
+def load_partition(idx : int):
+        assert idx in range(10)
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        return (
+            x_train[idx * 5000 : (idx + 1) * 5000],
+            y_train[idx * 5000 : (idx + 1) * 5000],
+        ), (
+            x_test[idx * 1000 : (idx + 1) * 1000],
+            y_test[idx * 1000 : (idx + 1) * 1000],
+        )
 
-# setup data to be corrupted 
-(x_train, y_train) = load_train_partition(idx=0)
-(x_test, y_test) = load_test_partition(idx=0)
-# type: EagerTensor
-print(type(x_train), type(x_test))
+# try MapDataset; that means this has to be partitioned as well
+datasets = tfds.load('mnist')
+map_train_dataset = datasets['train']
+map_test_dataset = datasets['test']
+train_dataset_for_base_model = map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
+test_dataset_for_base_model = map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
+
+# 5000 images of shape 28x28x1
+(x_train, y_train), (x_test, y_test) = load_partition(0)
+
+#x_train = imagecorruptions.corrupt(x_train, corruption_name="gaussian_blur")
+
+#         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
+#         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
+#         element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
+#         element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
+#         element = Data.apply_data_corruption(element, corruption_name="pixelate")
+#         element = Data.apply_data_corruption(element, corruption_name="pixelate")
+#         element = Data.apply_noise_corruption(element, corruption_name="shot_noise")
+#         element = Data.apply_data_corruption(element, corruption_name="shot_noise")
+#         element = Data.apply_noise_corruption(element, corruption_name="impulse_noise")
+#         element = Data.apply_data_corruption(element, corruption_name="impulse_noise")
+#         element = Data.apply_noise_corruption(element, corruption_name="speckle_noise")
+#         element = Data.apply_data_corruption(element, corruption_name="speckle_noise")
+#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="glass_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")
+#         element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")
+
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-
-# resolve data passed to corruption functions (tf.EagerTensor to np.ndarray)
-for batch in train_data:
-    for element in batch:
-        element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
-        element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
-        element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
-        element = Data.apply_data_corruption(element, corruption_name="elastic_transform")
-        element = Data.apply_data_corruption(element, corruption_name="pixelate")
-        element = Data.apply_data_corruption(element, corruption_name="pixelate")
-        element = Data.apply_noise_corruption(element, corruption_name="shot_noise")
-        element = Data.apply_data_corruption(element, corruption_name="shot_noise")
-        element = Data.apply_noise_corruption(element, corruption_name="impulse_noise")
-        element = Data.apply_data_corruption(element, corruption_name="impulse_noise")
-        element = Data.apply_noise_corruption(element, corruption_name="speckle_noise")
-        element = Data.apply_data_corruption(element, corruption_name="speckle_noise")
-        element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="glass_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="motion_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="zoom_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="gaussian_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")
-        element = Data.apply_blur_corruption(element, corruption_name="defocus_blur")

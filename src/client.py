@@ -13,9 +13,10 @@ from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1
 
-# todo: add support for the corruptions (as baseline adversarial regularization technique)
-# todo: test all corruption functions in utils.Data
+# todo: add FedAdagrad support
 # todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
+# todo: write test_plot_creation_with_dummy_data_for_exp_config():
+# todo: apply corruptions to feature tuples given args in DatasetConfig
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps, validation_split=0.1):
@@ -56,17 +57,15 @@ class DatasetConfig(object):
         DatasetConfig --> ClientConfig --> Client
     '''
     def __init__(self, client_partition_idx : int, args):
-        
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         x_train = tf.cast(x_train, dtype=tf.float32)
         x_test = tf.cast(x_test, dtype=tf.float32)
-
-        self.val_steps = x_test.shape[0] / 32
         (x_train, y_train), (x_test, y_test) = self.load_partition(idx=client_partition_idx)
-        
+
         # Partitioned BatchDataset
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+        self.val_steps = x_test.shape[0] / 32
 
     def load_partition(self, idx : int):
         assert idx in range(10)
@@ -213,9 +212,9 @@ def setup_client_parse_args():
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--nsl_reg", type=bool, required=False, default=True)
     parser.add_argument("--gaussian_reg", type=bool, required=False, default=False)
-    # given that there's a set of image corruptions and that 1 can only be applied at a time, should we measure with different types of image corruptions then? Perhaps test the idea of non-convex transformations and their effect on CNN mechanics, or perhaps sets up the discussion to address these situational nuances as a result of the corruption of choice.
-    parser.add_argument("--corruption_reg", type=bool, required=False, default=True)
-    # todo: add specific corruption attacks for regularization rather than "corruption as regularization" 
+    parser.add_argument("--data_corruption_reg", type=str, required=False, default="jpeg_compression")
+    parser.add_argument("--noise_corruption_reg", type=str, required=False, default="shot_noise")
+    parser.add_argument("--blur_corruption_reg", type=str, required=False, default="gaussian_blur")
     return parser
 
 # config object store resetted after each client execution
@@ -334,4 +333,10 @@ if __name__ == '__main__':
 
             return loss, test_cardinality, accuracy
     
-    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
+    if (args.nsl_reg):
+        client = AdvRegClient()
+
+    else:
+        client = Client()
+
+    flwr.client.start_keras_client(server_address="[::]:8080", client=client)
