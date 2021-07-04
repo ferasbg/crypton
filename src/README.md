@@ -83,3 +83,12 @@ noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckl
 - fedadagrad, corruptions processing with args resolved
 - add remaining formulations for certify.py, then implemented for use against server-side model evaluation, and checked out for all robustness checks 
 
+## Features
+- corruptions config into client (test corruptions, fit to data, model, DatasetConfig)
+- metrics for exp config
+- server-side model robustness certification support 
+- fedadagrad support for strategy
+
+## Bugs
+- Figure out the small re-write and fix for client in order to support rank=3 images for imagecorruptions library for the baselines.
+

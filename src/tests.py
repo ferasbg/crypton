@@ -35,7 +35,6 @@ from client import *
 
 warnings.filterwarnings("ignore")
 
-
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(28, 28, 1), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, (3,3), activation='relu', padding='same')(input_layer)
@@ -108,42 +107,36 @@ def load_partition(idx : int):
             y_test[idx * 1000 : (idx + 1) * 1000],
         )
 
-# try MapDataset; that means this has to be partitioned as well
 datasets = tfds.load('mnist')
 map_train_dataset = datasets['train']
 map_test_dataset = datasets['test']
 train_dataset_for_base_model = map_train_dataset.map(normalize).shuffle(10000).batch(32).map(convert_to_tuples)
 test_dataset_for_base_model = map_test_dataset.map(normalize).batch(32).map(convert_to_tuples)
 
-# corrupting partitions but being able to access partitions by their feature tuple elements with partition[0] for sample set and partition[1] for label set
-(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-# pass in train and test partition, and return perturbed data
-img = x_train[0]
-
-# abstraction
-def corrupt_train_partition(train_samples, corruption_name: str):
-    for i in range(len(train_samples)):
-        img = train_samples[i]
-        img = cv2.resize(img, dsize=(32,32))
-        img = imagecorruptions.corrupt(img, corruption_name=corruption_name)
-        train_samples[i] = img
-
-partition = load_train_partition(0)
-# partition > partition[0] > partition[0][i] for i in range(len(partition[0]))
-train_samples = partition[0]
-# todo: setup corruptions with DatasetConfig
-# todo: test each corruptions func
+# partition > partition[0] > partition[0][i] for i in range(len(partition[0])) in DatasetConfig (partitions.append(train_partition and test_partition) and for partition in partitions: train = resize(train), test = resize(test)
 
 # misc: smoothing, min-max perturbation, loss maximization as contradiction
 corruptions = ["shot_noise", "impulse_noise", "defocus_blur",
                 "glass_blur", "motion_blur", "zoom_blur", "elastic_transform", "pixelate",
                 "jpeg_compression", "gaussian_blur"]
 
-for corruption in corruptions:
-    train_samples = corrupt_train_partition(train_samples, corruption_name=corruption)
+def resize_partition(partitioned_samples):
+    for i in range(len(partitioned_samples)):
+        # pad 1d tensor 
+        pass
+    
+def corrupt_train_partition(train_samples, corruption_name: str):
+    # precondition: dataset has been padded to the model given baseline corruption regularization technique being used
+    for i in range(len(train_samples)):
+        # 28,28, 1 --> 32,32,3 gives an error
+        train_samples[i] = imagecorruptions.corrupt(train_samples[i], corruption_name=corruption_name)
 
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+train_partition = load_train_partition(0)
+train_partition = resize_partition(train_partition)
 
-print(train_samples)
+# for corruption in corruptions:
+#     train_samples = corrupt_train_partition(x_train, corruption_name=corruption)
 
 #         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
 #         element = Data.apply_data_corruption(element, corruption_name="jpeg_compression")
@@ -170,3 +163,10 @@ print(train_samples)
 
 train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
 val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+
+
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
+val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+# 313 and 1563
+print(len(val_data), len(train_data))

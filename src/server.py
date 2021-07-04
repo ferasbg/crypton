@@ -37,6 +37,16 @@ class ServerConfig(object):
 
 warnings.filterwarnings("ignore")
 
+class Arguments(object):
+    def __init__(self, args):
+        self.args = args
+
+# make args accessible
+arg_set = []
+if (len(arg_set) > 0):
+    args_object = Arguments(arg_set[0])
+    args = args_object.args
+
 def build_base_server_model(num_classes: int):
     input_layer = layers.Input(
         shape=(28, 28, 1), batch_size=None, name="image")
@@ -76,7 +86,7 @@ def main(args) -> None:
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
     # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
-
+    arg_set.append(args)
     # create model
     model = build_base_server_model(num_classes=10)
 
@@ -109,12 +119,12 @@ def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-    params = HParams(10, 0.02, 0.05, "infinity")
+    params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
@@ -175,8 +185,9 @@ def setup_server_parse_args():
     parser.add_argument("--min_available_clients",
                         type=int, required=False, default=2)
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
+    parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
-    parser.add_argument("--adv_step_size", type=float, choices=range(0, 1), required=False, default=0.05)
+    parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
 
     args = parser.parse_args()
     return args

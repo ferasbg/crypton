@@ -307,6 +307,17 @@ class Data:
 
     @staticmethod    
     def load_train_partition_for_100_clients(idx: int):
+        '''
+        if (args.num_clients in range(11, 100)):
+                    (x_train, y_train) = Data.load_train_partition_for_100_clients(idx=client_partition_idx)
+                    (x_test, y_test) = Data.load_test_partition_for_100_clients(idx=client_partition_idx) 
+                    
+                    self.x_train = x_train
+                    self.y_train = y_train
+                    self.x_test = x_test
+                    self.y_test = y_test
+
+        '''
         assert idx in range(100)
         # 500/100 train/test split per partition e.g. per client
         # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test

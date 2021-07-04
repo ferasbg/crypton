@@ -4,12 +4,10 @@ from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes,
 from flwr.server.client_proxy import ClientProxy
 from server import *
 from client import AdvRegClient, Client
-from adversarial import HParams, build_adv_model, build_base_model
 import argparse
 import absl
 from absl import flags
 import tensorflow_datasets as tfds
-from dataset import *
 
 '''
 
