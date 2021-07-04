@@ -119,7 +119,7 @@ def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
