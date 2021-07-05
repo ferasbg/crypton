@@ -1,7 +1,5 @@
 # Adversarially Robust Federated Optimization with Neural Structured Learning
-
-## Abstract
-The purpose of this work is to certify the adversarial robustness of a server-side trusted aggregator model given the optimizations done both for adversarial regularization at the client-level and the use of adaptive federated optimization which can adapt to heterogeneous, corrupt, low-resolution, and sparse client-side image data, to simulate and thrive in real-world federated learning environments.
+The purpose of this work is to build an adversarially robust federated system by utilizing adaptive and non-adaptive federated optimization techniques, as well as optimizing the adversarial regularization techniques used at the client-level in order to build a robust trusted aggregator model. More specifically, we aim to use neural structured learning and adaptive federated optimization together to build an adversarially robust federated learning system that can adapt to heterogeneous, sparse, and perturbed data that would be faced in a production-level federated environment.
 
 ## Introduction
 - State the problem being solved and the approach taken.

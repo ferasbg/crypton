@@ -40,9 +40,7 @@ NUM_ADV_REG_TECHNIQUES = 13
 # todo: write the formalizations (on paper, and checks defined in certify) of the problem (evaluating adversarial robustness without tight certifications) is manage-able; albeit certification isn't to the degree of standard robustness certifications (eg. randomized smoothing, etc)
 # todo: still not clear on how the graphs will look like; need to do that before translating to code
 # todo: scale to 100 rounds with 100 clients with utils.Data and server args
-# todo: define args for all exp configs in run.sh when executing each exp config "simulation"
 # todo: define the graphs per exp config iteration and save the plots
-# todo: create a list of args that stores every args permutation, then iterate over the args list created here
 # todo: store metrics in pandas.Dataframe per exp config, then append the exp configs based on the table you defined earlier
 # todo: create graphs out of the existing table, fit it to features for comparison against baselines (eg adv reg and strategy permutations, etc --> other variables)
 # todo: define exp_config iteration in main
@@ -62,6 +60,12 @@ client_federated_robust_train_accuracy_set = []
 server_side_federated_robust_accuracy_set = []
 
 corruption_types_set = ["blur", "noise", "data"]
+'''
+Hendrycks, Dan and Dietterich, Thomas G.
+Benchmarking Neural Network Robustness to Common Corruptions and
+Surface Variations
+
+'''
 adversarial_regularization_techniques_set = ["neural_structured_learning", "gaussian_noise_regularization", "data_corruption_regularization", "blur_corruption_regularization", "noise_corruption_regularization"]
 blur_corruptions_set = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
 data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
@@ -209,7 +213,8 @@ def run_simulation(num_rounds: int, num_clients: int, fraction_fit: float, args)
     server_process.start()
     processes.append(server_process)
 
-    time.sleep(10)
+    # 60 seconds to apply perturbation attack to server-side evaluation data
+    time.sleep(60)
     dataset_config = DatasetConfig(args)
     client_train_partitions = []
     client_test_partitions = []
@@ -291,14 +296,14 @@ if __name__ == '__main__':
     client_args = setup_client_parser()
     # iterate over exp_config_set, thus 780 operations of the loop.
     # execute each exp config; end result: plots in /figures directory and all exp configs check out
-    # ex: fedavg --> nsl --> l-inf --> l-inf e=0.05 (p-E) --> run_simulation()
+        # ex: fedavg --> nsl --> l-inf --> l-inf e=0.05 (p-E) --> run_simulation()
     
     for j in range(NUM_FEDERATED_STRATEGIES):
         for i in range(NUM_ADV_REG_TECHNIQUES):
             for n in range(len(ADV_GRAD_NORM_OPTIONS)):
                 for s in range(NUM_NORM_VALUES):
                     # iterate in terms of these target variables to get each exp config
-                    args = create_args_parser(client_partition_idx=i, adv_grad_norm=ADV_GRAD_NORM_OPTIONS[n], adv_multiplier=0.2, adv_step_size=NUM_NORM_VALUES[s], batch_size=32, epochs=1, steps_per_epoch=0, num_clients= 10, num_classes= 10, model = "base_model", nsl_reg= False, gaussian_reg  = False, nominal_reg  = True, corruption_name : str = corruption_names[i], client : str = "client", num_rounds : int = 1, strategy : str = NUM_FEDERATED_STRATEGIES[j], fraction_fit=0.5, fraction_eval=0.2, min_fit_clients=2, min_eval_clients=10, args=client_args, dataset_config=DatasetConfig(client_args))
+                    args = create_args_parser(client_partition_idx=i, adv_grad_norm=ADV_GRAD_NORM_OPTIONS[n], adv_multiplier=0.2, adv_step_size=NUM_NORM_VALUES[s], batch_size=32, epochs=1, steps_per_epoch=0, num_clients= 10, num_classes= 10, model = "base_model", nsl_reg= False, gaussian_reg  = False, nominal_reg  = True, client : str = "client", num_rounds : int = 1, strategy : str = NUM_FEDERATED_STRATEGIES[j], fraction_fit=0.5, fraction_eval=0.2, min_fit_clients=2, min_eval_clients=10, args=client_args, dataset_config=DatasetConfig(client_args))
                     main(args)
 
     args = setup_simulation_parser()

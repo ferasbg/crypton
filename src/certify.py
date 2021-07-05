@@ -52,61 +52,63 @@ Statements:
   -
   -
   -
-  -
 
 
 '''
 
-def compute_admissibility_constraint(x):
-  '''
-  The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed inputs.
-
-  Eq: x∗ ∈ X˜
-
-  How do you know what's an "admissible" input? An input that maximizes loss? Remember how optimization desires for the opposite? Formulations here are contradicting each other, but these are general statements not included in any of the functions in this file.
-
+class Specification(object):
 
   '''
+      robustness trace property set τ:
+          - robustness trace 1: given lp-norm perturbation, the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
+          - robustness trace 3: network is not making misclassifications with respect to L-norm (infinity, l^2, l-1)
+          - robustness trace 4: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
+          - robust kl-divergence: kl-divergence for server-side federated accuracy under perturbation attack
+      - note: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]). : fancy way of checking if the property that wants an accurate label holds and robustness itself translates to a threshold given the batch_episode set per epoch or a set of epochs iterating over the defined # of rounds.
+      - objective: just analyze how adversarial attacks affect convergence, and focus on nn optimization by having math to explain the phenomenon, e.g. confirming expectations or contradicting it with truth
+      - note: If the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing.
 
-  return x
+      References:
+          - https://arxiv.org/pdf/1904.13215.pdf
+          - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
 
-def compute_distance_constraint(adv_step_size, adv_grad_norm):
-  '''
-  The Distance Constraint (2) constrains x∗ to be no more distant from x than α.
-
-  Eq: D(µ(x, x∗), α)
-
-  '''
-  x = []
-  return x
-
-def compute_target_behavior_constraint(a, x, x_prime, beta):
-  '''
-  The Target Behavior Constraint (3) captures the target behavior of the adversary as a predicate A(x, x∗, β) which is true if the adversary changes the behavior of the ML model by at least β modifying x to x∗. If the three constraints hold, then we say that
-  the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as
-  opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
-
-  Eq: A(x, x∗, β)
+      - misc: smoothing, min-max perturbation, loss maximization as contradiction
 
   '''
-  x = []
-  return x
+
+  def compute_admissibility_constraint(x):
+    '''
+    The Admissibility Constraint (1) ensures that the adversarial input x∗ belongs to the space of admissible perturbed inputs.
+
+    Eq: x∗ ∈ X˜
+
+    How do you know what's an "admissible" input? An input that maximizes loss? Remember how optimization desires for the opposite? Formulations here are contradicting each other, but these are general statements not included in any of the functions in this file.
 
 
-'''
-    robustness trace property set τ:
-        - robustness trace 1: given lp-norm perturbation, the euclidean distance of certified_accuracy (given proportion of correct classifications out of total classifications in training iteration) under certain threshold p to formally guarantee robustness of the network.
-        - robustness trace 3: network is not making misclassifications with respect to L-norm (infinity, l^2, l-1)
-        - robustness trace 4: input-output relation comparing the perturbed image to a non-perturbed output given applied perturbation_epsilon to attack network with distortion to input_image.
-        - robust kl-divergence: kl-divergence for server-side federated accuracy under perturbation attack
-    - note: Given a classification deep neural network N with an input region Θ, the robustness property holds if and only if (<-->) all inputs within the input region Θ have the same label, i.e., ∀x [0] , y [0] ∈ Θ =⇒ ϱ(x^[0]) = ϱ(y^[0]). : fancy way of checking if the property that wants an accurate label holds and robustness itself translates to a threshold given the batch_episode set per epoch or a set of epochs iterating over the defined # of rounds.
-    - objective: just analyze how adversarial attacks affect convergence, and focus on nn optimization by having math to explain the phenomenon, e.g. confirming expectations or contradicting it with truth
-    - note: If the perturbations don't change the output label for pixelwise_perturbation_ɛ = 0.{1,2,3,4,5}, then there is no adversarial_example created, which satisfies the desired input-output relation between the perturbation_epsilon during data pre-processing.
+    '''
 
-    References:
-        - https://arxiv.org/pdf/1904.13215.pdf
-        - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
+    return x
 
-    - misc: smoothing, min-max perturbation, loss maximization as contradiction
+  def compute_distance_constraint(adv_step_size, adv_grad_norm):
+    '''
+    The Distance Constraint (2) constrains x∗ to be no more distant from x than α.
 
-'''
+    Eq: D(µ(x, x∗), α)
+
+    '''
+    x = []
+    return x
+
+  def compute_target_behavior_constraint(a, x, x_prime, beta):
+    '''
+    The Target Behavior Constraint (3) captures the target behavior of the adversary as a predicate A(x, x∗, β) which is true if the adversary changes the behavior of the ML model by at least β modifying x to x∗. If the three constraints hold, then we say that
+    the ML model has failed for input x. We note that this is a so called “local” robustness property for a specific input x, as
+    opposed to other notions of “global” robustness to changes to a population of inputs (see Dreossi et al. [2018b]; Seshia et al. [2018].
+
+    Eq: A(x, x∗, β)
+
+    '''
+    x = []
+    return x
+
+
