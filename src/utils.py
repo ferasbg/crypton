@@ -129,6 +129,13 @@ class Data:
     Research Notes:
         - In leu of structured signals, graph representations, and graph learning, here's a reference for the paper nsl depends on:
         - "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
+
+    References:
+            
+        Corruptions Reference: Hendrycks, Dan and Dietterich, Thomas G.
+        Benchmarking Neural Network Robustness to Common Corruptions and
+        Surface Variations
+    
     '''
 
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
@@ -209,6 +216,8 @@ class Data:
             y_test[idx * 1000 : (idx + 1) * 1000],
         )
 
+    # Data.load_train_partition_for_100_clients(idx=args.client_partition_idx) if args.num_clients = 100
+    # Data.load_test_partition_for_100_clients(idx=args.client_partition_idx) if args.num_clients = 100
     @staticmethod    
     def load_train_partition_for_100_clients(idx: int):
         assert idx in range(100)
@@ -339,3 +348,37 @@ class Plot(object):
         dates = pd.date_range("1 1 2016", periods=365)
         data = pd.DataFrame(values, dates, columns=["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"])
         return sns.lineplot(data=data, palette="tab10", linewidth=2.5)
+
+    @staticmethod
+    def create_args_parser(client_partition_idx : int, adv_grad_norm : str, adv_multiplier=0.2, adv_step_size=0.05, batch_size=32, epochs=25, steps_per_epoch=None, num_clients=10, num_classes=10, model=None, nsl_reg : bool = False, gaussian_reg : bool = False, nominal_reg=True, corruption_name : str = "", client : str = "client", num_rounds=10, strategy="fedavg", fraction_fit=0.5, fraction_eval=0.2, min_fit_clients=2, min_eval_clients=10, dataset_config=None):
+        # hardcode defaults given parameters.
+        parser = argparse.ArgumentParser(description="Crypton Exp Config Object.")
+        parser.add_argument("--client_partition_idx", type=int, required=False, default=client_partition_idx)
+        parser.add_argument("--adv_grad_norm", type=str, required=False, default=adv_grad_norm)
+        parser.add_argument("--adv_multiplier", type=float, required=False, default=adv_multiplier)
+        parser.add_argument("--adv_step_size", type=float, required=False, default=adv_step_size)
+        parser.add_argument("--batch_size", type=int, required=False, default=batch_size)
+        parser.add_argument("--epochs", type=int, required=False, default=epochs)
+        parser.add_argument("--steps_per_epoch", type=int, required=False, default=steps_per_epoch)
+        parser.add_argument("--num_clients", type=int, required=False, default=num_clients)
+        parser.add_argument("--num_classes", type=int, required=False, default=num_classes)
+        parser.add_argument("--model", type=str, required=False, default=model)
+        parser.add_argument("--nsl_reg", type=bool, required=False, default=nsl_reg)
+        parser.add_argument("--gaussian_reg", type=bool, required=False, default=gaussian_reg)
+        parser.add_argument("--nominal_reg", type=str, required=False, default=nominal_reg)
+        parser.add_argument("--corruption_name", type=str, required=False, default=corruption_name)
+        # options: "nsl_client", "client"
+        parser.add_argument("--client", type=str, required=False, default=client)
+        parser.add_argument("--num_rounds", type=int, required=False, default=3)
+        parser.add_argument("--strategy", type=str, required=False, default="fedavg")
+        parser.add_argument("--fraction_fit", type=float,
+                            required=False, default=0.05)
+        parser.add_argument("--fraction_eval", type=float,
+                            required=False, default=0.5)
+        parser.add_argument("--min_fit_clients", type=int,
+                            required=False, default=10)
+        parser.add_argument("--min_eval_clients", type=int,
+                            required=False, default=2)
+        parser.add_argument("--min_available_clients",
+                            type=int, required=False, default=2)
+        parser = parser.parse_args()

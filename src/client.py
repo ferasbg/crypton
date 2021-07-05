@@ -173,6 +173,7 @@ if __name__ == '__main__':
     base_model = build_base_model(params=params)
     gaussian_base_model = build_gaussian_base_model(params=params)
 
+    # select model
     if (args.model == "nsl_model"):
         model = nsl_model
 
@@ -261,4 +262,4 @@ if __name__ == '__main__':
     if (args.client == "nsl_client"):
         client = AdvRegClient()
 
-    flwr.client.start_keras_client(server_address="[::]:8080", client=AdvRegClient())
+    flwr.client.start_keras_client(server_address="[::]:8080", client=client)

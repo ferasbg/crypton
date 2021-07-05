@@ -87,8 +87,7 @@ def main(args) -> None:
         initial_parameters=model.get_weights(),
     )
 
-    fed_adagrad = FedAdagrad(initial_parameters=tf.convert_to_tensor(value=model.get_weights()))
-
+    # fed_adagrad = FedAdagrad(initial_parameters=tf.convert_to_tensor(value=model.get_weights()))
     if (args.strategy == "fedavg"):
         strategy = fed_avg 
 
@@ -96,7 +95,7 @@ def main(args) -> None:
         strategy = ft_fed_avg
 
     if (args.strategy == "fed_adagrad"):
-        strategy = fed_adagrad
+        strategy = None
 
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
@@ -108,7 +107,7 @@ def get_eval_fn(model):
 
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.10, adv_grad_norm="infinity")
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
