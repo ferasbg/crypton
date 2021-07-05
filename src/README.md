@@ -5,40 +5,10 @@ Execute experimental configurations to assess the most optimal configuration for
 - `python3 server.py --num_rounds=10 --strategy="fedadagrad"` 
 - `python3 client.py --num_partitions=10 --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=5 --num_clients=10 adv_reg=True gaussian_layer=True`
 
-## Features
-- working: server-side evaluation after fit_round and sample_round sampling of clients
-- working: writing funcs for formal robustness metrics
-- working: write simulation.py that takes in args per execution instance and runs client-server processes similar to flwr example for simulation.py
-- certification of adv. robustness (formal statements are written and functions can be used to compute satisfiability of adversarial robustness properties): compute formal robustness metrics based on the formalization paper
-- exp-config-run.sh is an iterative for loop that starts a server, and runs the clients based on the partition specified by index and samples all the clients with the server/client/exp config as args to each target file and then shuts down the server and then starts a new one to run the next test, until all the configs are run (all combinations --> defined with itertools)
-
-## Technical Notes
-- metrics should get plots for what relationships you want to measure given exp config combination for all combinations
-
-```python
-for exp_config in exp_config_set:
-    # create strategy object given strategy config that processes args.strategy 
-    strategy = StrategyConfig(args.strategy).strategy
-    start_server()
-    for i in range(args.num_clients):
-        adv_client_config = AdvRegClientConfig(model=[], params=[], train_dataset=[], test_dataset=[], validation_steps=[])
-        client = AdvRegClient()
-        flwr.server.start_server(server_address=DEFAULT_SERVER_ADDRESS, strategy=strategy)
-        flwr.client.start_keras_client(server_address=DEFAULT_SERVER_ADDRESS, client=client)
-        partition_train = load_train_partition(i)
-        partition_test = load_test_partition(i)
-        start_client(exp_config, client, partition_train, partition_test)
-        
-    server_model.evaluate(perturbation_attack_dataset)
-    exp_config.log_experiment()
-
-
-```
-- The `exp-config-run.sh` file will be an iterative shell file that will run each experimental configuration permutation.
-
 ## Technical Overview
-- In `client.py`, the component at the client-level is split into the following subcomponents: `AdvRegClient` which is the client that uses the model of type `nsl.AdversarialRegularization`, `AdvRegClientConfig` which stores configuration data for the `AdvRegClient`, `Client` which uses the base `tf.keras.models.Model` object for its model, `ClientConfig`, `ExperimentConfig` which stores the arguments passed when the user runs `python3 client.py` after instantiating an insecure gRPC instance with `python3 server.py`, and `DatasetConfig`, which creates the client partitions depending on the argument for the total number of clients, and passes the loaded client train & test partitions to the `ClientConfig` or `AdvRegClientConfig` object respectively. By default, the `HParams` utilities object is also used, which defines the adversarial and base network hyperparameters for the models used by the clients.
-- In `server.py`, the component at the server-level is split into the `ServerConfig` and `StrategyConfig` objects that configure the strategy and server-side trusted aggregator model that doesn't use adversarial regularization since it's the model used for server-side parameter evaluation.
+- Deprecated: In `client.py`, the component at the client-level is split into the following subcomponents: `AdvRegClient` which is the client that uses the model of type `nsl.AdversarialRegularization`, `AdvRegClientConfig` which stores configuration data for the `AdvRegClient`, `Client` which uses the base `tf.keras.models.Model` object for its model, `ClientConfig`, `ExperimentConfig` which stores the arguments passed when the user runs `python3 client.py` after instantiating an insecure gRPC instance with `python3 server.py`, and `DatasetConfig`, which creates the client partitions depending on the argument for the total number of clients, and passes the loaded client train & test partitions to the `ClientConfig` or `AdvRegClientConfig` object respectively. By default, the `HParams` utilities object is also used, which defines the adversarial and base network hyperparameters for the models used by the clients.
+- Deprecated: In `server.py`, the component at the server-level is split into the `ServerConfig` and `StrategyConfig` objects that configure the strategy and server-side trusted aggregator model that doesn't use adversarial regularization since it's the model used for server-side parameter evaluation.
+- Current: In `simulation.py`, the system is formalized in terms of its components and subcomponents compartmentalized by the execution process defined with `multiprocessing` since each `ExperimentalConfig` object is the instantiation of the server and client processes that are configured with `ArgumentParser`. We iterate over every combination and sequentially utilize `utils.Plot` and `client.DatasetConfig` to handle data processing and metrics. We utilize the `certify.Specification` class to define all the adversarial robustness properties (sub-component-level --> server-side trusted aggregator model specifications) to certify, assert, and measure the formalized adversarial robustness of the federated system and testing what configurations map best to its real-world production-level stability, dependability, and reliability.
 
 ## Research Notes
 - math is involved around decision formulations that use formal notation of functions used on client-level, the federated strategy, the nsl-specific math, and the formalization of different perturbations/configs as regularization etc
@@ -73,25 +43,21 @@ noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckl
 
 ```
 
-## ExperimentalConfig
-- It's important to formalize both what experimental configs must be defined and how they map and translate into the graphs that will be plotted and tables that will be defined (when comparing against baseline, etc)
-- It depends on what variables need to be isolated and held constant. The main variables in question for the client and server are the strategy, adv_grad_norm, adv_step_size
-
-## Remaining
-- .sh fit to exp configs 
-- metrics fit to exp configs; relevant graph plots stored in dir resolved
-- fedadagrad, corruptions processing with args resolved
-- add remaining formulations for certify.py, then implemented for use against server-side model evaluation, and checked out for all robustness checks 
-
-## Features
-- corruptions config into client (test corruptions, fit to data, model, DatasetConfig)
-- metrics for exp config
-- server-side model robustness certification support 
-- fedadagrad support for strategy
+## Remaining Features
+- working: metrics fit to exp configs; relevant graph plots stored in dir resolved
+- working: fedadagrad and fault tolerant fed avg defined through args 
+- working: server-side model robustness certification support with `certify.py` and `server.py`
+- working: writing funcs for formal robustness metrics
 
 ## Bugs
-- Figure out the small re-write and fix for client in order to support rank=3 images for imagecorruptions library for the baselines.
-- The reason why there was an error with reading in dataset was because the partition forces the batch_size to be less than the number of samples.
-- Does it make sense to implement "randomized smoothing" or some common certification algorithm to measure adversarial robustness for the server-side model?
-	- The usage would be to `from certify import *` in `server.py` and apply the perturbation attack, track the state of the variables, and check it against the target certification.
+- gRPC freeze when running server.py and client.py
+- strategy selection with args, model selection (testing conditionals given args)
+- errors with iterative exp config execution body
+- errors with graphing iterative exp config and defining data for plots during server-client process (formalize analysis via plots/data)
+- `adv_model.perturb_on_batch(batch)` takes too long when initializing gRPC server instance
 
+## Tests
+- Currently most of the code I wrote on 7/4/21 was untested, and in many ways there are potential errors and weaknesses, as usual. I want to make sure that I resolve the gRPC freeze error with server and client sampling. I have setup arguments, but I do have to make sure that the code I touch/change based on args and the general structure is consistent (and should be consistent) with each experimental config test. Now, given that there's many permutations and some complexity, and noise with tests, it's also important to work backwards from what data you want to collect to validate/substantiate your reasoning.
+
+## Certification
+- Note that the focus of the paper (after pivot) is not on the uniqueness of the certification with a unique system design, but rather applying formalized tests but for a particular component of the federated system eg the server model as mentioned many times before.
