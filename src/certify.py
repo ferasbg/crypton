@@ -107,4 +107,6 @@ def compute_target_behavior_constraint(a, x, x_prime, beta):
         - https://arxiv.org/pdf/1904.13215.pdf
         - https://people.eecs.berkeley.edu/~sseshia/pubdir/atva18.pdf (3.2)
 
+    - misc: smoothing, min-max perturbation, loss maximization as contradiction
+
 '''

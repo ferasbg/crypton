@@ -28,28 +28,18 @@ from tensorflow.python.ops.gen_batch_ops import Batch
 from utils import *
 from client import *
 
-class ServerConfig(object):
-    # server-side model and server configurations
-    def __init__(self):
-        self.fed_adagrad = FedAdagrad()
-        self.fed_avg = FedAvg()
-
-
 warnings.filterwarnings("ignore")
 
-class Arguments(object):
-    def __init__(self, args):
-        self.args = args
-
-# make args accessible
-arg_set = []
-if (len(arg_set) > 0):
-    args_object = Arguments(arg_set[0])
-    args = args_object.args
+class ServerMetricsConfig(object):
+    def __init__(self):
+        self.metrics = []
+    
+    def update_metrics(self, metrics):
+        self.metrics.append(metrics)
 
 def build_base_server_model(num_classes: int):
     input_layer = layers.Input(
-        shape=(28, 28, 1), batch_size=None, name="image")
+        shape=(32, 32, 3), batch_size=None, name="image")
     conv1 = layers.Conv2D(32, (3, 3), activation='relu',
                           padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
@@ -80,57 +70,23 @@ def build_base_server_model(num_classes: int):
                   loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-def main(args) -> None:
-    # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
-
-    # 1. server-side parameter initialization
-    # 2. server-side parameter evaluation
-    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
-    arg_set.append(args)
-    # create model
-    model = build_base_server_model(num_classes=10)
-
-    if (args.strategy == "fedavg"):
-        strategy = FedAvg()
-        # strategy = flwr.server.strategy.FedAvg(
-        #     fraction_fit=0.3,
-        #     fraction_eval=0.2,
-        #     min_fit_clients=3,
-        #     min_eval_clients=2,
-        #     min_available_clients=10,
-        #     eval_fn=get_eval_fn(model),
-        #     # strategy based on user-written wrapper functions
-        #     on_fit_config_fn=fit_config,
-        #     on_evaluate_config_fn=evaluate_config,
-        #     initial_parameters=model.get_weights(),
-        # )
-
-    if (args.strategy == "fedadagrad"):
-        # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor
-        initial_parameters = model.get_weights()
-        initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters, dtype=tf.float32))
-        strategy = FedAdagrad(initial_parameters=initial_parameters)
-
-    # remove strategy parameter
-    flwr.server.start_server(server_address="[::]:8080", config={
-                             "num_rounds": args.num_rounds})
+server_metrics_config = ServerMetricsConfig()
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 
     #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     x_test, y_test = x_train[-10000:], y_train[-10000:]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-    params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
-    adv_model = build_adv_model(params=params)
 
-    for batch in val_data:
-        adv_model.perturb_on_batch(batch)
-        # untested function to clip norm values during perturbation to range(0, 1)
-        # batch['image'] = tf.clip_by_value(batch['image'], 0.0, 1.0)
+    # params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
+    # adv_model = build_adv_model(params=params)
+
+    # for batch in val_data:
+    #     adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -139,10 +95,15 @@ def get_eval_fn(model):
 
         model.set_weights(weights)  # Update model with the latest parameters
         # this inner function unpacks the tuples into the loss and accuracy just fine it seems
-        loss, accuracy = model.evaluate(x_test, y_test)
-        # get dict of history in evaluation, and return
-        return loss, {"accuracy": accuracy}
+        results = model.evaluate(x_test, y_test)
+        results = {
+            "loss": results[0],
+            "accuracy": results[1],
+        }
+        server_metrics_config.update_metrics(results)
 
+        return results["loss"], {"accuracy": results["accuracy"]}
+    
     return evaluate
 
 
@@ -193,6 +154,35 @@ def setup_server_parse_args():
     return args
 
 if __name__ == "__main__":
-    # configure the args object when the file is run and it'll be processed into main function and into target objects in question
+    # 1. server-side parameter initialization
+    # 2. server-side parameter evaluation
+    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
+
     args = setup_server_parse_args()
-    main(args)
+
+    # create model
+    model = build_base_server_model(num_classes=args.num_classes)
+
+    if (args.strategy == "fedavg"):
+        strategy = FedAvg(
+            fraction_fit=0.3,
+            fraction_eval=0.2,
+            min_fit_clients=3,
+            min_eval_clients=2,
+            min_available_clients=10,
+            eval_fn=get_eval_fn(model),
+            # strategy based on user-written wrapper functions
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=model.get_weights(),
+        )
+
+    # if (args.strategy == "fedadagrad"):
+    #     # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor
+    #     initial_parameters = model.get_weights()
+    #     initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters, dtype=tf.float32))
+    #     strategy = FedAdagrad(initial_parameters=initial_parameters)
+
+    # remove strategy parameter
+    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
+                             "num_rounds": args.num_rounds})

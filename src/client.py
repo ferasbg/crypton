@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 # todo: setup exp configs; hardcode the graphs (x-y axis) that will be made based on the notes you have in dynalist and write the pseudocode in terms of matplotlib.pyplot if necessary
 # todo: write test_plot_creation_with_dummy_data_for_exp_config():
 # todo: apply corruptions to feature tuples given args in DatasetConfig
-# todo: create sample plots based on target plots required for paper, then add with data from running exp-config-run.sh
 
 class AdvRegClientConfig(object):
     def __init__(self, model : AdversarialRegularization, params : HParams, train_dataset, test_dataset, validation_steps=None, validation_split=0.1):
@@ -66,13 +65,15 @@ class DatasetConfig(object):
         DatasetConfig --> AdvRegClientConfig --> AdvRegClient
         DatasetConfig --> ClientConfig --> Client
     '''
-    def __init__(self, client_partition_idx : int):
+    def __init__(self, args):
         # server.py params for strategy map to the partitions that depend on num_clients
         
-        # (x_train, y_train) = self.load_train_partition(idx=client_partition_idx)
-        # (x_test, y_test) = self.load_test_partition(idx=client_partition_idx)
+        (x_train, y_train) = self.load_train_partition(idx=args.client_partition_idx)
+        (x_test, y_test) = self.load_test_partition(idx=args.client_partition_idx)
 
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+        x_train = self.corrupt_train_partition(x_train, corruption_name=args.corruption_name)
+
         self.train_data = tf.data.Dataset.from_tensor_slices({'image': x_train, 'label': y_train}).batch(32)
         self.val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
         # partition / batch size
@@ -109,42 +110,18 @@ class DatasetConfig(object):
         x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
-    def corrupt_train_partition(self, corruption_name : str):
+    def corrupt_train_partition(self, x_train, corruption_name : str):
         '''
+        Technically, the corruption is applied before it's partitioned. 
+
         Usage:
             client_train_partition = self.corrupt_train_partition(self.client_train_partition, corruption_name=args.corruption_name)
         '''
         # corrupt the dataset in DatasetConfig
-        for i in range(len(self.x_train)):
-            self.x_train[i] = imagecorruptions.corrupt(self.x_train[i], corruption_name=corruption_name)
+        for i in range(len(x_train)):
+            x_train[i] = imagecorruptions.corrupt(x_train[i], corruption_name=corruption_name)
 
-class MetricsConfig(object):
-    @staticmethod
-    def create_table(header: list, csv, norm_type="l-inf", options=["l-inf", "l2"]):
-        # every set of rounds maps to a hardcoded adv_step_size, so we can measure this round set in terms of the adv_step_size set we want to iterate over
-        headers = ["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"]
-        # define options per variable; adv reg shares pattern of adversarial augmentation, noise (non-uniform, uniform) perturbations/corruptions/degradation as regularization
-        adv_reg_options = ["Neural Structured Learning", "Gaussian Regularization", "Data Corruption Regularization", "Noise Regularization", "Blur Regularization"]
-        strategy_options = ["FedAvg", "FedAdagrad", "FaultTolerantFedAvg", "FedFSV1"]
-        metrics = ["server_loss", "server_accuracy_under_attack", "server_certified_loss"]
-        # norm type used to define the line graph in the plot rather than an x or y axis label
-        variables = ["epochs", "communication_rounds", "client_learning_rate", "server_learning_rate", "adv_grad_norm", "adv_step_size"]
-        nsl_variables = ["neighbor_loss"]
-        # measure severity as an epsilon when labeling the line graph in plot
-        baseline_adv_reg_variables = ["severity", "noise_sigma"]
-
-    @staticmethod
-    def plot_client_model(model):
-        file = keras.utils.plot_model(model, to_file='model.png')
-        save_path = '/media'
-        file_name = "model.png"
-        os.path.join(save_path, file_name)
-
-    @staticmethod
-    def plot_img(image : np.ndarray):
-        plt.figure(figsize=(32,32))
-        # iteratively get perturbed images based on their norm type and norm values (l∞-p_ε; norm_type, adv_step_size)
-        plt.imshow(image, cmap=plt.get_cmap('gray'))
+        return x_train
 
 def build_base_model(params : HParams):
     input_layer = layers.Input(shape=(32,32,3), name="image")
@@ -304,7 +281,7 @@ if __name__ == '__main__':
     # process args upon execution
     client_parser = setup_client_parse_args()
     args = client_parser.parse_args()
-    dataset_config = DatasetConfig(args.client_partition_idx)
+    dataset_config = DatasetConfig(args)
     params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     
     nsl_model = build_adv_model(params=params)

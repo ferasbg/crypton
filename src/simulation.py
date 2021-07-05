@@ -1,3 +1,21 @@
+from client import *
+from server import *
+import seaborn as sns
+import bokeh as bkh
+import chartify
+import matplotlib.pyplot as plt
+import multiprocessing
+from multiprocessing import Process
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from settings import *
+
+# todo: store metrics in pandas.Dataframe per exp config, then append the exp configs based on the table you defined earlier
+# todo: create graphs out of the existing table, fit it to features for comparison against baselines (eg adv reg and strategy permutations, etc --> other variables)
+
+
 '''
 # process args from client.py and server.py such that they edit the variables passed to the target objects in each "component" file
 # essentially run the server.py file but then shut down the server after the client set has been executed. Note that partitions work the same, but the configurations specific to the strategy selected, adversarial hyperparameters, and so on, are all different and may iteratively increase, etc.
@@ -54,5 +72,45 @@ sleep 86400
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 done
 
-
 '''
+
+def start_server(args):
+    strategy = FedAvg()
+    flwr.server.start_server(strategy=strategy, server_address=DEFAULT_SERVER_ADDRESS, config={"num_rounds": args.num_rounds})
+
+def start_client(args):
+    if (args.nsl_reg):
+        client = AdvRegClient()
+    
+    else:
+        client = Client()
+
+    flwr.client.start_keras_client(server_address=DEFAULT_SERVER_ADDRESS, client=client)
+
+
+def start_process(args):
+    # based on num_rounds, execute the client-server process and update continuously based on specification
+    server_args = setup_server_parse_args()
+    server_args = server_args.parse_args()
+    client_args = setup_client_parse_args()
+    client_args = client_args.parse_args()
+
+    processes = []
+    server_process = start_server(server_args)
+    time.sleep(10)
+    processes.append(server_process)
+    client_process = start_client(client_args)
+
+    for i in range(client_args.num_clients):
+        processes.append(client_process)
+    
+    process = Process(group=processes)
+    return process
+
+def main(args):
+    # execute exp config
+    # store metrics in /metrics directory; name in terms of target configurations used
+    process = start_process(args)
+
+if __name__ == '__main__':
+    main(args)

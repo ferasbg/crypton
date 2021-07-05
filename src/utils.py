@@ -16,11 +16,15 @@ import art
 import cleverhans
 import flwr as fl
 import imagecorruptions
+import imagedegrade
 import keras
 import matplotlib.pyplot as plt
+import neural_structured_learning as nsl
 import numpy
 import numpy as np
+import pandas as pd
 import scipy
+import seaborn as sns
 import sympy
 import tensorflow as tf
 import tensorflow_datasets as tfds
@@ -30,8 +34,10 @@ import tensorflow_probability as tpb
 import tqdm
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import (
-    FaultTolerantFedAvg, FedAdagrad, FedAvg, FedFSv1, Strategy, fedopt)
+from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
+                                  FedFSv1, Strategy, fedopt)
+from imagecorruptions import corrupt
+from imagedegrade import np as degrade
 from keras import backend as K
 from keras import optimizers, regularizers
 from keras.applications.vgg16 import VGG16, preprocess_input
@@ -45,14 +51,11 @@ from keras.layers.core import Lambda
 from keras.models import Input, Model, Sequential, load_model, save_model
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-import neural_structured_learning as nsl
 from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
-import imagedegrade
-from imagedegrade import np as degrade
-from imagecorruptions import corrupt
+
 
 def scheduler(epoch, lr):
     if epoch < 5:
@@ -292,10 +295,6 @@ class Data:
         return partition    
 
     @staticmethod
-    def get_mnist_image(image : np.ndarray):
-        return tf.keras.preprocessing.image.array_to_img(image)
-
-    @staticmethod
     def make_training_data_iid(dataset, num_partitions):
         # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
         return []
@@ -334,3 +333,78 @@ class Data:
         x_train = tf.cast(x_train, dtype=tf.float32)
         x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])
+
+class MetricsConfig(object):
+    @staticmethod
+    def create_table(header: list, csv, norm_type="l-inf", options=["l-inf", "l2"]):
+        # every set of rounds maps to a hardcoded adv_step_size, so we can measure this round set in terms of the adv_step_size set we want to iterate over
+        headers = ["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"]
+        # define options per variable; adv reg shares pattern of adversarial augmentation, noise (non-uniform, uniform) perturbations/corruptions/degradation as regularization
+        adv_reg_options = ["Neural Structured Learning", "Gaussian Regularization", "Data Corruption Regularization", "Noise Regularization", "Blur Regularization"]
+        strategy_options = ["FedAvg", "FedAdagrad", "FaultTolerantFedAvg", "FedFSV1"]
+        metrics = ["server_loss", "server_accuracy_under_attack", "server_certified_loss"]
+        # norm type used to define the line graph in the plot rather than an x or y axis label
+        variables = ["epochs", "communication_rounds", "client_learning_rate", "server_learning_rate", "adv_grad_norm", "adv_step_size"]
+        nsl_variables = ["neighbor_loss"]
+        # measure severity as an epsilon when labeling the line graph in plot
+        baseline_adv_reg_variables = ["severity", "noise_sigma"]
+
+    @staticmethod
+    def plot_client_model(model):
+        file = keras.utils.plot_model(model, to_file='model.png')
+        save_path = '/media'
+        file_name = "model.png"
+        os.path.join(save_path, file_name)
+
+    @staticmethod
+    def plot_img(image : np.ndarray):
+        plt.figure(figsize=(32,32))
+        # iteratively get perturbed images based on their norm type and norm values (l∞-p_ε; norm_type, adv_step_size)
+        plt.imshow(image, cmap=plt.get_cmap('gray'))
+
+    @staticmethod
+    def update_dataframe(dataframe : pd.DataFrame, row):
+        '''
+            sns.relplot(
+                data=fmri, x="timepoint", y="signal", col="region",
+                hue="event", style="event", kind="line",
+            )
+
+        '''
+        exp_config_data = pd.DataFrame(row=row)
+        dataframe.append(exp_config_data)
+    
+    @staticmethod
+    def create_line_plot():
+        # Reference: https://seaborn.pydata.org/generated/seaborn.lineplot.html#seaborn.lineplot
+        sns.set_theme(style="whitegrid")
+        rs = np.random.RandomState(365)
+        values = rs.randn(365, 4).cumsum(axis=0)
+        dates = pd.date_range("1 1 2016", periods=365)
+        data = pd.DataFrame(values, dates, columns=["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"])
+        return sns.lineplot(data=data, palette="tab10", linewidth=2.5)
+
+    @staticmethod
+    def save_plot(sns_plot):
+        # check for directory, then add file to target directory
+        if (os.path.isdir('/figures')):
+            # add file to path
+            os.walk("/figures")
+            file = sns_plot.savefig("exp_config.png")
+
+        else:
+            os.makedir("figures")
+            os.walk("/figures")
+            file = sns_plot.savefig("exp_config.png")
+
+    @staticmethod
+    def create_sns_plot(num_rounds : int, server_metrics : tf.keras.callbacks.History):
+        # setup the scale given num_rounds is 10 or 100
+        pass
+
+# todo: setup plots below per exp config in process
+    # communication rounds against federated-accuracy-under-attack (server-side eval accuracy vs num rounds for adv. regularized server model and non-adv regularized server model)
+    # comm rounds vs evaluation loss for both server models (adv. regularized clients --> server model a, non-regularized clients --> server model b) 
+    # federated optimization technique (FedAvg, FedAdagrad, FaultTolerantFedAvg) versus server-side model federated-accuracy-under-attack (adv reg vs non adv reg)
+    # epsilon norm values (increasing __p_adv-e__) against federated accuracy-under-attack (label each line by their grad norm type) --> change the HParams metadata for adv step size (each time, reset at 1/2) and adv grad norm (after 1/2) for each "trial"
+
