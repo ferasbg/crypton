@@ -91,4 +91,7 @@ noise_corruption_set = ["gaussian_noise", "shot_noise", "impulse_noise", "speckl
 
 ## Bugs
 - Figure out the small re-write and fix for client in order to support rank=3 images for imagecorruptions library for the baselines.
+- The reason why there was an error with reading in dataset was because the partition forces the batch_size to be less than the number of samples.
+- Does it make sense to implement "randomized smoothing" or some common certification algorithm to measure adversarial robustness for the server-side model?
+	- The usage would be to `from certify import *` in `server.py` and apply the perturbation attack, track the state of the variables, and check it against the target certification.
 

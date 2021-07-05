@@ -30,47 +30,54 @@ from client import *
 
 warnings.filterwarnings("ignore")
 
-class ServerMetricsConfig(object):
-    def __init__(self):
-        self.metrics = []
-    
-    def update_metrics(self, metrics):
-        self.metrics.append(metrics)
-
-def build_base_server_model(num_classes: int):
-    input_layer = layers.Input(
-        shape=(32, 32, 3), batch_size=None, name="image")
-    conv1 = layers.Conv2D(32, (3, 3), activation='relu',
-                          padding='same')(input_layer)
+def build_base_server_model(num_classes : int):
+    input_layer = layers.Input(shape=(32,32,3), name="image")
+    regularizer = tf.keras.regularizers.l2()
+    conv1 = layers.Conv2D(32, (3,3), activation='relu', kernel_regularizer=regularizer, padding='same')(input_layer)
     batch_norm = layers.BatchNormalization()(conv1)
     dropout = layers.Dropout(0.3)(batch_norm)
-    conv2 = layers.Conv2D(64, (3, 3), activation='relu',
-                          kernel_initializer='he_uniform',  padding='same')(dropout)
-    maxpool1 = layers.MaxPool2D((2, 2))(conv2)
-    conv3 = layers.Conv2D(64, (3, 3), activation='relu',
-                          kernel_initializer='he_uniform', padding='same')(maxpool1)
-    conv4 = layers.Conv2D(128, (3, 3), activation='relu',
-                          kernel_initializer='he_uniform', padding='same')(conv3)
-    maxpool2 = layers.MaxPool2D((2, 2))(conv4)
-    conv5 = layers.Conv2D(128, (3, 3), activation='relu',
-                          kernel_initializer='he_uniform', padding='same')(maxpool2)
-    conv6 = layers.Conv2D(256, (3, 3), activation='relu',
-                          kernel_initializer='he_uniform', padding='same')(conv5)
-    maxpool3 = layers.MaxPool2D((2, 2))(conv6)
+    #  kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)
+    conv2 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',padding='same')(dropout)
+    maxpool1 = layers.MaxPool2D((2,2))(conv2)
+    conv3 = layers.Conv2D(64, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool1)
+    conv4 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv3)
+    maxpool2 = layers.MaxPool2D((2,2))(conv4)
+    conv5 = layers.Conv2D(128, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(maxpool2)
+    conv6 = layers.Conv2D(256, (3,3), activation='relu', kernel_initializer='he_uniform',  padding='same')(conv5)
+    maxpool3 = layers.MaxPool2D((2,2))(conv6)
     flatten = layers.Flatten()(maxpool3)
-    # flatten is creating error because type : NoneType
-    dense1 = layers.Dense(128, activation='relu',
-                          kernel_initializer='he_uniform')(flatten)
+    dense1 = layers.Dense(128, activation='relu', kernel_initializer='he_uniform')(flatten)
     # possibly remove defined kernel/bias initializer, but functional API will check for this and removes error before processing model architecture and config
-    output_layer = layers.Dense(num_classes, activation='softmax',
-                                kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
-    model = keras.Model(inputs=input_layer,
-                        outputs=output_layer, name='client_model')
-    model.compile(optimizer="adam",
-                  loss="sparse_categorical_crossentropy", metrics=['accuracy'])
+    output_layer = layers.Dense(num_classes, activation='softmax', kernel_initializer='random_normal', bias_initializer='zeros')(dense1)
+    model = keras.Model(inputs=input_layer, outputs=output_layer, name='client_model')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=['accuracy'])
     return model
 
-server_metrics_config = ServerMetricsConfig()
+def main(args) -> None:
+    # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
+
+    # 1. server-side parameter initialization
+    # 2. server-side parameter evaluation
+    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
+
+    # create model
+    model = build_base_server_model(num_classes=10)
+
+    # # create strategy; later use args.strategy 
+    strategy = FedAvg(
+        fraction_fit=0.3,
+        fraction_eval=0.2,
+        min_fit_clients=3,
+        min_eval_clients=2,
+        min_available_clients=10,
+        eval_fn=get_eval_fn(model),
+        # strategy based on user-written wrapper functions
+        on_fit_config_fn=fit_config,
+        on_evaluate_config_fn=evaluate_config,
+        initial_parameters=model.get_weights(),
+    )
+
+    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
@@ -82,11 +89,11 @@ def get_eval_fn(model):
     x_test, y_test = x_train[-10000:], y_train[-10000:]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
 
-    # params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
-    # adv_model = build_adv_model(params=params)
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
+    adv_model = build_adv_model(params=params)
 
-    # for batch in val_data:
-    #     adv_model.perturb_on_batch(batch)
+    for batch in val_data:
+        adv_model.perturb_on_batch(batch)
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -94,18 +101,12 @@ def get_eval_fn(model):
     ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
 
         model.set_weights(weights)  # Update model with the latest parameters
-        # this inner function unpacks the tuples into the loss and accuracy just fine it seems
-        results = model.evaluate(x_test, y_test)
-        results = {
-            "loss": results[0],
-            "accuracy": results[1],
-        }
-        server_metrics_config.update_metrics(results)
+        # convert from tuples to dicts if this
+        loss, accuracy = model.evaluate(x_test, y_test)
+        # get dict of history in evaluation, and return
+        return loss, {"accuracy": accuracy}
 
-        return results["loss"], {"accuracy": results["accuracy"]}
-    
     return evaluate
-
 
 def fit_config(rnd: int):
     """Return training configuration dict for each round.
@@ -129,10 +130,11 @@ def evaluate_config(rnd: int):
     val_steps = 5 if rnd < 4 else 10
     return {"val_steps": val_steps}
 
-def setup_server_parse_args():
+def setup_server_parser():
     parser = argparse.ArgumentParser(description="Crypton Server")
     # configurations
     parser.add_argument("--num_rounds", type=int, required=False, default=3)
+    # options = "fedavg", "fedadagrad", "fault_tolerant_fedavg"
     parser.add_argument("--strategy", type=str, required=False, default="fedavg")
     # hardcode or configure with args? optional
     parser.add_argument("--fraction_fit", type=float,
@@ -149,40 +151,10 @@ def setup_server_parse_args():
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
-
-    args = parser.parse_args()
-    return args
+    parser = parser.parse_args()
+    return parser
 
 if __name__ == "__main__":
-    # 1. server-side parameter initialization
-    # 2. server-side parameter evaluation
-    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
-
-    args = setup_server_parse_args()
-
-    # create model
-    model = build_base_server_model(num_classes=args.num_classes)
-
-    if (args.strategy == "fedavg"):
-        strategy = FedAvg(
-            fraction_fit=0.3,
-            fraction_eval=0.2,
-            min_fit_clients=3,
-            min_eval_clients=2,
-            min_available_clients=10,
-            eval_fn=get_eval_fn(model),
-            # strategy based on user-written wrapper functions
-            on_fit_config_fn=fit_config,
-            on_evaluate_config_fn=evaluate_config,
-            initial_parameters=model.get_weights(),
-        )
-
-    # if (args.strategy == "fedadagrad"):
-    #     # initialize param to pass to initial_parameters by converting model.get_weights() into iterable Tensor
-    #     initial_parameters = model.get_weights()
-    #     initial_parameters = tf.nest.map_structure(tf.convert_to_tensor(initial_parameters, dtype=tf.float32))
-    #     strategy = FedAdagrad(initial_parameters=initial_parameters)
-
-    # remove strategy parameter
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={
-                             "num_rounds": args.num_rounds})
+    # configure the args object when the file is run and it'll be processed into main function and into target objects in question
+    args = setup_server_parser()
+    main(args)

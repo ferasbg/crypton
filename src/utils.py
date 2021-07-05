@@ -77,10 +77,9 @@ class HParams(object):
             - https://arxiv.org/abs/1409.1556
     '''
 
-    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm, input_shape=[28, 28, 1]):
+    def __init__(self, num_classes, adv_multiplier, adv_step_size, adv_grad_norm):
         # store model and its respective train/test dataset + metadata in parameters
         # by default it's 28x28x1 but if specified, it can change to 32x32x3
-        self.input_shape = input_shape
         self.num_classes = num_classes
         self.conv_filters = [32, 32, 64, 64, 128, 128, 256]
         self.kernel_size = (3, 3)
@@ -111,7 +110,6 @@ class Data:
     This class handles processing data corruption, data preprocessing, and data utilities.
 
     Notes:
-        
         - goal: using image processing techniques as a form of regularization through the data sent through the client models to evaluate better on real-world "adversarial examples". Structured signals from adv. regularization relation to entropy and adaptive federated optimization and effects from combined methods of data "regularization" to generate robust adversarial examples for the purpose of building a robust server-client model infrastructure.
         - process: perturb dtype=uint8 x_train before it's casted to tf.float32
         - note: modifying image fidelity as a means of regularization through the data and not the model
@@ -126,31 +124,18 @@ class Data:
         - note: relate image geometric transformations and map with structured signals with adv. reg. to relate to adaptive fed optimizer when aggregating updated client gradients (.... some middle steps though)
         - FedAdagrad helps server model converge on heteregeneous data better; that's all
         - non-uniform, non-universal perturbations to the image; how does this fare as far as 1) min-max perturbation in adv. reg. and 2) against universal, norm-bounded perturbations?
+        - train and eval loss data matters when relating the ideas of the regularizer and strategy in terms of architecture choice
 
     Research Notes:
         - In leu of structured signals, graph representations, and graph learning, here's a reference for the paper nsl depends on:
         - "Parameterization invariant regularization, on the other hand, does not suffer from such a problem. In more precise terms, by parametrization invariant regularization we mean the regularization based on an objective function L(θ) with the property that the corresponding optimal distribution p(X; θ ∗ ) is invariant under the oneto-one transformation ω = T(θ), θ = T −1 (ω). That is, p(X; θ ∗ ) = p(X; ω ∗ ) where ω ∗ = arg minω L(T −1 (ω); D). VAT is a parameterization invariant regularization, because it directly regularizes the output distribution by its local sensitivity of the output with respect to input, which is, by definition, independent from the way to parametrize the model."
-
-    References:
-
-        @article{michaelis2019dragon,
-        title={Benchmarking Robustness in Object Detection:
-            Autonomous Driving when Winter is Coming},
-        author={Michaelis, Claudio and Mitzkus, Benjamin and
-            Geirhos, Robert and Rusak, Evgenia and
-            Bringmann, Oliver and Ecker, Alexander S. and
-            Bethge, Matthias and Brendel, Wieland},
-        journal={arXiv preprint arXiv:1907.07484},
-        year={2019}
-        }
-
-    
     '''
 
     corruption_tuple = ["gaussian_noise", "shot_noise", "impulse_noise", "defocus_blur",
                     "glass_blur", "motion_blur", "zoom_blur", "fog", "brightness", "contrast", "elastic_transform", "pixelate",
                     "jpeg_compression", "speckle_noise", "gaussian_blur", "spatter",
                     "saturate"]
+
 
     @staticmethod
     def apply_blur_corruption(image, corruption_name : str):
@@ -209,90 +194,51 @@ class Data:
             perturbed_batch[IMAGE_INPUT_NAME] = tf.clip_by_value(perturbed_batch[IMAGE_INPUT_NAME], 0.0, 1.0)
 
         return dataset
+    
+    def load_partition(self, idx : int):
+        assert idx in range(10)
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
 
-    @staticmethod
-    def apply_corruptions_to_dataset(dataset, model, corruption_name : str):
-        # if tf.keras.Model --> assume dataset is a set of tuples --> convert back to dict then apply with Data.apply_corruption(dataset : Dict[np.ndarray])  then convert back to tuples
-        # if AdversarialRegularization --> assume dataset is a set of dictionaries --> iterate over dict when applying to each image of type 'np.ndarray'
-        pass
+        return (
+            x_train[idx * 5000 : (idx + 1) * 5000],
+            y_train[idx * 5000 : (idx + 1) * 5000],
+        ), (
+            x_test[idx * 1000 : (idx + 1) * 1000],
+            y_test[idx * 1000 : (idx + 1) * 1000],
+        )
 
-    @staticmethod
-    def load_train_partition(train_partitions, idx: int):
-        # return a tuple given the target client (index to iterate over all clients)
-        # (x_train, y_train) are already partitioned with Data.create_train_partitions(). This is untested, but validate that the return type of Tuple is consistent with the logic written in DatasetConfig and for storing the partition for the client in ExperimentConfig and accessed by AdvRegClientConfig or ClientConfig.
-        # usage: train_partitions[0][0] --> x_train for client 0
-        client_train_partition = train_partitions[idx]
-        return client_train_partition
+    @staticmethod    
+    def load_train_partition_for_100_clients(idx: int):
+        assert idx in range(100)
+        # 500/100 train/test split per partition e.g. per client
+        # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+        # 5000/50000 --> 500/50000
+        return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
 
-    @staticmethod
-    def load_test_partition(test_partitions, idx : int):
-        client_test_partition = test_partitions[idx]
-        return client_test_partition
+    @staticmethod    
+    def load_test_partition_for_100_clients(idx : int):
+        assert idx in range(100) 
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+        x_train = tf.cast(x_train, dtype=tf.float32)
+        x_test = tf.cast(x_test, dtype=tf.float32)
+        return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])
 
-    @staticmethod
-    def create_train_partitions(x_train, y_train, num_clients : int):
-        '''
-        Usage:
-            - train_partitions = create_train_partitions(dataset, num_clients=args.num_clients)
-            - current_train_dataset = train_partitions[current_client_idx]
+    # MapDataset
+    def normalize(features):
+        features['image'] = tf.cast(
+            features['image'], dtype=tf.float32) / 255.0
+        return features
 
-        Notes:
-            - preprocess the partitions before wrapping them into the MapDataset / BatchDataset objects
+    def convert_to_tuples(features):
+        return features['image'], features['label']
 
-        '''
-        train_partitions = []
-        if (num_clients == 10):
-            for i in range(num_clients):
-                # partition x_train and y_train based on the num_clients
-                partition = []
-                # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
-                x_train = x_train[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
-                y_train = y_train[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
-                partition = (x_train, y_train)
-                train_partitions.append(partition)
-
-        return train_partitions
-
-    @staticmethod
-    def create_test_partitions(x_test, y_test, num_clients : int):
-        test_partitions = []
-        if (num_clients == 10):
-            for i in range(num_clients):
-                # partition x_train and y_train based on the num_clients
-                partition = []
-                # 0:5000; 50000:10000, 10000:15000, 15000:20000, ..., 45000:50000
-                x_test = x_test[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
-                y_test = y_test[(i * (50000/num_clients)) : (i + 1) * (50000/num_clients)]
-                partition = (x_test, y_test)
-                test_partitions.append(partition)
-
-        return test_partitions
-
-    @staticmethod
-    def perturb_dataset_partition(partition, adv_model : nsl.keras.AdversarialRegularization, params : HParams):
-        '''
-        Server-side dataset perturbation.
-
-        Usage:
-            
-            # perturb dataset for server model
-            (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-            #x_test, y_test = x_train[45000:50000], y_train[45000:50000]
-            x_test, y_test = x_train[-10000:], y_train[-10000:]
-            # make BatchDataset
-            val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
-            params = HParams(10, 0.02, 0.05, "infinity")
-            adv_model = build_adv_model(params=params)
-
-            for batch in val_data:
-                adv_model.perturb_on_batch(batch)
-
-        '''
-        for batch in partition:
-            adv_model.perturb_on_batch(batch)
-            # clip_by_value --> depends on sample implementation
-
-        return partition    
+    def convert_to_dictionaries(image, label, IMAGE_INPUT_NAME='image', LABEL_INPUT_NAME='label'):
+        return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
     @staticmethod
     def make_training_data_iid(dataset, num_partitions):
@@ -304,39 +250,48 @@ class Data:
         # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
         return []
 
-    @staticmethod    
-    def load_train_partition_for_100_clients(idx: int):
-        '''
-        if (args.num_clients in range(11, 100)):
-                    (x_train, y_train) = Data.load_train_partition_for_100_clients(idx=client_partition_idx)
-                    (x_test, y_test) = Data.load_test_partition_for_100_clients(idx=client_partition_idx) 
-                    
-                    self.x_train = x_train
-                    self.y_train = y_train
-                    self.x_test = x_test
-                    self.y_test = y_test
+class Plot(object):
+    def plot_certified_accuracy(outfile: str, title: str, max_radius: float, radius_step: float = 0.01) -> None:
 
-        '''
-        assert idx in range(100)
-        # 500/100 train/test split per partition e.g. per client
-        # create partition with train/test data per client; note that 600 images per client for 100 clients is convention; 300 images for 200 shards for 2 shards per client is another method and not general convention, but a test
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
-        # 5000/50000 --> 500/50000
-        return (x_train[idx * 500: (idx + 1) * 500], y_train[idx * 500: (idx + 1) * 500])
+        # for line in lines:
+            # plot line with sns
+            # plt.plot(radii * line.scale_x, line.quantity.at_radii(radii), line.plot_fmt)
 
-    @staticmethod    
-    def load_test_partition_for_100_clients(idx : int):
-        assert idx in range(100) 
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-        x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
-        return (x_test[idx * 100: (idx + 1) * 100], y_test[idx * 100: (idx + 1) * 100])
+        # radius is the norm value eg adv_step_size
 
-class MetricsConfig(object):
+        plt.ylim((0, 1))
+        plt.xlim((0, max_radius))
+        plt.tick_params(labelsize=14)
+        plt.xlabel("radius", fontsize=16)
+        plt.ylabel("certified accuracy", fontsize=16)
+        # plt.legend([method.legend for method in lines], loc='upper right', fontsize=16)
+        plt.savefig(outfile + ".pdf")
+        plt.tight_layout()
+        plt.title(title, fontsize=20)
+        plt.tight_layout()
+        plt.savefig(outfile + ".png", dpi=300)
+        plt.close()
+
     @staticmethod
-    def create_table(header: list, csv, norm_type="l-inf", options=["l-inf", "l2"]):
+    def save_plot(sns_plot):
+        # check for directory, then add file to target directory
+        if (os.path.isdir('/figures')):
+            # add file to path
+            os.walk("/figures")
+            file = sns_plot.savefig("exp_config.png")
+
+        else:
+            os.makedir("figures")
+            os.walk("/figures")
+            file = sns_plot.savefig("exp_config.png")
+
+    @staticmethod
+    def create_sns_plot(num_rounds : int, server_metrics : tf.keras.callbacks.History):
+        # setup the scale given num_rounds is 10 or 100
+        pass
+
+    @staticmethod
+    def create_table(csv, norm_type="l-inf", options=["l-inf", "l2"]):
         # every set of rounds maps to a hardcoded adv_step_size, so we can measure this round set in terms of the adv_step_size set we want to iterate over
         headers = ["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"]
         # define options per variable; adv reg shares pattern of adversarial augmentation, noise (non-uniform, uniform) perturbations/corruptions/degradation as regularization
@@ -348,7 +303,8 @@ class MetricsConfig(object):
         nsl_variables = ["neighbor_loss"]
         # measure severity as an epsilon when labeling the line graph in plot
         baseline_adv_reg_variables = ["severity", "noise_sigma"]
-
+        table = pd.DataFrame(columns=headers)
+        
     @staticmethod
     def plot_client_model(model):
         file = keras.utils.plot_model(model, to_file='model.png')
@@ -383,28 +339,3 @@ class MetricsConfig(object):
         dates = pd.date_range("1 1 2016", periods=365)
         data = pd.DataFrame(values, dates, columns=["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"])
         return sns.lineplot(data=data, palette="tab10", linewidth=2.5)
-
-    @staticmethod
-    def save_plot(sns_plot):
-        # check for directory, then add file to target directory
-        if (os.path.isdir('/figures')):
-            # add file to path
-            os.walk("/figures")
-            file = sns_plot.savefig("exp_config.png")
-
-        else:
-            os.makedir("figures")
-            os.walk("/figures")
-            file = sns_plot.savefig("exp_config.png")
-
-    @staticmethod
-    def create_sns_plot(num_rounds : int, server_metrics : tf.keras.callbacks.History):
-        # setup the scale given num_rounds is 10 or 100
-        pass
-
-# todo: setup plots below per exp config in process
-    # communication rounds against federated-accuracy-under-attack (server-side eval accuracy vs num rounds for adv. regularized server model and non-adv regularized server model)
-    # comm rounds vs evaluation loss for both server models (adv. regularized clients --> server model a, non-regularized clients --> server model b) 
-    # federated optimization technique (FedAvg, FedAdagrad, FaultTolerantFedAvg) versus server-side model federated-accuracy-under-attack (adv reg vs non adv reg)
-    # epsilon norm values (increasing __p_adv-e__) against federated accuracy-under-attack (label each line by their grad norm type) --> change the HParams metadata for adv step size (each time, reset at 1/2) and adv grad norm (after 1/2) for each "trial"
-
