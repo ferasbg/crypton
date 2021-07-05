@@ -147,7 +147,7 @@ def setup_client_parser():
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
-    parser.add_argument("--batch_size", type=int, required=False, default=32)
+    parser.add_argument("--batch_size", type=int, required=False, default=16)
     parser.add_argument("--epochs", type=int, required=False, default=1)
     parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
     parser.add_argument("--num_clients", type=int, required=False, default=10)

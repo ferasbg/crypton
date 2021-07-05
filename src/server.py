@@ -97,7 +97,7 @@ def main(args) -> None:
     if (args.strategy == "fed_adagrad"):
         strategy = None
 
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
+    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
