@@ -74,18 +74,18 @@ def main(args) -> None:
         initial_parameters=model.get_weights())
 
     # # create strategy; later use args.strategy 
-    fed_avg = FedAvg(
-        fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=3,
-        min_eval_clients=2,
-        min_available_clients=10,
-        eval_fn=get_eval_fn(model),
-        # strategy based on user-written wrapper functions
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        initial_parameters=model.get_weights(),
-    )
+    fed_avg = FedAvg()
+
+    # fraction_fit=0.3,
+    # fraction_eval=0.2,
+    # min_fit_clients=3,
+    # min_eval_clients=2,
+    # min_available_clients=10,
+    # eval_fn=get_eval_fn(model),
+    # # strategy based on user-written wrapper functions
+    # on_fit_config_fn=fit_config,
+    # on_evaluate_config_fn=evaluate_config,
+    # initial_parameters=model.get_weights(),
 
     # fed_adagrad = FedAdagrad(initial_parameters=tf.convert_to_tensor(value=model.get_weights()))
     if (args.strategy == "fedavg"):
@@ -94,10 +94,10 @@ def main(args) -> None:
     if (args.strategy == "ft_fedavg"):
         strategy = ft_fed_avg
 
-    if (args.strategy == "fed_adagrad"):
-        strategy = None
+    # if (args.strategy == "fed_adagrad"):
+    #     strategy = None
 
-    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": args.num_rounds})
+    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
@@ -106,7 +106,7 @@ def get_eval_fn(model):
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
 
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
-    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(32)
+    val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
     params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.10, adv_grad_norm="infinity")
     adv_model = build_adv_model(params=params)
 

@@ -17,8 +17,31 @@ import seaborn as sns
 import pandas as pd
 import chartify
 import matplotlib.pyplot as plt
-
+import json
+import jsonify
+import logging
+from logging import Logger
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+# note down the data printed for metrics --> use directory to create plots (most ad-hoc approach there is)
+# work backwards from data u need
+
+## GET DATA FOR:
+# server eval accuracy against comm rounds
+# client train accuracy vs num rounds (for each adv_reg technique so constant adv_grad_norm and adv_step_size but different adv_reg techniques)
+# server eval loss against comm rounds
+# client train loss vs num rounds (for each adv_reg technique with constant adv_grad_norm and adv_step_size)  
+'''
+# change to get all plot data
+python3 client.py --steps_per_epoch=1 --epochs=1 --model="nsl_model" --num_clients=10  -adv_grad_norm="infinity" --adv_step_size=0.05 --client_partition_idx=0
+
+INFO flower 2021-07-05 23:49:57,927 | app.py:121 | app_evaluate: federated loss: 625.0
+INFO:flower:app_evaluate: federated loss: 625.0
+INFO flower 2021-07-05 23:49:57,927 | app.py:122 | app_evaluate: results [('ipv6:[::1]:58558', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58564', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58568', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58572', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58574', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58578', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58582', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58586', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58590', EvaluateRes(loss=625.0, num_examples=49, accuracy=0.0, metrics={}))]
+INFO:flower:app_evaluate: results [('ipv6:[::1]:58558', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58564', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58568', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58572', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58574', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58578', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58582', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58586', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58590', EvaluateRes(loss=625.0, num_examples=49, accuracy=0.0, metrics={}))]
+INFO flower 2021-07-05 23:49:57,928 | app.py:127 | app_evaluate: failures []
+INFO:flower:app_evaluate: failures []
+
+'''
 
 class DatasetConfig(object):
     '''
@@ -28,7 +51,9 @@ class DatasetConfig(object):
     def __init__(self, args):
         (x_train, y_train) = self.load_train_partition(idx=args.client_partition_idx)
         (x_test, y_test) = self.load_test_partition(idx=args.client_partition_idx)
-        
+
+        # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+
         if (args.corruption_name != ""):
             x_train = self.corrupt_train_partition(x_train, corruption_name=args.corruption_name)
 
@@ -40,17 +65,12 @@ class DatasetConfig(object):
         # the declaration is in terms of a tuple to the assignment with the respective load partition function
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-        x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
-
         # process the same dataset
         return (x_train[idx * 5000 : (idx + 1) * 5000], y_train[idx * 5000 : (idx + 1) * 5000])
 
     def load_test_partition(self, idx : int):
         assert idx in range(10)
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-        x_train = tf.cast(x_train, dtype=tf.float32)
-        x_test = tf.cast(x_test, dtype=tf.float32)
         return (x_test[idx * 1000 : (idx + 1) * 1000], y_test[idx * 1000 : (idx + 1) * 1000])
 
     def corrupt_train_partition(self, x_train, corruption_name : str):
@@ -143,13 +163,14 @@ def build_gaussian_base_model(params : HParams):
 def setup_client_parser():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
-    parser.add_argument("--client_partition_idx", type=int, required=False, default=0)
+    parser.add_argument("--client_partition_idx", type=int, choices=range(0, 9), required=False, default=1)
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
-    parser.add_argument("--batch_size", type=int, required=False, default=16)
+    # sample data is very sparse
+    parser.add_argument("--batch_size", type=int, required=False, default=8)
     parser.add_argument("--epochs", type=int, required=False, default=1)
-    parser.add_argument("--steps_per_epoch", type=int, required=False, default=0)
+    parser.add_argument("--steps_per_epoch", type=int, required=False, default=1)
     parser.add_argument("--num_clients", type=int, required=False, default=10)
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     # hardcode use of nsl model
@@ -168,6 +189,10 @@ if __name__ == '__main__':
     # process args upon execution
     args = setup_client_parser()
     dataset_config = DatasetConfig(args)
+    print(len(dataset_config.partitioned_train_dataset))
+    print(len(dataset_config.partitioned_test_dataset))
+    print(dataset_config.partitioned_val_steps)
+
     params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     nsl_model = build_adv_model(params=params)
     base_model = build_base_model(params=params)
@@ -212,6 +237,8 @@ if __name__ == '__main__':
                     "sparse_categorical_accuracy": results[2],
                     "scaled_adversarial_loss": results[3],
             }
+
+            print(results)
 
             loss = int(results["loss"])
             accuracy = int(results["sparse_categorical_accuracy"])
