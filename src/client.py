@@ -9,7 +9,7 @@ import tensorflow_datasets as tfds
 from tensorflow.keras.utils import to_categorical
 from keras.regularizers import l2
 import numpy as np
-from utils import *
+from src.utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
 from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1
 import bokeh
@@ -22,8 +22,12 @@ import jsonify
 import logging
 from logging import Logger
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-# note down the data printed for metrics --> use directory to create plots (most ad-hoc approach there is)
 # work backwards from data u need
+# todo: hardcode arg execution to get each plot
+    # repeat arg lines in terms of ascending adv step size when it applies
+# todo: fix venv unresolved imports issue
+# todo: get the plots with the set of history objects
+# todo: setup client and server process data with logger object
 
 ## GET DATA FOR:
 # server eval accuracy against comm rounds
@@ -213,6 +217,9 @@ if __name__ == '__main__':
             return model.get_weights()
 
         def fit(self, parameters, config):
+            # i will plot the data and then manually create the plots;
+            # instead of worrying abt storing it in static object
+            # run each exp config (define all them first), get plots, use them to measure client train losses for each config in terms of rounds (100)
             model.set_weights(parameters)
             history = model.fit(dataset_config.partitioned_train_dataset, validation_data=dataset_config.partitioned_test_dataset, validation_steps=dataset_config.partitioned_val_steps, steps_per_epoch=args.steps_per_epoch, epochs=args.epochs)
             results = {
@@ -221,9 +228,22 @@ if __name__ == '__main__':
                 "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
-
+            
+            # either get avg of accuracies or use 1 epoch and use in terms of rounds
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
+            plt.plot(results["loss"], label='Client Train Loss')
+            plt.legend(['Training Loss'])
+            plt.show()
+            plt.savefig('client_train_loss')
+
+            plt.plot(accuracy, label='Client Train Accuracy')
+            # store train loss and accuracy for client (train loss/acc for each adv reg technique)
+            plt.legend(['Training Accuracy'])
+            plt.show()
+            plt.savefig('client_train_accuracy')
+            
+            # assume --epochs=1
             accuracy = int(accuracy[0])
             return model.get_weights(), train_cardinality, accuracy
 
@@ -245,6 +265,16 @@ if __name__ == '__main__':
             # client_configs[0].test_dataset
             test_cardinality = len(dataset_config.partitioned_train_dataset)
 
+            plt.plot(loss, label='Client Train Loss')
+            plt.legend(['Training Loss'])
+            plt.show()
+            plt.savefig('client_train_loss')
+
+            plt.plot(accuracy, label='Client Train Accuracy')
+            plt.legend(['Training Accuracy'])
+            plt.show()
+            plt.savefig('client_train_accuracy')
+
             return loss, test_cardinality, accuracy
 
     class Client(flwr.client.KerasClient):
@@ -263,6 +293,16 @@ if __name__ == '__main__':
 
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
+            plt.plot(results["loss"], label='Client Train Loss')
+            plt.legend(['Training Loss'])
+            plt.show()
+            plt.savefig('client_train_loss')
+
+            plt.plot(accuracy, label='Client Train Accuracy')
+            plt.legend(['Training Accuracy'])
+            plt.show()
+            plt.savefig('client_train_accuracy')
+
             accuracy = int(accuracy[0])
 
             return model.get_weights(), train_cardinality, accuracy
@@ -276,6 +316,16 @@ if __name__ == '__main__':
                     "sparse_categorical_accuracy": results[2],
                     "scaled_adversarial_loss": results[3],
             }
+
+            plt.plot(results["loss"], label='Client Train Loss')
+            plt.legend(['Training Loss'])
+            plt.show()
+            plt.savefig('client_train_loss')
+
+            plt.plot(results["sparse_categorical_accuracy"], label='Client Train Accuracy')
+            plt.legend(['Training Accuracy'])
+            plt.show()
+            plt.savefig('client_train_accuracy')
 
             loss = int(results["loss"])
             accuracy = int(results["sparse_categorical_accuracy"])

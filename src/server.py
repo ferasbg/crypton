@@ -25,8 +25,8 @@ from tensorflow.keras import layers
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
-from utils import *
-from client import *
+from src.utils import *
+from src.client import *
 
 warnings.filterwarnings("ignore")
 
