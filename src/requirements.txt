@@ -12,3 +12,8 @@ sympy
 tqdm
 imagecorruptions
 imagedegrade
+bokeh
+chartify
+pandas
+seaborn
+jsonify
