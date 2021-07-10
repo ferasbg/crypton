@@ -2,14 +2,22 @@
 The purpose of this work is to build an adversarially robust federated system by utilizing adaptive and non-adaptive federated optimization techniques, as well as optimizing the adversarial regularization techniques used at the client-level in order to build a robust trusted aggregator model. More specifically, we aim to use neural structured learning and adaptive federated optimization together to build an adversarially robust federated learning system that can adapt to heterogeneous, sparse, and perturbed data that would be faced in a production-level federated environment.
 
 ## Introduction
+There is a disconnect in terms of system design relating to federated systems for specifically image recognition and other computer vision tasks when it comes to performing well on real-world data. Models converge well on fixed, IID data with unrealistic quality, sparsity, fault tolerance, adaptivity, and so on, so this system is built to adapt to the data state and the system state (adaptive strategies, adversarially regularized client models)
 - State the problem being solved and the approach taken.
 - State what your goals for the paper are.
 - "This paper introduces a novel and scalable connection between adversarial regularization and neural structured learning for production-level federated learning."
 
 ## Problem Statement
+- Formulation is in terms of system components and subcomponents. Strategy (adaptive, non-adaptive), adversarial regularization technique, and robustness specifications (checks) for server-side model evaluation. We can have a base formulation and extend it to various forms of formal "scrutiny" to ensure dependability/reliability under variability.
 - Formalize the problem that is being solved in terms of the components responsible, neglecting unnecessarily specific variables that are default settings and thus preconditional assumptions (safe to assume, so extraneous in problem formulation).
 
 ## Crypton Architecture
+
+<div align="center">
+    <img src="https://github.com/ferasbg/crypton/blob/master/docs/media/nsl_architecture.png" width="800" align="center">
+</div>
+
+#### Meta
 - Partition Dataset --> MNIST Image Sample --> NSL (Structured Signals, Feature Decomposition, Adv. Regularization) --> Core Deep Conv. Neural Network (nominally regularized is default setting) --> Federated Strategy --> Server-Side Parameter Evaluation (Trusted Aggregator) --> Certification : Check Against Adv. Robustness Property Specifications
 
 ## Results and Evaluation
