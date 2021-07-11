@@ -17,7 +17,7 @@ The purpose of this work is to build an adversarially robust federated system by
 
 #### System Components
 - `client.py`: define the client models and their configuration subcomponents.
-- `server.py`:  
+- `server.py`: define the server-side trusted aggregator model with adversarial perturbations applied to the evaluation data, as well as defining the adaptive/non-adaptive federated strategy.   
 - `simulation.py`: aggregate server-client processes iteratively in terms of the experimental configuration permutations
 #### System Subcomponents
 - `HParams`: adversarial hyperparameter settings
