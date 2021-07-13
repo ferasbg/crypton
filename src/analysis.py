@@ -5,4 +5,4 @@ import bokeh
 import numpy as np
 from client import *
 import logging
-# log the data from the clients and server to create the plots; access logger info; or txt file data; either way 
+# Use 'metrics.py' functions to create plots given log data written to the respective experiment configs, where the logfile name is specified by the experiment (method=(strategy name + adv_reg technique)).

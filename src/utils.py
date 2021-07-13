@@ -257,6 +257,9 @@ class Data:
     def make_training_data_non_iid(dataset, num_partitions):
         # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
         return []
+    
+    # make configurable to MNIST dataset despite corruption learning not applicable given dimensionality / rank error at tensor-level
+
 
 class ExperimentConfig:
     @staticmethod

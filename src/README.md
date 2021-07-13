@@ -18,6 +18,7 @@ Execute experimental configurations to assess the most optimal configuration for
 - Baseline 1: Data Corruption Regularization
 - Baseline 2: Noise Corruption Regularization
 - Baseline 3: Blur Corruption Regularization
+- Control: Nominal Regularization
 
 ```python3
     blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]

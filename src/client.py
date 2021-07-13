@@ -24,12 +24,14 @@ from logging import Logger
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # note down the data printed for metrics --> use directory to create plots (most ad-hoc approach there is)
 # work backwards from data u need
+# write data to log file that can build the final plots
 
 ## GET DATA FOR:
 # server eval accuracy against comm rounds
 # client train accuracy vs num rounds (for each adv_reg technique so constant adv_grad_norm and adv_step_size but different adv_reg techniques)
 # server eval loss against comm rounds
 # client train loss vs num rounds (for each adv_reg technique with constant adv_grad_norm and adv_step_size)  
+
 '''
 # change to get all plot data
 python3 client.py --steps_per_epoch=1 --epochs=1 --model="nsl_model" --num_clients=10  -adv_grad_norm="infinity" --adv_step_size=0.05 --client_partition_idx=0
@@ -288,5 +290,8 @@ if __name__ == '__main__':
     
     if (args.client == "nsl_client"):
         client = AdvRegClient()
+
+    else:
+        client = Client()
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
