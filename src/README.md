@@ -26,6 +26,9 @@ Execute experimental configurations to assess the most optimal configuration for
     noise_corruption_set = ["shot_noise", "impulse_noise", "speckle_noise"]
 ```
 
+## Statements
+- It's important to utilize adversarial regularization whether or not the data is non-IID or IID for machine learning models in production systems.
+
 ## Usage
 - `python3 server.py --num_rounds=10 --strategy="fedadagrad"` 
 - `python3 client.py --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=1 --num_clients=10 nsl_reg=True`

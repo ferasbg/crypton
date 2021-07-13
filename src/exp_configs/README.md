@@ -10,3 +10,7 @@
 # Opt.
 - We can measure for `l2` norm as well
 
+## Reference
+- Change the variables that will iterate. Set it up for one exp config then all you have to do is change the model specification and the regularization technique
+- Use `python3 ../../server.py`
+

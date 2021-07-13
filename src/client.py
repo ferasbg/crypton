@@ -165,7 +165,7 @@ def build_gaussian_base_model(params : HParams):
 def setup_client_parser():
     parser = argparse.ArgumentParser(description="Crypton Client")
     # configurations
-    parser.add_argument("--client_partition_idx", type=int, choices=range(0, 9), required=False, default=1)
+    parser.add_argument("--client_partition_idx", type=int, choices=range(0, 10), required=False, default=1)
     parser.add_argument("--adv_grad_norm", type=str, required=False, default="infinity")
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
