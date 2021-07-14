@@ -37,10 +37,10 @@ Execute experimental configurations to assess the most optimal configuration for
 - working: metrics fit to exp configs; write the code to write the data into the config objects that will create the plots
 - working: writing funcs for server-side formal robustness metrics in `certify.Specification`, then add to `simulation.py` and `server.py` and log the certification metadata when calling the functions. Formalization may involve raw ε-robust accuracy, but either way is concrete even given 2-3 possible additional steps of abstraction. 
 
-## Tests
+## Todo
 - test simulation.py in isolation in terms of default args to test if the processes and code all work
+- write client-level, server-level, exp_config-level data to logfiles that can be parsed and used for creating plots.
 - add feature of plot creation and writing the plot data to be used to create the end plots; this a question on how much is going in the file because that affects what data can be used to create the plot (perhaps the iterations have to take place in the same file instance if you want to get each coordinate pair)
-
 
 ## Comments
 - 3 strats, 13 techniques, 2 norm types, 10 norm values; hardcode args per exp config per python3 simulation.py ran in experimental_config.sh

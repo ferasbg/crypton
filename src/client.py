@@ -30,7 +30,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # server eval accuracy against comm rounds
 # client train accuracy vs num rounds (for each adv_reg technique so constant adv_grad_norm and adv_step_size but different adv_reg techniques)
 # server eval loss against comm rounds
-# client train loss vs num rounds (for each adv_reg technique with constant adv_grad_norm and adv_step_size)  
+# client train loss vs num rounds (for each adv_reg technique with constant adv_grad_norm and adv_step_size)
 
 '''
 # change to get all plot data
@@ -77,7 +77,7 @@ class DatasetConfig(object):
 
     def corrupt_train_partition(self, x_train, corruption_name : str):
         '''
-        Technically, the corruption is applied before it's partitioned. 
+        Technically, the corruption is applied before it's partitioned.
 
         Usage:
             client_train_partition = self.corrupt_train_partition(self.client_train_partition, corruption_name=args.corruption_name)
@@ -188,6 +188,10 @@ def setup_client_parser():
     return parser
 
 if __name__ == '__main__':
+    # create a powerset of sets that store numbers/metrics for target plots
+    # when the client.py file is executed, it will build target plots at the client-level. We will aggregate the logfile data, then create the target plots.
+    # Let's first work backwards and create sample plots. We will then fill them with real data from the experiments.
+
     # process args upon execution
     args = setup_client_parser()
     dataset_config = DatasetConfig(args)
@@ -289,7 +293,7 @@ if __name__ == '__main__':
 
     if (args.client == "base_client"):
         client = Client()
-    
+
     if (args.client == "nsl_client"):
         client = AdvRegClient()
 
