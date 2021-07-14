@@ -223,6 +223,8 @@ if __name__ == '__main__':
                 "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
+            # we can write the metadata used for plots at the client-level iteratively during the entire train/eval rounds --> use that information to create the "final plots". Log the metadata, then use for the core plots.
+            # I'd say first write base data, then extrapolate the data relevant to the final plots (eg 20 rounds is relevant at the exp_config level, not the server or client level)
 
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]

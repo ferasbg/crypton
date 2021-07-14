@@ -1,9 +1,13 @@
 #!/bin/bash
 
 # change the epochs parameter to 1 and set steps_per_epoch=0. Do this once you've written working code that gets the plot data for each client, as well as the server-side data. This may require flwr-side custom configuration, so keep in mind.
-# metadata: ε=range(0.05, 1), norm: l-inf, l2
+# metadata: ε=range(0.05, 1), norm: l-inf, l2; 10 * exp_config_count = 200 net comm rounds?
+# if I need to scale up in terms of my range, that is a simple fix. Either add redundant code or iterate at the exp config level.
+# flwr, write to log file or log object (and make checks based on ArgumentParser).
+# Specify where each data point is accessed. Write data to logfiles relevant to target plots. 
+# server-side model over comm rounds --> write to server_model_data.txt file etc
 
-# FedAvg + NSL; norm: infinity
+# FedAvg + NSL
 python3 ../../server.py --strategy="fedavg" --num_rounds=10 &
 sleep 60
 python3 ../../client.py --model="nsl_model" --num_clients=10 --client_partition_idx=0 --adv_step_size=0.05 --adv_grad_norm="infinity" --epochs=1 --steps_per_epoch=1 --nsl_reg=True --gaussian_reg=False --client="nsl_client"
