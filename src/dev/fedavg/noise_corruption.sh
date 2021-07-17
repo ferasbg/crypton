@@ -1,5 +1,14 @@
 # !/bin/bash
 
+norms = ["infinity" "l2"]
+corruption_names = []
+
+# for corruption_name in corruption_names
+    # for client in clients
+        # for adv_grad_norm in norms
+            # for adv_step_size in adv_step_size_set
+
+
 ###### FedAvg + GaussianNoise
 ####
 ##

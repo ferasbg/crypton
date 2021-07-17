@@ -14,3 +14,10 @@
 - Change the variables that will iterate. Set it up for one exp config then all you have to do is change the model specification and the regularization technique
 - Use `python3 ../../server.py`
 
+#### Corruptions
+```python3
+    blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
+    data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
+    noise_corruption_set = ["shot_noise", "impulse_noise", "speckle_noise"]
+```
+

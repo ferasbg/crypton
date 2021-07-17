@@ -188,16 +188,9 @@ def setup_client_parser():
     return parser
 
 if __name__ == '__main__':
-    # create a powerset of sets that store numbers/metrics for target plots
-    # when the client.py file is executed, it will build target plots at the client-level. We will aggregate the logfile data, then create the target plots.
-    # Let's first work backwards and create sample plots. We will then fill them with real data from the experiments.
-
     # process args upon execution
     args = setup_client_parser()
     dataset_config = DatasetConfig(args)
-    print(len(dataset_config.partitioned_train_dataset))
-    print(len(dataset_config.partitioned_test_dataset))
-    print(dataset_config.partitioned_val_steps)
 
     params = HParams(num_classes=args.num_classes, adv_multiplier=args.adv_multiplier, adv_step_size=args.adv_step_size, adv_grad_norm=args.adv_grad_norm)
     nsl_model = build_adv_model(params=params)
@@ -213,6 +206,8 @@ if __name__ == '__main__':
 
     if (args.model == "base_model"):
         model = base_model
+
+    # get client-level metrics data akin to the papers that do measure federated training accuracy
 
     class AdvRegClient(flwr.client.KerasClient):
         def get_weights(self):

@@ -18,16 +18,10 @@ The purpose of this work is to build an adversarially robust federated system by
 
 ## Adversarial Regularization Techniques
 - Target Technique: Neural Structured Learning
-- Baseline 1: Data Corruption Regularization
-- Baseline 2: Noise Corruption Regularization
-- Baseline 3: Blur Corruption Regularization
+- Baseline 1: Data Corruption-Regularized Learning
+- Baseline 2: Noise Corruption-Regularized Learning
+- Baseline 3: Blur Corruption-Regularized Learning
 - Control: Nominal Regularization
-
-```python3
-    blur_corruptions = ["motion_blur", "glass_blur", "zoom_blur", "gaussian_blur", "defocus_blur"]
-    data_corruption_set = ["jpeg_compression", "elastic_transform", "pixelate"]
-    noise_corruption_set = ["shot_noise", "impulse_noise", "speckle_noise"]
-```
 
 ## Figures
  Method | Communication Cost     | Server-Side Model Accuracy-Under-Attack | Server-Side Model Adversarial Loss
@@ -45,14 +39,12 @@ The purpose of this work is to build an adversarially robust federated system by
 | FedAvg + GaussianNoise | Null | X%                                |  Y%
 | FedAvg + GaussianNoise | Null | X%                                |  Y%
 
-## Usage
-- `python3 server.py --num_rounds=10 --strategy="fedadagrad"` 
-- `python3 client.py --adv_grad_norm="infinity" --adv_multiplier=0.2 --adv_step_size=0.05 --batch_size=32 --epochs=1 --num_clients=10 nsl_reg=True`
+## Todos
+- resolve server-client process when running on `.sh` thread
+- write data to a logfile continuously in terms of its target plot, and after the .sh file is done running, make plots given written data. Do this for each exp config set (each `.sh` file there is --> 4) 
+- get model robustness metrics (formal, nominal) --> nominal to keep the scope, formal for the other paper (you can make 2 papers out of this?)
+- make tables, diagrams, graphs/plots for the paper in the `paper` directory in `/docs/`. Write arxiv paper that clearly bolsters research innovations and results.
+- resolve FedAdagrad and FaultTolerantFedAvg
+- we can remove redundant shell code and iterate over what we are changing at the adv_reg level.
+- get the logfile --> plot feature working at the `trials.sh` level before writing iterative scripts in `dev/fedavg`. Then support FedAdagrad, and then support getting nomina and formal robustness.
 
-## Remaining Features
-- working: metrics fit to exp configs; write the code to write the data into the config objects that will create the plots
-- working: writing funcs for server-side formal robustness metrics in `certify.Specification`, then add to `simulation.py` and `server.py` and log the certification metadata when calling the functions. Formalization may involve raw ε-robust accuracy, but either way is concrete even given 2-3 possible additional steps of abstraction. 
-- test simulation.py in isolation in terms of default args to test if the processes and code all work
-- write client-level, server-level, exp_config-level data to logfiles that can be parsed and used for creating plots.
-- add feature of plot creation and writing the plot data to be used to create the end plots; this a question on how much is going in the file because that affects what data can be used to create the plot (perhaps the iterations have to take place in the same file instance if you want to get each coordinate pair)
-- separate by plot specifications
