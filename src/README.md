@@ -40,7 +40,6 @@ The purpose of this work is to build an adversarially robust federated system by
 | FedAvg + GaussianNoise | Null | X%                                |  Y%
 
 ## Todos
-- resolve server-client process when running on `.sh` thread
 - write data to a logfile continuously in terms of its target plot, and after the .sh file is done running, make plots given written data. Do this for each exp config set (each `.sh` file there is --> 4) 
 - get model robustness metrics (formal, nominal) --> nominal to keep the scope, formal for the other paper (you can make 2 papers out of this?)
 - make tables, diagrams, graphs/plots for the paper in the `paper` directory in `/docs/`. Write arxiv paper that clearly bolsters research innovations and results.

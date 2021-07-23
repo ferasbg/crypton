@@ -302,7 +302,7 @@ if __name__ == '__main__':
 
     else:
         client = Client()
-
+    
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
 
     with open('./metrics/client_accuracy.txt', 'w') as client_accuracy:

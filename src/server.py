@@ -27,6 +27,15 @@ from tensorflow.python.keras.engine.sequential import Sequential
 from tensorflow.python.ops.gen_batch_ops import Batch
 from utils import *
 from client import *
+from numpy import array, float32
+
+from flwr.common import (
+    FitRes,
+    Parameters,
+    Weights,
+    parameters_to_weights,
+    weights_to_parameters,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -62,40 +71,35 @@ def main(args) -> None:
 
     # create model
     model = build_base_server_model(num_classes=10)
-    ft_fed_avg = FaultTolerantFedAvg(fraction_fit=0.3,
-        fraction_eval=0.2,
-        min_fit_clients=3,
-        min_eval_clients=2,
-        min_available_clients=10,
-        eval_fn=get_eval_fn(model),
-        # strategy based on user-written wrapper functions
-        on_fit_config_fn=fit_config,
-        on_evaluate_config_fn=evaluate_config,
-        initial_parameters=model.get_weights())
-
-    # # create strategy; later use args.strategy 
-    fed_avg = FedAvg()
-
-    # fraction_fit=0.3,
-    # fraction_eval=0.2,
-    # min_fit_clients=3,
-    # min_eval_clients=2,
-    # min_available_clients=10,
-    # eval_fn=get_eval_fn(model),
-    # # strategy based on user-written wrapper functions
-    # on_fit_config_fn=fit_config,
-    # on_evaluate_config_fn=evaluate_config,
-    # initial_parameters=model.get_weights(),
-
-    # fed_adagrad = FedAdagrad(initial_parameters=tf.convert_to_tensor(value=model.get_weights()))
+    
     if (args.strategy == "fedavg"):
-        strategy = fed_avg 
+        fed_avg = FedAvg()
+        strategy = fed_avg
 
     if (args.strategy == "ft_fedavg"):
+        ft_fed_avg = FaultTolerantFedAvg(fraction_fit=0.3,
+            fraction_eval=0.2,
+            min_fit_clients=3,
+            min_eval_clients=2,
+            min_available_clients=10,
+            eval_fn=get_eval_fn(model),
+            # strategy based on user-written wrapper functions
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters=model.get_weights())
         strategy = ft_fed_avg
 
-    # if (args.strategy == "fed_adagrad"):
-    #     strategy = None
+    if (args.strategy == "fed_adagrad"):
+        weights = model.get_weights()
+        weights : Weights = [array(array(weights, dtype=float32))]
+        # weights : Weights = [array([0.1, 0.1, 0.1, 0.1], dtype=float32)]
+
+        strategy = FedAdagrad(
+            eta=0.1,
+            eta_l=0.316,
+            tau=0.5,
+            initial_parameters=weights_to_parameters(weights),
+        )
 
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
@@ -131,7 +135,7 @@ def get_eval_fn(model):
 
         with open('./metrics/server_accuracy.txt', 'w') as server_accuracy:
             for accuracy_set in server_accuracies:
-                for round_wise_accuracy in accuracy_set: 
+                for round_wise_accuracy in accuracy_set:
                     server_accuracy.write("{}\n".format(round_wise_accuracy))
 
         with open('./metrics/server_losses.txt') as server_losses:
@@ -191,6 +195,6 @@ def setup_server_parser():
 
 if __name__ == "__main__":
     # configure the args object when the file is run and it'll be processed into main function and into target objects in question
-    args = setup_server_parser()    
+    args = setup_server_parser()
     main(args)
 
