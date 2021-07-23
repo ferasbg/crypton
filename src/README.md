@@ -45,6 +45,5 @@ The purpose of this work is to build an adversarially robust federated system by
 - get model robustness metrics (formal, nominal) --> nominal to keep the scope, formal for the other paper (you can make 2 papers out of this?)
 - make tables, diagrams, graphs/plots for the paper in the `paper` directory in `/docs/`. Write arxiv paper that clearly bolsters research innovations and results.
 - resolve FedAdagrad and FaultTolerantFedAvg
-- we can remove redundant shell code and iterate over what we are changing at the adv_reg level.
 - get the logfile --> plot feature working at the `trials.sh` level before writing iterative scripts in `dev/fedavg`. Then support FedAdagrad, and then support getting nomina and formal robustness.
 

@@ -21,10 +21,8 @@ import json
 import jsonify
 import logging
 from logging import Logger
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-# note down the data printed for metrics --> use directory to create plots (most ad-hoc approach there is)
-# work backwards from data u need
-# write data to log file that can build the final plots
 
 ## GET DATA FOR:
 # server eval accuracy against comm rounds
@@ -42,6 +40,10 @@ INFO flower 2021-07-05 23:49:57,927 | app.py:122 | app_evaluate: results [('ipv6
 INFO:flower:app_evaluate: results [('ipv6:[::1]:58558', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58564', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58568', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58572', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58574', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58578', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58582', EvaluateRes(loss=625.0, num_examples=48, accuracy=0.0, metrics={})), ('ipv6:[::1]:58586', EvaluateRes(loss=625.0, num_examples=47, accuracy=0.0, metrics={})), ('ipv6:[::1]:58590', EvaluateRes(loss=625.0, num_examples=49, accuracy=0.0, metrics={}))]
 INFO flower 2021-07-05 23:49:57,928 | app.py:127 | app_evaluate: failures []
 INFO:flower:app_evaluate: failures []
+
+# each client's accuracy/loss set is based on the num_rounds parameter; 
+# since we are running multiple clients (but not in parallel), we write to the logfile such that we can construct the plot easily 
+# it's a lot easier to read the txt file to create plots after iterations are complete
 
 '''
 
@@ -207,7 +209,8 @@ if __name__ == '__main__':
     if (args.model == "base_model"):
         model = base_model
 
-    # get client-level metrics data akin to the papers that do measure federated training accuracy
+    client_accuracies = []
+    client_losses = []
 
     class AdvRegClient(flwr.client.KerasClient):
         def get_weights(self):
@@ -222,12 +225,15 @@ if __name__ == '__main__':
                 "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
-            # we can write the metadata used for plots at the client-level iteratively during the entire train/eval rounds --> use that information to create the "final plots". Log the metadata, then use for the core plots.
-            # I'd say first write base data, then extrapolate the data relevant to the final plots (eg 20 rounds is relevant at the exp_config level, not the server or client level)
 
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
             accuracy = int(accuracy[0])
+            
+            # add client loss/acc for plot data
+            client_accuracies.append(accuracy)
+            client_losses.append(int(results["loss"][0]))
+
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
@@ -240,8 +246,6 @@ if __name__ == '__main__':
                     "sparse_categorical_accuracy": results[2],
                     "scaled_adversarial_loss": results[3],
             }
-
-            print(results)
 
             loss = int(results["loss"])
             accuracy = int(results["sparse_categorical_accuracy"])
@@ -267,6 +271,10 @@ if __name__ == '__main__':
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
             accuracy = int(accuracy[0])
+
+            # add client loss/acc for plot data
+            client_accuracies.append(accuracy)
+            client_losses.append(int(results["loss"][0]))
 
             return model.get_weights(), train_cardinality, accuracy
 
@@ -296,3 +304,11 @@ if __name__ == '__main__':
         client = Client()
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
+
+    with open('./metrics/client_accuracy.txt', 'w') as client_accuracy:
+        for round_wise_accuracy in client_accuracies:
+            client_accuracy.write("{}\n".format(round_wise_accuracy))
+
+    with open('./metrics/client_losses.txt') as client_losses:
+        for round_wise_loss in client_losses:
+            client_losses.write("{}\n".format(round_wise_loss))

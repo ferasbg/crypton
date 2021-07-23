@@ -122,6 +122,23 @@ def get_eval_fn(model):
         # convert from tuples to dicts if this
         loss, accuracy = model.evaluate(x_test, y_test)
         # get dict of history in evaluation, and return
+
+        # server-side evaluation #'s in terms of num_rounds
+        server_accuracies = []
+        server_losses = []
+        server_accuracies.append(accuracy)
+        server_losses.append(loss)
+
+        with open('./metrics/server_accuracy.txt', 'w') as server_accuracy:
+            for accuracy_set in server_accuracies:
+                for round_wise_accuracy in accuracy_set: 
+                    server_accuracy.write("{}\n".format(round_wise_accuracy))
+
+        with open('./metrics/server_losses.txt') as server_losses:
+            for loss_set in server_losses:
+                for round_wise_loss in loss_set:
+                    server_losses.write("{}\n".format(round_wise_loss))
+
         return loss, {"accuracy": accuracy}
 
     return evaluate
@@ -174,5 +191,6 @@ def setup_server_parser():
 
 if __name__ == "__main__":
     # configure the args object when the file is run and it'll be processed into main function and into target objects in question
-    args = setup_server_parser()
+    args = setup_server_parser()    
     main(args)
+
