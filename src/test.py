@@ -29,6 +29,8 @@ from utils import *
 from client import *
 from numpy import array, float32
 
+# python3 client.py --model="nsl_model" --steps_per_epoch=1 --epochs=1 --num_clients=10 --client_partition_idx=0
+
 from flwr.common import (
     FitRes,
     Parameters,
@@ -63,14 +65,12 @@ def build_base_server_model(num_classes : int):
     return model
 
 model = build_base_server_model(num_classes=10)
-previous_weights = model.get_weights()
-weights : Weights = [array([0.1, 0.1, 0.1, 0.1], dtype=float32)]
+weights = model.get_weights()
+weights = np.array(weights, dtype=np.float32)
 
 strategy = FedAdagrad(
     eta=0.1,
     eta_l=0.316,
     tau=0.5,
-    initial_parameters=weights_to_parameters(previous_weights),
+    initial_parameters=weights_to_parameters(weights),
 )
-
-print(type(strategy))

@@ -73,11 +73,10 @@ def main(args) -> None:
     model = build_base_server_model(num_classes=10)
     
     if (args.strategy == "fedavg"):
-        fed_avg = FedAvg()
-        strategy = fed_avg
+        strategy = FedAvg()
 
     if (args.strategy == "ft_fedavg"):
-        ft_fed_avg = FaultTolerantFedAvg(fraction_fit=0.3,
+        strategy = FaultTolerantFedAvg(fraction_fit=0.3,
             fraction_eval=0.2,
             min_fit_clients=3,
             min_eval_clients=2,
@@ -87,22 +86,23 @@ def main(args) -> None:
             on_fit_config_fn=fit_config,
             on_evaluate_config_fn=evaluate_config,
             initial_parameters=model.get_weights())
-        strategy = ft_fed_avg
 
     if (args.strategy == "fed_adagrad"):
+        # this code is untested.
         weights = model.get_weights()
-        weights : Weights = [array(array(weights, dtype=float32))]
-        # weights : Weights = [array([0.1, 0.1, 0.1, 0.1], dtype=float32)]
+        weights = np.array(weights, dtype=np.float32)
 
         strategy = FedAdagrad(
             eta=0.1,
             eta_l=0.316,
             tau=0.5,
+            # pass the parameters from the numpy weights
             initial_parameters=weights_to_parameters(weights),
         )
 
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
+# using dict to logfile, using flwr metrics, manual eval / avg;ing, etc..
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
@@ -111,7 +111,7 @@ def get_eval_fn(model):
 
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.10, adv_grad_norm="infinity")
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
@@ -125,24 +125,7 @@ def get_eval_fn(model):
         model.set_weights(weights)  # Update model with the latest parameters
         # convert from tuples to dicts if this
         loss, accuracy = model.evaluate(x_test, y_test)
-        # get dict of history in evaluation, and return
-
-        # server-side evaluation #'s in terms of num_rounds
-        server_accuracies = []
-        server_losses = []
-        server_accuracies.append(accuracy)
-        server_losses.append(loss)
-
-        with open('./metrics/server_accuracy.txt', 'w') as server_accuracy:
-            for accuracy_set in server_accuracies:
-                for round_wise_accuracy in accuracy_set:
-                    server_accuracy.write("{}\n".format(round_wise_accuracy))
-
-        with open('./metrics/server_losses.txt') as server_losses:
-            for loss_set in server_losses:
-                for round_wise_loss in loss_set:
-                    server_losses.write("{}\n".format(round_wise_loss))
-
+        
         return loss, {"accuracy": accuracy}
 
     return evaluate
@@ -194,7 +177,5 @@ def setup_server_parser():
     return parser
 
 if __name__ == "__main__":
-    # configure the args object when the file is run and it'll be processed into main function and into target objects in question
     args = setup_server_parser()
     main(args)
-

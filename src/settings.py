@@ -123,3 +123,12 @@ NOISE_CORRUPTION_SET = ["gaussian_noise", "shot_noise", "impulse_noise", "speckl
 # this defines whether a particular set of corruptions are applied
 TRAIN_SET_IMAGE_DISTORTION_STATE = False
 SERVER_TEST_SET_PERTURBATION_STATE = False
+
+headers = ["Model", "Adversarial Regularization Technique", "Strategy", "Server Model ε-Robust Federated Accuracy", "Server Model Certified ε-Robust Federated Accuracy"]
+# define options per variable; adv reg shares pattern of adversarial augmentation, noise (non-uniform, uniform) perturbations/corruptions/degradation as regularization
+adv_reg_options = ["Neural Structured Learning", "Gaussian Regularization", "Data Corruption Regularization", "Noise Regularization", "Blur Regularization"]
+strategy_options = ["FedAvg", "FedAdagrad", "FaultTolerantFedAvg", "FedFSV1"]
+metrics = ["server_loss", "server_accuracy_under_attack", "server_certified_loss"]
+variables = ["epochs", "communication_rounds", "client_learning_rate", "server_learning_rate", "adv_grad_norm", "adv_step_size"]
+nsl_variables = ["neighbor_loss"]
+baseline_adv_reg_variables = ["severity", "noise_sigma"]

@@ -56,6 +56,17 @@ from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
 
+def plot_client_model(model):
+    file = keras.utils.plot_model(model, to_file='model.png')
+    save_path = '/media'
+    file_name = "model.png"
+    os.path.join(save_path, file_name)
+
+def plot_img(image : np.ndarray):
+    plt.figure(figsize=(32,32))
+    # iteratively get perturbed images based on their norm type and norm values (l∞-p_ε; norm_type, adv_step_size)
+    plt.imshow(image, cmap=plt.get_cmap('gray'))
+
 def scheduler(epoch, lr):
     if epoch < 5:
         return lr
@@ -249,17 +260,9 @@ class Data:
         return {IMAGE_INPUT_NAME: image, LABEL_INPUT_NAME: label}
 
     @staticmethod
-    def make_training_data_iid(dataset, num_partitions):
-        # IID: data is shuffled, then partitioned into 100 clients with 500 train and 100 test examples per client
-        return []
-
-    @staticmethod
     def make_training_data_non_iid(dataset, num_partitions):
         # Non-IID: first sort the data, divide it into 200 shards of size 300 and assign 100 clients 2 shards
         return []
-    
-    # make configurable to MNIST dataset despite corruption learning not applicable given dimensionality / rank error at tensor-level
-
 
 class ExperimentConfig:
     @staticmethod

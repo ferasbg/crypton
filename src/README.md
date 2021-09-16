@@ -17,32 +17,100 @@ The purpose of this work is to build an adversarially robust federated system by
 - It's important to utilize adversarial regularization whether or not the data is non-IID or IID for machine learning models in production systems.
 
 ## Adversarial Regularization Techniques
+We want to measure for the best combination between adversarial regularization technique and strategy.
+
 - Target Technique: Neural Structured Learning
 - Baseline 1: Data Corruption-Regularized Learning
 - Baseline 2: Noise Corruption-Regularized Learning
 - Baseline 3: Blur Corruption-Regularized Learning
-- Control: Nominal Regularization
+- Control: Nominal Regularization (L2 Weight Reg, Dropout, BatchNormalization)
 
 ## Figures
- Method | Communication Cost     | Server-Side Model Accuracy-Under-Attack | Server-Side Model Adversarial Loss
+We need to construct several tables that illustrate the client-side model regularization and then map that to a server-side parameter evaluation under the constraint of various strategies.
+
+
+ Method | Client-Side Adversarially-Regularized Accuracy     | Client-Side Adversarially-Regularized Loss | Adversarial Step Size
 | --- | ---| ---|---|
-| FedAvg + NSL           | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
-| FedAvg + GaussianNoise | Null | X%                                |  Y%
+| FedAvg + Neural Structured Learning           | Null | X%                                |  Y%
+| FedAvg + Gaussian Noise | Null | X%                                |  Y%
+| FedAvg + Shot Noise | Null | X%                                |  Y%
+| FedAvg + Impulse Noise | Null | X%                                |  Y%
+| FedAvg + Speckle Noise | Null | X%                                |  Y%
+| FedAvg + Motion Blur| Null | X%                                |  Y%
+| FedAvg + Glass Blur | Null | X%                                |  Y%
+| FedAvg + Zoom Blur | Null | X%                                |  Y%
+| FedAvg + Gaussian Blur | Null | X%                                |  Y%
+| FedAvg + Defocus Blur | Null | X%                                |  Y%
+| FedAvg + Jpeg Compression | Null | X%                                |  Y%
+| FedAvg + Elastic Transform | Null | X%                                |  Y%
+| FedAvg + Pixelation | Null | X%                                |  Y%
+| FedAdagrad + Neural Structured Learning           | Null | X%                                |  Y%
+| FedAdagrad + Gaussian Noise | Null | X%                                |  Y%
+| FedAdagrad + Shot Noise | Null | X%                                |  Y%
+| FedAdagrad + Impulse Noise | Null | X%                                |  Y%
+| FedAdagrad + Speckle Noise | Null | X%                                |  Y%
+| FedAdagrad + Motion Blur| Null | X%                                |  Y%
+| FedAdagrad + Glass Blur | Null | X%                                |  Y%
+| FedAdagrad + Zoom Blur | Null | X%                                |  Y%
+| FedAdagrad + Gaussian Blur | Null | X%                                |  Y%
+| FedAdagrad + Defocus Blur | Null | X%                                |  Y%
+| FedAdagrad + Jpeg Compression | Null | X%                                |  Y%
+| FedAdagrad + Elastic Transform | Null | X%                                |  Y%
+| FedAdagrad + Pixelation | Null | X%                                |  Y%
+
+Note that we are measuring in terms of client-side adversarial regularization performance at the client-level, and the server-side parameter evaluation via adaptive and non-adaptive server-side optimization. We want to connect the idea of the two in order to converge on a robust large-scale federated system for semi-supervised computer vision algorithms that operate with real-world data. Independent of adversarial and optimization-wise adaptivity, it serves to the benefit of any large-scale computer vision tasks, independent of the medium (eg. browser, self-driving cars, etc). Let's first start with FedAdagrad and FedAvg before editing the strategies supported at the server-side, which is relatively straightforward and has minimum turnaround time.
+
+Break up how the data is organized in order to illustrate key ideas in a compartmentalized manner. In order to simplify the experiments, make sure to account for the constant norm value, norm type, client learning rate, server learning rate, model hyperparameter size, data state, model-wise sgd momentum, l2 weight reg, epochs/rounds, partitio size, non-iid/iid data state
+
+Note how you minimized experimental design error with respect to communication costs, model architecture, iid/non-iid data state, constants held, conditions per experiment, number of control variables
 
 ## Todos
-- write data to a logfile continuously in terms of its target plot, and after the .sh file is done running, make plots given written data. Do this for each exp config set (each `.sh` file there is --> 4) 
-- get model robustness metrics (formal, nominal) --> nominal to keep the scope, formal for the other paper (you can make 2 papers out of this?)
-- make tables, diagrams, graphs/plots for the paper in the `paper` directory in `/docs/`. Write arxiv paper that clearly bolsters research innovations and results.
-- resolve FedAdagrad and FaultTolerantFedAvg
-- get the logfile --> plot feature working at the `trials.sh` level before writing iterative scripts in `dev/fedavg`. Then support FedAdagrad, and then support getting nomina and formal robustness.
+- get plot data from client-side training to work under a small scope of parameters
+- get plot data to work for server-side model evaluation under small scope of parameters
+- get plot data to work on each of the tests/experiments for the final plots
+- resolve FedAdagrad
+
+## Process
+process: server-side eval (acc, loss) can be done through flwr; client-side eval (acc,loss) can be done by writing in data pre-flwr and pre-aggregation
+plots to create: comm. rounds vs accuracy (default strategy: fedavg; dependent variable: reg. techniques), rounds vs server-side eval loss, rounds vs client-side loss
+- add. strategies to support: fedadagrad, fedyogi, fedavgM, FedAdam
+- we can compare the SGD vs adaptive server-side optimization to acknowledge more effective aggregation. We can always note down that the data was IID and other conditions that may of been more effective, but kept out of the focus for the paper.
+- run trials.sh in terms of initial data with 10 clients and 10 rounds with low data (proper batch size relative to epochs and steps per epoch)
+
+## Conditions
+- Constants: norm value, norm type, and server/client learning rate are all constant
+
+Note that the "defense" against the real-world nature of sparse & corrupted data is the reason for adversarial regularization. Evaluating between various adaptive and non-adaptive strategies has to do with efficiently updating the main model with each of the local client updates. The attack itself is the nature of the data itself, and we measure with various regularization techniques so that our model can converge well on adversarial data and also optimize at the server-side model-level given the federated/decentralized nature of the training/evaluation.
+
+- We will record in terms of 10-round iterations in terms of the total communication rounds (4000, eg 400 epochs). Let's do 100 rounds first.
+- We are changing the strategy used and the adversarial regularization technique, thus forming 13 methods per strategy, given the net attacks given all corruption types
+- When measuring the "client-side" accuracy, I will take the average of the clients' accuracies at each epoch instance.
+- Note that clients are also partitioned in terms of which account for the evaluation round and the fit round, eg which clients are used for client-side evaluation. How do we factor this in to how we collect the training-wise accuracy for the clients?
+
+## Plots
+- Comm Rounds vs Client Adversarially-Regularized Accuracy (comparing reg. techniques + control/nominal)
+- Comm Rounds vs. Server-Side Accuracy-Under-Attack 
+- Comm Rounds vs. Client-Side Adversarially-Regularized Loss (measuring for convergence behavior)
+- Comm Rounds vs. Server-Side Loss-Under-Attack (measure for server-side strategy optimization against adaptive/non-adaptive strategies to aggregate client grads)
+- Comm Rounds vs. Server-Side Accuracy-Under-Attack (Strategy + Adv. Reg. Technique)
+
+## Features for Crypton V2
+- non-iid support (DatasetConfig)
+- certification via ensemble randomized smoothing for graph network
+
+## Notes
+- the batch size and epoch affect the partition size and the accuracy/loss values stored in the History object for both the fit and eval function since they depend on the partitioned dataset.
+- Label your outputs so that the plot creation process is smooth.
+- access history object for the client-side object and compare it against the history object within the eval and fit functions of the client object
+- each client will have a set of accuracy values for each accuracy value is based on the epoch which is accuracy over a subset of its partitioned dataset. We will take the average accuracies from this.
+- note the distinction related to the data that flwr returns given the sampling/eval rounds from metrics.
+- Paper: If you don't need many aggregation updates, and you can operate under corrupt and sparse data, then your machine learning system is robust.
+- Before worrying about changing control variables (eg client, server learning rate, norm val/type, etc...), hold more variables constant and run the exp. Establish a basis before addressing further nested variations.
+- The accuracy of the clients on such a low-volume partitioned dataset is creating an issue with the client model's accuracy vector calculated from the fit and eval function. What difference are we applying other than the dataset partition size? Is it properly partitioned? Is there an issue with validation steps because of the batch size? Are we forgetting a step?
+- We posit that client-side optimizations via regularization will proportionally improve the adaptive server-side optimization. Regardless of the adaptivity of the strategy used, the aggregation process to optimize the server-side aggregator model diminishes in return of investment given the gradients of the clients that map to poor convergence times relative to the data sparsity and corruption states. We want to then measure for how surface variations within the corruptions affect how the client models converge and regularize, and how that affects the server-side model's ability to converge under an adversarial attack relative to similar corruptions that occur in the client-side device-wise data collection process within federated machine learning systems. 
+
+
+## Tables
+- Hyperparameters (Configuration)
+- Method-Wise Feature Comparison
 
