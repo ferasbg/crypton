@@ -6,6 +6,7 @@ from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
                                   FedFSv1, Strategy, fault_tolerant_fedavg, fedopt)
+
 import keras
 import matplotlib.pyplot as plt
 import neural_structured_learning as nsl
@@ -90,17 +91,14 @@ def main(args) -> None:
     if (args.strategy == "fed_adagrad"):
         # this code is untested.
         weights : Weights = model.get_weights()
-        weights = np.array(weights, dtype=np.float32)
-        weights = weights_to_parameters(weights)
-
         strategy = FedAdagrad(
             eta=0.1,
             eta_l=0.316,
             tau=0.5,
-            # pass the parameters from the numpy weights
-            initial_parameters=weights,
+            initial_parameters=weights_to_parameters(weights),
         )
-
+    
+    # todo: add remaining strategies (adaptive, non-adaptive, eg FedAdam, FedYogi, FedFSL)
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
 # using dict to logfile, using flwr metrics, manual eval / avg;ing, etc..

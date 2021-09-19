@@ -65,8 +65,8 @@ def build_base_server_model(num_classes : int):
     return model
 
 model = build_base_server_model(num_classes=10)
-weights = model.get_weights()
-weights = np.array(weights, dtype=np.float32)
+weights : Weights = model.get_weights()
+
 
 strategy = FedAdagrad(
     eta=0.1,
@@ -74,3 +74,6 @@ strategy = FedAdagrad(
     tau=0.5,
     initial_parameters=weights_to_parameters(weights),
 )
+
+print(type(strategy))
+flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": 2})

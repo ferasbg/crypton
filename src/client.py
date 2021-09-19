@@ -21,6 +21,7 @@ import json
 import jsonify
 import logging
 from logging import Logger
+from keras.callbacks import History, EarlyStopping
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -186,8 +187,11 @@ if __name__ == '__main__':
     if (args.model == "base_model"):
         model = base_model
 
-    # result set stores acc/loss values for each client.
-    result_set = []
+    # number of epochs. Every value most likely will be the same.
+    epoch_cardinality = []
+    # if the vectors change, then we can store the average during each fit iteration. Given that we are using the .fit() function approximately for 50 iterations over 100 batches during 1 .fit() iteration (polynomial time?). Either way, we get the first element, regardless of the set contains 1 element or not.
+    epoch_level_accuracy = []
+    epoch_level_loss = []
 
     class AdvRegClient(flwr.client.KerasClient):
         def get_weights(self):
@@ -195,7 +199,6 @@ if __name__ == '__main__':
 
         def fit(self, parameters, config):
             model.set_weights(parameters)
-            # remove validation for now (validation_data=dataset_config.partitioned_test_dataset, validation_steps=dataset_config.partitioned_val_steps)
             history = model.fit(dataset_config.partitioned_train_dataset, epochs=args.epochs)
             results = {
                 "loss": history.history["loss"],
@@ -205,28 +208,52 @@ if __name__ == '__main__':
             }
 
             train_cardinality = len(dataset_config.partitioned_train_dataset)
-            # data points: 1; rounded value creates error with fedavg calculation; FitRes requires int values, but use long values in calculation / data stored
-            accuracy = int(results["sparse_categorical_accuracy"][0])
-            result_set.append(results)
+            accuracy : int = 0
+            acc_vector = results["sparse_categorical_accuracy"]
+            for i in range(len(acc_vector)):
+                accuracy+=acc_vector[i]
+            
+            accuracy = accuracy / (len(acc_vector))
+            accuracy = int(accuracy)
+            epoch_level_accuracy.append(accuracy)
 
+            # get the total epochs during the eval round for this client
+            epoch_cardinality.append(len(results["loss"]))
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
-            results = model.evaluate(dataset_config.partitioned_train_dataset, verbose=1)
-            # only fit uses validation accuracy and sce loss
+            res = model.evaluate(dataset_config.partitioned_train_dataset, verbose=1)
             results = {
-                    "loss": results[0],
-                    "sparse_categorical_crossentropy": results[1],
-                    "sparse_categorical_accuracy": results[2],
-                    "scaled_adversarial_loss": results[3],
+                    # let's assume these elements are sets.
+                    "loss": res[0],
+                    "sparse_categorical_crossentropy": res[1],
+                    "sparse_categorical_accuracy": res[2],
+                    "scaled_adversarial_loss": res[3],
             }
 
-            loss = int(results["loss"])
-            accuracy = int(results["sparse_categorical_accuracy"])
-            # client_configs[0].test_dataset
+            # EvaluateRes requires 1 loss value. Average out the loss vector.
+            loss = 0
+            loss_vector = res.history["loss"]
+            for k in range(len(loss_vector)):
+                loss+=loss_vector[k]
+
+            loss = loss / len(loss_vector)
+            loss = int(loss)
+
+            accuracy = 0
+            # let's assume res.history["sca"] = results["sca"]
+            acc_vector = res.history["sparse_categorical_accuracy"]
+            for i in range(len(acc_vector)):
+                accuracy+=acc_vector[i]
+            
+            accuracy = accuracy / (len(acc_vector))
+            accuracy = int(accuracy)
+            
             test_cardinality = len(dataset_config.partitioned_test_dataset)
-            result_set.append(results)
+            # get the total epochs during the eval round for this client
+            loss_cardinality = len(res.history["loss"])
+            epoch_cardinality.append(loss_cardinality)
 
             return loss, test_cardinality, accuracy
 
@@ -246,16 +273,24 @@ if __name__ == '__main__':
             }
 
             train_cardinality = len(dataset_config.partitioned_train_dataset)
-            # return the first value of the accuracy vector for flwr
-            accuracy = int(results["sparse_categorical_accuracy"][0])
-            result_set.append(results)
 
-            # flwr FitRes requires 1 accuracy value.
+            accuracy : int = 0
+            acc_vector = results["sparse_categorical_accuracy"]
+            for i in range(len(acc_vector)):
+                accuracy+=acc_vector[i]
+
+            accuracy = int(accuracy)
+            epoch_level_accuracy.append(accuracy)
+            # epochs depends on loss cardinality..
+            epoch_cardinality.append(len(results["loss"]))
+
+            # flwr FitRes requires 1 accuracy value. 
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
             results = model.evaluate(dataset_config.partitioned_test_dataset, verbose=1)
+            epoch_cardinality.append(len(results.history['loss']))    
             results = {
                     "loss": results[0],
                     "sparse_categorical_crossentropy": results[1],
@@ -263,10 +298,21 @@ if __name__ == '__main__':
                     "scaled_adversarial_loss": results[3],
             }
 
-            loss = int(results["loss"])
-            accuracy = int(results["sparse_categorical_accuracy"])
+            loss = 0
+            loss_vector = results.history["loss"]
+            for k in range(len(loss_vector)):
+                loss+=loss_vector[k]
+
+            loss = loss / len(loss_vector)
+            loss = int(loss)
+
+            accuracy : int = 0
+            acc_vector = results["sparse_categorical_accuracy"]
+            for i in range(len(acc_vector)):
+                accuracy+=acc_vector[i]
+
+            accuracy = int(accuracy)
             test_cardinality = len(dataset_config.partitioned_test_dataset)
-            result_set.append(results)
 
             return loss, test_cardinality, accuracy
 
@@ -281,19 +327,23 @@ if __name__ == '__main__':
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
 
-    # these values differ for fit and evaluate, and are dependent on the fraction_fit / fraction_eval ratio defined. I'd say we use only the fraction_fit clients. The clients used for fraction_eval train on the test dataset, which is the only difference.
-    epoch_level_client_accuracies = []
-    epoch_level_client_losses = []
+    # The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss. 
+    client_results : Dict = {
+        # the value in this store would be the vector average of the epoch-level accuracies, that is stored already in epoch_level_accuracy
+        "client_accuracy": epoch_level_accuracy[0],
+        "client_regularization_loss": epoch_level_loss[0],
+    }
 
-    # let's track the metrics at the round-level, print them first before mapping it to a logfile
-    for result_element in result_set:
-        # every result element stores a History object of the acc/loss vectors. Let's aaverage out the accuracy values in our key-VALUE array in terms of double values, store it in a list, and return the lists.
-        epoch_level_client_accuracies.append(result_element["sparse_categorical_accuracy"])
-        epoch_level_client_losses.append(result_element["loss"])
+    for k in range(len(epoch_level_accuracy)):
+        print(epoch_level_accuracy[k])
+    
+    for l in range(len(epoch_level_loss)):
+        print(epoch_level_loss[l])
 
-    for i in range(len(epoch_level_client_accuracies)):
-        print(epoch_level_client_accuracies[i])
+    for epoch in epoch_cardinality:
+        print(epoch + "\n")
 
-    for k in range(len(epoch_level_client_losses)):
-        print(epoch_level_client_losses)
+    # todo: write in the epoch and the respective client and loss value inside the text file, thus getting you the data for the regularization loss / acc at the client-set level, not just individual clients.
+    
 
+    

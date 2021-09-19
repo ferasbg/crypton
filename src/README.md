@@ -109,7 +109,9 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - Before worrying about changing control variables (eg client, server learning rate, norm val/type, etc...), hold more variables constant and run the exp. Establish a basis before addressing further nested variations.
 - The accuracy of the clients on such a low-volume partitioned dataset is creating an issue with the client model's accuracy vector calculated from the fit and eval function. What difference are we applying other than the dataset partition size? Is it properly partitioned? Is there an issue with validation steps because of the batch size? Are we forgetting a step?
 - We posit that client-side optimizations via regularization will proportionally improve the adaptive server-side optimization. Regardless of the adaptivity of the strategy used, the aggregation process to optimize the server-side aggregator model diminishes in return of investment given the gradients of the clients that map to poor convergence times relative to the data sparsity and corruption states. We want to then measure for how surface variations within the corruptions affect how the client models converge and regularize, and how that affects the server-side model's ability to converge under an adversarial attack relative to similar corruptions that occur in the client-side device-wise data collection process within federated machine learning systems. 
-
+- model under-fitting is a risk both due to the epoch size (1 due to round equivalency given partition) and given adversarial input data state
+- SGD and FedAvg are non-adaptive strategies.
+- We hold certain variables constant to measure the effectiveness of certain algorithms within our methods. This is more useful to keep in mind of when writing the observations/understandings in the discussion.
 
 ## Tables
 - Hyperparameters (Configuration)
