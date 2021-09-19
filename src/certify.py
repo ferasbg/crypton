@@ -53,6 +53,8 @@ Statements:
   -
   -
 
+Each statement will test the system at the client and server-side level in terms of the algorithms used between the two components as well.
+
 
 '''
 

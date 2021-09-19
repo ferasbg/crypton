@@ -76,6 +76,7 @@ plots to create: comm. rounds vs accuracy (default strategy: fedavg; dependent v
 - add. strategies to support: fedadagrad, fedyogi, fedavgM, FedAdam
 - we can compare the SGD vs adaptive server-side optimization to acknowledge more effective aggregation. We can always note down that the data was IID and other conditions that may of been more effective, but kept out of the focus for the paper.
 - run trials.sh in terms of initial data with 10 clients and 10 rounds with low data (proper batch size relative to epochs and steps per epoch)
+- Collect the data from the print stream in a way that you can insert the data with a fixed number of rounds for the plot
 
 ## Conditions
 - Constants: norm value, norm type, and server/client learning rate are all constant

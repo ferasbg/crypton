@@ -281,5 +281,19 @@ if __name__ == '__main__':
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
 
+    # these values differ for fit and evaluate, and are dependent on the fraction_fit / fraction_eval ratio defined. I'd say we use only the fraction_fit clients. The clients used for fraction_eval train on the test dataset, which is the only difference.
+    epoch_level_client_accuracies = []
+    epoch_level_client_losses = []
+
+    # let's track the metrics at the round-level, print them first before mapping it to a logfile
     for result_element in result_set:
-        print(result_element)
+        # every result element stores a History object of the acc/loss vectors. Let's aaverage out the accuracy values in our key-VALUE array in terms of double values, store it in a list, and return the lists.
+        epoch_level_client_accuracies.append(result_element["sparse_categorical_accuracy"])
+        epoch_level_client_losses.append(result_element["loss"])
+
+    for i in range(len(epoch_level_client_accuracies)):
+        print(epoch_level_client_accuracies[i])
+
+    for k in range(len(epoch_level_client_losses)):
+        print(epoch_level_client_losses)
+

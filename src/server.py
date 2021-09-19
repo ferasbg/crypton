@@ -71,7 +71,7 @@ def main(args) -> None:
 
     # create model
     model = build_base_server_model(num_classes=10)
-    
+
     if (args.strategy == "fedavg"):
         strategy = FedAvg()
 
@@ -89,15 +89,16 @@ def main(args) -> None:
 
     if (args.strategy == "fed_adagrad"):
         # this code is untested.
-        weights = model.get_weights()
+        weights : Weights = model.get_weights()
         weights = np.array(weights, dtype=np.float32)
+        weights = weights_to_parameters(weights)
 
         strategy = FedAdagrad(
             eta=0.1,
             eta_l=0.316,
             tau=0.5,
             # pass the parameters from the numpy weights
-            initial_parameters=weights_to_parameters(weights),
+            initial_parameters=weights,
         )
 
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
@@ -125,7 +126,7 @@ def get_eval_fn(model):
         model.set_weights(weights)  # Update model with the latest parameters
         # convert from tuples to dicts if this
         loss, accuracy = model.evaluate(x_test, y_test)
-        
+
         return loss, {"accuracy": accuracy}
 
     return evaluate
