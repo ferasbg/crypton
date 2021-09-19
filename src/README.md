@@ -113,6 +113,8 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - SGD and FedAvg are non-adaptive strategies.
 - We hold certain variables constant to measure the effectiveness of certain algorithms within our methods. This is more useful to keep in mind of when writing the observations/understandings in the discussion.
 - Secure gRPC to secure the server-client channels, apply differential privacy to the data across all the corruption types, apply certification algorithms, then apply formal verification algorithm that unifies graph technique 
+- Feedback about my explanations: they are too wordy and detract away from the cohesive balance between persuasive expression (why is this even useful, and how can this really create a trillion dollar impact). Reviewers operate on dynamical responses.... emotional invocation backed by logical expressivity.
+
 ## Tables
 - Hyperparameters (Configuration)
 - Method-Wise Feature Comparison

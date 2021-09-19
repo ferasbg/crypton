@@ -11,7 +11,7 @@ from keras.regularizers import l2
 import numpy as np
 from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
-from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1, FastAndSlow 
+from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1, FastAndSlow
 import bokeh
 import seaborn as sns
 import pandas as pd
@@ -212,7 +212,7 @@ if __name__ == '__main__':
             acc_vector = results["sparse_categorical_accuracy"]
             for i in range(len(acc_vector)):
                 accuracy+=acc_vector[i]
-            
+
             accuracy = accuracy / (len(acc_vector))
             accuracy = int(accuracy)
             epoch_level_accuracy.append(accuracy)
@@ -251,18 +251,18 @@ if __name__ == '__main__':
 
             accuracy = 0
             # let's assume res.history["sca"] = results["sca"]
-            acc_vector = res.history["sparse_categorical_accuracy"]
+            acc_vector = history.history["sparse_categorical_accuracy"]
             for i in range(len(acc_vector)):
                 print("accuracy vector values......")
                 print(acc_vector[i])
                 accuracy+=acc_vector[i]
-            
+
             accuracy = accuracy / (len(acc_vector))
             accuracy = int(accuracy)
-            
+
             test_cardinality = len(dataset_config.partitioned_test_dataset)
             # get the total epochs during the eval round for this client
-            loss_cardinality = len(res.history["loss"])
+            loss_cardinality = len(history.history["loss"])
             epoch_cardinality.append(loss_cardinality)
 
             return temporary_loss_value, test_cardinality, accuracy
@@ -294,13 +294,13 @@ if __name__ == '__main__':
             # epochs depends on loss cardinality..
             epoch_cardinality.append(len(results["loss"]))
 
-            # flwr FitRes requires 1 accuracy value. 
+            # flwr FitRes requires 1 accuracy value.
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
             results = model.evaluate(dataset_config.partitioned_test_dataset, verbose=1)
-            epoch_cardinality.append(len(results.history['loss']))    
+            epoch_cardinality.append(len(results.history['loss']))
             results = {
                     "loss": results[0],
                     "sparse_categorical_crossentropy": results[1],
@@ -337,14 +337,14 @@ if __name__ == '__main__':
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
 
-    # The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss. 
-    for node in epoch_level_accuracy: 
+    # The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss.
+    for node in epoch_level_accuracy:
         print(node)
-        print("\n") 
-    
+        print("\n")
+
     for loss in epoch_level_loss:
         print(loss)
-        print("\n") 
+        print("\n")
 
     client_results : Dict = {
         # the value in this store would be the vector average of the epoch-level accuracies, that is stored already in epoch_level_accuracy
@@ -354,7 +354,7 @@ if __name__ == '__main__':
 
     for k in range(len(epoch_level_accuracy)):
         print(epoch_level_accuracy[k])
-    
+
     for l in range(len(epoch_level_loss)):
         print(epoch_level_loss[l])
 
