@@ -5,7 +5,7 @@ import flwr
 from flwr.common import EvaluateIns, EvaluateRes, FitIns, FitRes, ParametersRes
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import (FaultTolerantFedAvg, FedAdagrad, FedAvg,
-                                  FedFSv1, Strategy, fault_tolerant_fedavg, fedopt)
+                                  FedFSv1, Strategy, fault_tolerant_fedavg, fedopt, QffedAvg, FastAndSlow)
 
 import keras
 import matplotlib.pyplot as plt

@@ -11,7 +11,7 @@ from keras.regularizers import l2
 import numpy as np
 from utils import *
 from tensorflow.keras.callbacks import LearningRateScheduler
-from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1
+from flwr.server.strategy import FedAdagrad, FedAvg, FaultTolerantFedAvg, FedFSv1, FastAndSlow 
 import bokeh
 import seaborn as sns
 import pandas as pd
@@ -223,28 +223,38 @@ if __name__ == '__main__':
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
-            res = model.evaluate(dataset_config.partitioned_train_dataset, verbose=1)
+            history = model.evaluate(dataset_config.partitioned_train_dataset, verbose=1)
+            # What happens when we change the evaluate function in terms of the history object?
             results = {
-                    # let's assume these elements are sets.
-                    "loss": res[0],
-                    "sparse_categorical_crossentropy": res[1],
-                    "sparse_categorical_accuracy": res[2],
-                    "scaled_adversarial_loss": res[3],
+                    "loss": history[0],
+                    "sparse_categorical_crossentropy": history[1],
+                    "sparse_categorical_accuracy": history[2],
+                    "scaled_adversarial_loss": history[3],
             }
 
             # EvaluateRes requires 1 loss value. Average out the loss vector.
             loss = 0
-            loss_vector = res.history["loss"]
-            for k in range(len(loss_vector)):
-                loss+=loss_vector[k]
+            print("losses: \n")
+            print(results["loss"])
+            print()
+            temporary_loss_value = 15
 
-            loss = loss / len(loss_vector)
-            loss = int(loss)
+            # loss_vector = results["loss"]
+            # print(loss_vector)
+            # for k in range(len(loss_vector)):
+            #     print("loss vector values......")
+            #     print(loss_vector[k])
+            #     loss+=loss_vector[k]
+
+            # loss = loss / len(loss_vector)
+            # loss = int(loss)
 
             accuracy = 0
             # let's assume res.history["sca"] = results["sca"]
             acc_vector = res.history["sparse_categorical_accuracy"]
             for i in range(len(acc_vector)):
+                print("accuracy vector values......")
+                print(acc_vector[i])
                 accuracy+=acc_vector[i]
             
             accuracy = accuracy / (len(acc_vector))
@@ -255,7 +265,7 @@ if __name__ == '__main__':
             loss_cardinality = len(res.history["loss"])
             epoch_cardinality.append(loss_cardinality)
 
-            return loss, test_cardinality, accuracy
+            return temporary_loss_value, test_cardinality, accuracy
 
     class Client(flwr.client.KerasClient):
         def get_weights(self):
@@ -328,6 +338,14 @@ if __name__ == '__main__':
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
 
     # The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss. 
+    for node in epoch_level_accuracy: 
+        print(node)
+        print("\n") 
+    
+    for loss in epoch_level_loss:
+        print(loss)
+        print("\n") 
+
     client_results : Dict = {
         # the value in this store would be the vector average of the epoch-level accuracies, that is stored already in epoch_level_accuracy
         "client_accuracy": epoch_level_accuracy[0],
@@ -343,7 +361,8 @@ if __name__ == '__main__':
     for epoch in epoch_cardinality:
         print(epoch + "\n")
 
-    # todo: write in the epoch and the respective client and loss value inside the text file, thus getting you the data for the regularization loss / acc at the client-set level, not just individual clients.
-    
-
-    
+    path = "./metrics/"
+    with open(path + "client_accuracy.txt", "a") as file:
+        file.write(epoch_level_accuracy[0])
+        file.write("\n")
+        file.close()
