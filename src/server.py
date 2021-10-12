@@ -40,6 +40,10 @@ from flwr.common import (
 
 warnings.filterwarnings("ignore")
 
+# acc/loss 
+server_level_accuracy = []
+server_level_loss = []
+
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(32,32,3), name="image")
     regularizer = tf.keras.regularizers.l2()
@@ -110,7 +114,7 @@ def get_eval_fn(model):
 
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # fixed values
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
@@ -124,6 +128,8 @@ def get_eval_fn(model):
         model.set_weights(weights)  # Update model with the latest parameters
         # convert from tuples to dicts if this
         loss, accuracy = model.evaluate(x_test, y_test)
+        server_level_accuracy.append(accuracy)
+        server_level_loss.append(loss)
 
         return loss, {"accuracy": accuracy}
 
@@ -176,5 +182,7 @@ def setup_server_parser():
     return parser
 
 if __name__ == "__main__":
+    # get the plot data for the server-side model evaluation (so that we can compare regularized clients to server-model under attack)
+    # many different comparable model variations (data, model used) necessary to make all the plots. But as long as we make the plot creation process constant independent of the strategy and regularization technique (and we name in terms of the argument parameter object that was given), we can streamline to some extent the plot creation process as well.
     args = setup_server_parser()
     main(args)

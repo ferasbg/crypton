@@ -1,5 +1,7 @@
 import argparse
+from re import A
 import flwr
+from keras.metrics import sparse_categorical_accuracy
 from neural_structured_learning.keras.adversarial_regularization import AdversarialRegularization
 import tensorflow as tf
 from tensorflow import keras
@@ -176,6 +178,9 @@ if __name__ == '__main__':
     nsl_model = build_adv_model(params=params)
     base_model = build_base_model(params=params)
     gaussian_base_model = build_gaussian_base_model(params=params)
+    # can we store a set of result dicts such that we can later plot all this data into our graph?
+    fit_results_set = []
+    eval_results_set = []
 
     # select model
     if (args.model == "nsl_model"):
@@ -187,11 +192,10 @@ if __name__ == '__main__':
     if (args.model == "base_model"):
         model = base_model
 
-    # number of epochs. Every value most likely will be the same.
-    epoch_cardinality = []
-    # if the vectors change, then we can store the average during each fit iteration. Given that we are using the .fit() function approximately for 50 iterations over 100 batches during 1 .fit() iteration (polynomial time?). Either way, we get the first element, regardless of the set contains 1 element or not.
     epoch_level_accuracy = []
     epoch_level_loss = []
+    # define the parameters for the plots such that it can be "streamlined" during the plot creation process
+    # run through each permutation of plot comparison-wise (adaptive to adaptive, non-adaptive to non-adaptive, all reg variations against each other + vanilla reg)
 
     class AdvRegClient(flwr.client.KerasClient):
         def get_weights(self):
@@ -206,66 +210,38 @@ if __name__ == '__main__':
                 "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
-
+            
+            fit_results_set.append(results)
             train_cardinality = len(dataset_config.partitioned_train_dataset)
-            accuracy : int = 0
-            acc_vector = results["sparse_categorical_accuracy"]
-            for i in range(len(acc_vector)):
-                accuracy+=acc_vector[i]
+            accuracy = results["sparse_categorical_accuracy"]
+            sum = 0
+            for i in range(len(accuracy)):
+                sum+=accuracy[i]
 
-            accuracy = accuracy / (len(acc_vector))
-            accuracy = int(accuracy)
+            accuracy = sum / (len(accuracy))
             epoch_level_accuracy.append(accuracy)
+            accuracy = int(accuracy)
 
-            # get the total epochs during the eval round for this client
-            epoch_cardinality.append(len(results["loss"]))
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
             history = model.evaluate(dataset_config.partitioned_train_dataset, verbose=1)
-            # What happens when we change the evaluate function in terms of the history object?
             results = {
                     "loss": history[0],
                     "sparse_categorical_crossentropy": history[1],
                     "sparse_categorical_accuracy": history[2],
                     "scaled_adversarial_loss": history[3],
             }
-
-            # EvaluateRes requires 1 loss value. Average out the loss vector.
-            loss = 0
-            print("losses: \n")
-            print(results["loss"])
-            print()
-            temporary_loss_value = 15
-
-            # loss_vector = results["loss"]
-            # print(loss_vector)
-            # for k in range(len(loss_vector)):
-            #     print("loss vector values......")
-            #     print(loss_vector[k])
-            #     loss+=loss_vector[k]
-
-            # loss = loss / len(loss_vector)
-            # loss = int(loss)
-
-            accuracy = 0
-            # let's assume res.history["sca"] = results["sca"]
-            acc_vector = history.history["sparse_categorical_accuracy"]
-            for i in range(len(acc_vector)):
-                print("accuracy vector values......")
-                print(acc_vector[i])
-                accuracy+=acc_vector[i]
-
-            accuracy = accuracy / (len(acc_vector))
-            accuracy = int(accuracy)
+            eval_results_set.append(results)
 
             test_cardinality = len(dataset_config.partitioned_test_dataset)
-            # get the total epochs during the eval round for this client
-            loss_cardinality = len(history.history["loss"])
-            epoch_cardinality.append(loss_cardinality)
+            accuracy = results["sparse_categorical_accuracy"]
+            loss = results["loss"]
+            epoch_level_loss.append(loss)
+            loss = int(loss)
 
-            return temporary_loss_value, test_cardinality, accuracy
+            return loss, test_cardinality, accuracy
 
     class Client(flwr.client.KerasClient):
         def get_weights(self):
@@ -273,7 +249,6 @@ if __name__ == '__main__':
 
         def fit(self, parameters, config):
             model.set_weights(parameters)
-
             history = model.fit(dataset_config.partitioned_train_dataset, validation_data=dataset_config.partitioned_test_dataset, validation_steps=dataset_config.partitioned_val_steps, epochs=args.epochs)
             results = {
                 "loss": history.history["loss"],
@@ -282,47 +257,48 @@ if __name__ == '__main__':
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
 
+            fit_results_set.append(results)
             train_cardinality = len(dataset_config.partitioned_train_dataset)
+            accuracy = results["sparse_categorical_accuracy"]
+            
+            sum = 0
+            for i in range(len(accuracy)):
+                sum+=accuracy[i]
 
-            accuracy : int = 0
-            acc_vector = results["sparse_categorical_accuracy"]
-            for i in range(len(acc_vector)):
-                accuracy+=acc_vector[i]
-
-            accuracy = int(accuracy)
+            accuracy = sum / (len(accuracy))
             epoch_level_accuracy.append(accuracy)
-            # epochs depends on loss cardinality..
-            epoch_cardinality.append(len(results["loss"]))
+            accuracy = int(accuracy)
 
-            # flwr FitRes requires 1 accuracy value.
             return model.get_weights(), train_cardinality, accuracy
 
         def evaluate(self, parameters, config):
             model.set_weights(parameters)
-            results = model.evaluate(dataset_config.partitioned_test_dataset, verbose=1)
-            epoch_cardinality.append(len(results.history['loss']))
+            history = model.evaluate(dataset_config.partitioned_test_dataset, verbose=1)
             results = {
-                    "loss": results[0],
-                    "sparse_categorical_crossentropy": results[1],
-                    "sparse_categorical_accuracy": results[2],
-                    "scaled_adversarial_loss": results[3],
+                    "loss": history[0],
+                    "sparse_categorical_crossentropy": history[1],
+                    "sparse_categorical_accuracy": history[2],
+                    "scaled_adversarial_loss": history[3],
             }
+            eval_results_set.append(results)
 
-            loss = 0
-            loss_vector = results.history["loss"]
-            for k in range(len(loss_vector)):
-                loss+=loss_vector[k]
-
-            loss = loss / len(loss_vector)
-            loss = int(loss)
-
-            accuracy : int = 0
-            acc_vector = results["sparse_categorical_accuracy"]
-            for i in range(len(acc_vector)):
-                accuracy+=acc_vector[i]
-
-            accuracy = int(accuracy)
+            accuracy = results["sparse_categorical_accuracy"]
             test_cardinality = len(dataset_config.partitioned_test_dataset)
+            sum = 0
+            for i in range(len(accuracy)):
+                sum+=accuracy[i]
+
+            accuracy = sum / len(accuracy)
+            epoch_level_accuracy.append(accuracy)
+            accuracy = int(accuracy)
+
+            sum = 0
+            for k in range(len(results["loss"])):
+                sum+=results["loss"][k]
+
+            loss = sum / len(results["loss"])
+            epoch_level_loss.append(loss)
+            loss = int(loss)
 
             return loss, test_cardinality, accuracy
 
@@ -336,33 +312,76 @@ if __name__ == '__main__':
         client = Client()
 
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
+    path = "./metrics/"
 
-    # The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss.
-    for node in epoch_level_accuracy:
-        print(node)
-        print("\n")
+    # format the text data written to each file in terms of the round iteration such that the data can be plotted within round 0-1, 1-2, etc... 
 
-    for loss in epoch_level_loss:
-        print(loss)
-        print("\n")
+    with open(path + "client_accuracy.txt", "a") as file:
+        file.write("\n")
+        for i in range(len(epoch_level_accuracy)):
+            accuracy = str(epoch_level_accuracy[i])
+            file.write(accuracy)
+            file.write("\n")
 
-    client_results : Dict = {
-        # the value in this store would be the vector average of the epoch-level accuracies, that is stored already in epoch_level_accuracy
-        "client_accuracy": epoch_level_accuracy[0],
-        "client_regularization_loss": epoch_level_loss[0],
+        file.close()
+
+    with open(path + "client_losses.txt", "a") as file:
+        file.write("Round ")
+        file.write("\n")
+        
+        for i in range(len(epoch_level_loss)):
+            loss = str(epoch_level_loss[i])
+            file.write(loss)
+            file.write("\n")
+
+        file.close()
+
+    # making dict: create a set given all the dict-level data in fit_results_set and eval_results_set; accuracy vector, loss vector, and so on
+    fit_sparse_categorical_accuracy_set = []
+    fit_scaled_adversarial_loss_set = []
+    fit_loss_set = []
+
+    # The cardinality is 1 for the eval sets.
+    eval_scaled_adversarial_loss_set = []
+    eval_sparse_categorical_accuracy_set = []
+    eval_loss_set = []
+
+    # populate each list in terms of each results_set dict element in the results_set superset
+    for fit_results in fit_results_set:
+        for i in range(len(fit_results["loss"])):
+            fit_loss_set.append(fit_results["loss"][i])
+
+        for k in range(len(fit_results["sparse_categorical_accuracy"])):
+            fit_sparse_categorical_accuracy_set.append(fit_results["sparse_categorical_accuracy"][k])
+
+        for j in range(len(fit_results["scaled_adversarial_loss"])):
+            fit_scaled_adversarial_loss_set.append(fit_results["scaled_adversarial_loss"][j])
+
+    # create a superset that consists of all the loss/acc/adv_loss data across all clients
+    for i in range(len(eval_results_set)):
+        # append loss value for each dict object within client. 
+        eval_loss_set.append(eval_results_set[i]["loss"])
+        eval_sparse_categorical_accuracy_set.append(eval_results_set[i]["sparse_categorical_accuracy"])
+        eval_scaled_adversarial_loss_set.append(eval_results_set[i]["scaled_adversarial_loss"])
+
+    fit_results_dict = {
+        "sparse_categorical_accuracy_set": fit_sparse_categorical_accuracy_set,
+        "scaled_adversarial_loss": fit_scaled_adversarial_loss_set,
+        "loss": fit_loss_set,
     }
 
-    for k in range(len(epoch_level_accuracy)):
-        print(epoch_level_accuracy[k])
+    eval_results_dict = {
+        "sparse_categorical_accuracy_set": eval_sparse_categorical_accuracy_set,
+        "scaled_adversarial_loss": eval_scaled_adversarial_loss_set,
+        "loss": eval_loss_set,
+    }
 
-    for l in range(len(epoch_level_loss)):
-        print(epoch_level_loss[l])
-
-    for epoch in epoch_cardinality:
-        print(epoch + "\n")
-
-    path = "./metrics/"
-    with open(path + "client_accuracy.txt", "a") as file:
-        file.write(epoch_level_accuracy[0])
-        file.write("\n")
-        file.close()
+    fit_path = './metrics/fit_results' + '.json'
+    eval_path = './metrics/eval_results' + '.json'
+    
+    with open(fit_path, 'w') as f:
+        json.dump(fit_results_dict, f)
+    
+    with open(eval_path, 'w') as f:
+        json.dump(eval_results_dict, f)
+    

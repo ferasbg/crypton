@@ -1,6 +1,9 @@
 # Crypton: Adversarially Robust Federated Optimization with Neural Structured Learning
 The purpose of this work is to build an adversarially robust federated system by utilizing adaptive and non-adaptive federated optimization techniques, as well as optimizing the adversarial regularization techniques used at the client-level in order to build a robust trusted aggregator model. More specifically, we aim to use neural structured learning and adaptive federated optimization together to build an adversarially robust federated learning system that can adapt to heterogeneous, sparse, and perturbed data that would be faced in a production-level federated environment.
 
+The connection can dilute the focus of what is being changed and what the system aims to solve. Simply put, adaptivity is assumed to reduce the number of model updates, and adversarial regularization with respect to what's being tested, exists for the purpose of meshing adv. augmentation of sorts with an adaptive strategy that aggregates the adversarial client model gradients to make the server model robust against surface variations and variations of corruptions and perturbations as a whole.
+
+
 ## Objective
 - Execute experimental configurations to assess the most optimal configuration for a production-level federated system that is robust against adversarial attacks fixed by norm type and norm values. Though it's not fixed to norm type nor norm value. Attack vectors aren't limited to adversarial examples (adv. input generation).
 
@@ -64,11 +67,19 @@ Break up how the data is organized in order to illustrate key ideas in a compart
 
 Note how you minimized experimental design error with respect to communication costs, model architecture, iid/non-iid data state, constants held, conditions per experiment, number of control variables
 
+
+
 ## Todos
-- get plot data from client-side training to work under a small scope of parameters
-- get plot data to work for server-side model evaluation under small scope of parameters
 - get plot data to work on each of the tests/experiments for the final plots
-- resolve FedAdagrad
+- create all the final plots given 10 rounds, then do given 1000 rounds
+- make the data non-iid, and support the rest of the strategies that will be used given arg parameter (trials.sh file)
+
+- formally note all the mathematical formulations specific to the paper, and get this checked by research-wise discord frens as well as other mentors
+
+Do this before doing any patent research and figuring out the other "parts" e.g. math + component dependencies, and so on.
+Do this before figuring out technical details specific to Perseus and Neuralark MVP.
+Do this before solving USACO Silver/Gold Problems.
+Do this before writing any of the patent document. The patent document requires research-specific context, and that requires reading. That comes after this.
 
 ## Process
 process: server-side eval (acc, loss) can be done through flwr; client-side eval (acc,loss) can be done by writing in data pre-flwr and pre-aggregation
@@ -95,10 +106,6 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - Comm Rounds vs. Server-Side Loss-Under-Attack (measure for server-side strategy optimization against adaptive/non-adaptive strategies to aggregate client grads)
 - Comm Rounds vs. Server-Side Accuracy-Under-Attack (Strategy + Adv. Reg. Technique)
 
-## Features for Crypton V2
-- non-iid support (DatasetConfig)
-- certification via ensemble randomized smoothing for graph network
-
 ## Notes
 - the batch size and epoch affect the partition size and the accuracy/loss values stored in the History object for both the fit and eval function since they depend on the partitioned dataset.
 - Label your outputs so that the plot creation process is smooth.
@@ -114,8 +121,16 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - We hold certain variables constant to measure the effectiveness of certain algorithms within our methods. This is more useful to keep in mind of when writing the observations/understandings in the discussion.
 - Secure gRPC to secure the server-client channels, apply differential privacy to the data across all the corruption types, apply certification algorithms, then apply formal verification algorithm that unifies graph technique 
 - Feedback about my explanations: they are too wordy and detract away from the cohesive balance between persuasive expression (why is this even useful, and how can this really create a trillion dollar impact). Reviewers operate on dynamical responses.... emotional invocation backed by logical expressivity.
+- Verify certification techniques, minimize I.V's by focusing on the client-server connection with respect to minimizing aggregation updates while also converging with adversarial data.
+- Measure for the effect of client/server lr and the IID state of the data relative to the strategy.
 
 ## Tables
 - Hyperparameters (Configuration)
 - Method-Wise Feature Comparison
 
+## Comments
+- if the vectors change, then we can store the average during each fit iteration. Given that we are using the .fit() function approximately for 50 iterations over 100 batches during 1 .fit() iteration
+- The evaluate() function uses the test dataset and computes a regularization loss. Thus the more clients under fraction_fit, the better the client evaluation loss.
+- First use the first 10 rounds to get data at the epoch-level and then average the accuracy and loss data at the client-level. 80% are used for fit, and 20% are used for evaluation. Keep this in mind when storing information and then averaging the net evaluation losses/accuracy values for each client since 10 clients run 1 epoch 10 times because it's 1 epoch per 10 round iterations 
+- 50 iterations does not mean that the vector cardinality is 50 either. 
+- End goal is to test the system through 1000 rounds. So 100 10 round iterations or v.v.

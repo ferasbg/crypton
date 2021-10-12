@@ -1,7 +1,6 @@
 # !/bin/bash
 
 norms = ["infinity" "l2"]
-corruption_names = []
 
 ### FedAvg + GaussianNoise
 python3 ../server.py --strategy="fedavg" --num_rounds=10 &
