@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# define the tests to run relative to the plots to create relative to the total rounds; concurrently do this
+
 python3 server.py &
 sleep 60
 

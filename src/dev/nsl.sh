@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 ../server.py --strategy="fedavg" --num_rounds=10 &
+python3 ../server.py --strategy="fedavg" --num_rounds=100 &
 sleep 60
 
 for i in `seq 0 9`; do

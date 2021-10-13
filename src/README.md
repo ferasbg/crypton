@@ -71,10 +71,11 @@ Note how you minimized experimental design error with respect to communication c
 
 ## Todos
 - get plot data to work on each of the tests/experiments for the final plots
+- test the .sh file that automates all the plot creation / tests and round iteration / testing
 - create all the final plots given 10 rounds, then do given 1000 rounds
 - make the data non-iid, and support the rest of the strategies that will be used given arg parameter (trials.sh file)
-
 - formally note all the mathematical formulations specific to the paper, and get this checked by research-wise discord frens as well as other mentors
+- make all the diagrams & tables (system architecture, algorithm set, mathematical equations, algorithm latex form, sample code)
 
 Do this before doing any patent research and figuring out the other "parts" e.g. math + component dependencies, and so on.
 Do this before figuring out technical details specific to Perseus and Neuralark MVP.

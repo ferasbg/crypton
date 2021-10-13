@@ -210,7 +210,7 @@ if __name__ == '__main__':
                 "sparse_categorical_accuracy": history.history["sparse_categorical_accuracy"],
                 "scaled_adversarial_loss": history.history["scaled_adversarial_loss"],
             }
-            
+
             fit_results_set.append(results)
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             fit_results_set.append(results)
             train_cardinality = len(dataset_config.partitioned_train_dataset)
             accuracy = results["sparse_categorical_accuracy"]
-            
+
             sum = 0
             for i in range(len(accuracy)):
                 sum+=accuracy[i]
@@ -314,28 +314,6 @@ if __name__ == '__main__':
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
     path = "./metrics/"
 
-    # format the text data written to each file in terms of the round iteration such that the data can be plotted within round 0-1, 1-2, etc... 
-
-    with open(path + "client_accuracy.txt", "a") as file:
-        file.write("\n")
-        for i in range(len(epoch_level_accuracy)):
-            accuracy = str(epoch_level_accuracy[i])
-            file.write(accuracy)
-            file.write("\n")
-
-        file.close()
-
-    with open(path + "client_losses.txt", "a") as file:
-        file.write("Round ")
-        file.write("\n")
-        
-        for i in range(len(epoch_level_loss)):
-            loss = str(epoch_level_loss[i])
-            file.write(loss)
-            file.write("\n")
-
-        file.close()
-
     # making dict: create a set given all the dict-level data in fit_results_set and eval_results_set; accuracy vector, loss vector, and so on
     fit_sparse_categorical_accuracy_set = []
     fit_scaled_adversarial_loss_set = []
@@ -359,7 +337,7 @@ if __name__ == '__main__':
 
     # create a superset that consists of all the loss/acc/adv_loss data across all clients
     for i in range(len(eval_results_set)):
-        # append loss value for each dict object within client. 
+        # append loss value for each dict object within client.
         eval_loss_set.append(eval_results_set[i]["loss"])
         eval_sparse_categorical_accuracy_set.append(eval_results_set[i]["sparse_categorical_accuracy"])
         eval_scaled_adversarial_loss_set.append(eval_results_set[i]["scaled_adversarial_loss"])
@@ -378,10 +356,11 @@ if __name__ == '__main__':
 
     fit_path = './metrics/fit_results' + '.json'
     eval_path = './metrics/eval_results' + '.json'
-    
+
     with open(fit_path, 'w') as f:
+        f.write('\n')
         json.dump(fit_results_dict, f)
-    
+
     with open(eval_path, 'w') as f:
+        f.write('\n')
         json.dump(eval_results_dict, f)
-    

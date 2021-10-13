@@ -40,7 +40,7 @@ from flwr.common import (
 
 warnings.filterwarnings("ignore")
 
-# acc/loss 
+# acc/loss
 server_level_accuracy = []
 server_level_loss = []
 
@@ -101,11 +101,20 @@ def main(args) -> None:
             tau=0.5,
             initial_parameters=weights_to_parameters(weights),
         )
-    
+
     # todo: add remaining strategies (adaptive, non-adaptive, eg FedAdam, FedYogi, FedFSL)
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
 
-# using dict to logfile, using flwr metrics, manual eval / avg;ing, etc..
+    server_metrics = {
+        "server_level_accuracy": server_level_accuracy,
+        "server_level_loss": server_level_loss
+    }
+
+    server_json_path = './metrics/server_metrics.json'
+
+    with open(server_json_path, 'w') as server_file:
+        json.dump(server_metrics, server_file)
+
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
@@ -126,7 +135,6 @@ def get_eval_fn(model):
     ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
 
         model.set_weights(weights)  # Update model with the latest parameters
-        # convert from tuples to dicts if this
         loss, accuracy = model.evaluate(x_test, y_test)
         server_level_accuracy.append(accuracy)
         server_level_loss.append(loss)
@@ -183,6 +191,6 @@ def setup_server_parser():
 
 if __name__ == "__main__":
     # get the plot data for the server-side model evaluation (so that we can compare regularized clients to server-model under attack)
-    # many different comparable model variations (data, model used) necessary to make all the plots. But as long as we make the plot creation process constant independent of the strategy and regularization technique (and we name in terms of the argument parameter object that was given), we can streamline to some extent the plot creation process as well.
     args = setup_server_parser()
     main(args)
+
