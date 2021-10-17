@@ -25,6 +25,9 @@ import logging
 from logging import Logger
 from keras.callbacks import History, EarlyStopping
 
+# todo: return all plot data relative to each test in terms of 1000 rounds
+# todo: figure out how to stream the metrics outputs on the server-side as well as the formation of the plots relative to the specific metric relative to the target rounds, storage, mgmt
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 class DatasetConfig(object):
@@ -360,7 +363,9 @@ if __name__ == '__main__':
     with open(fit_path, 'w') as f:
         f.write('\n')
         json.dump(fit_results_dict, f)
+        f.write('\n')
 
     with open(eval_path, 'w') as f:
         f.write('\n')
         json.dump(eval_results_dict, f)
+        f.write('\n')

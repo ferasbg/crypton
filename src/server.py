@@ -40,10 +40,6 @@ from flwr.common import (
 
 warnings.filterwarnings("ignore")
 
-# acc/loss
-server_level_accuracy = []
-server_level_loss = []
-
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(32,32,3), name="image")
     regularizer = tf.keras.regularizers.l2()
@@ -68,7 +64,6 @@ def build_base_server_model(num_classes : int):
     return model
 
 def main(args) -> None:
-    # setup parse_args with respect to passing relevant params to server.py and client.py instead of run.sh or aggregate file
 
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
@@ -93,7 +88,6 @@ def main(args) -> None:
             initial_parameters=model.get_weights())
 
     if (args.strategy == "fed_adagrad"):
-        # this code is untested.
         weights : Weights = model.get_weights()
         strategy = FedAdagrad(
             eta=0.1,
@@ -102,18 +96,7 @@ def main(args) -> None:
             initial_parameters=weights_to_parameters(weights),
         )
 
-    # todo: add remaining strategies (adaptive, non-adaptive, eg FedAdam, FedYogi, FedFSL)
     flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
-
-    server_metrics = {
-        "server_level_accuracy": server_level_accuracy,
-        "server_level_loss": server_level_loss
-    }
-
-    server_json_path = './metrics/server_metrics.json'
-
-    with open(server_json_path, 'w') as server_file:
-        json.dump(server_metrics, server_file)
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
@@ -123,11 +106,14 @@ def get_eval_fn(model):
 
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") # fixed values
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") 
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
         adv_model.perturb_on_batch(batch)
+
+    loss_eval_fn = []
+    accuracy_eval_fn = []
 
     # The `evaluate` function will be called after every round
     def evaluate(
@@ -136,11 +122,19 @@ def get_eval_fn(model):
 
         model.set_weights(weights)  # Update model with the latest parameters
         loss, accuracy = model.evaluate(x_test, y_test)
-        server_level_accuracy.append(accuracy)
-        server_level_loss.append(loss)
-
+        # test data passing and data saving so that server-side eval data can be stored
+        loss_eval_fn.append(loss)
+        accuracy_eval_fn.append(accuracy)
+        
         return loss, {"accuracy": accuracy}
 
+    # append to the main set
+    server_level_accuracy.append(accuracy_eval_fn[0])
+    server_level_loss.append(loss_eval_fn[0])
+
+    accuracy_eval_fn.clear()
+    loss_eval_fn.clear()
+    
     return evaluate
 
 def fit_config(rnd: int):
@@ -190,7 +184,28 @@ def setup_server_parser():
     return parser
 
 if __name__ == "__main__":
-    # get the plot data for the server-side model evaluation (so that we can compare regularized clients to server-model under attack)
     args = setup_server_parser()
+    server_level_accuracy = []
+    server_level_loss = []
+    print("before running server-side parameter evaluation...")
+    print(server_level_accuracy)
+    print(server_level_loss)
     main(args)
+    print("after running server-side parameter evaluation...")
+    print(server_level_accuracy)
+    print(server_level_loss)
 
+    # Evaluation values depend on the total rounds. Each round has one server-side parameter-wise evaluation, thus your server-side values depend on the number of rounds.
+    server_metrics = {
+        "server_level_accuracy": server_level_accuracy,
+        "server_level_loss": server_level_loss
+    }
+
+    server_json_path = './metrics/server_metrics.json'
+    print(server_metrics["server_level_accuracy"])
+    print(server_metrics["server_level_loss"])
+
+    # this is an empty set for some reason. Figure out how to stream metrics with a flwr-native method with respect to the strategy  
+    with open(server_json_path, 'w') as server_file:
+        server_file.write("\n")
+        json.dump(server_metrics, server_file)

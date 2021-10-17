@@ -48,10 +48,13 @@ from keras.callbacks import History, EarlyStopping
 
 plot_vars = ["Client Model Type", "Adversarial Regularization Technique", "Federated Strategy", "Server Model ε-Robust Federated Accuracy Under Attack"]
 adv_reg_types = ["Neural Structured Learning", "Gaussian Regularization", "Data Corruption Regularization", "Noise Regularization", "Blur Regularization"]
-adaptive_strategy_options = ["FedAdagrad", "FedYogi"]
+# mathematical formulation must inter-weave and relate the federated strategy algorithm (equation set) to the neural structured learning algorithm relative to the federated system 
+adaptive_strategy_options = ["FedAdagrad"]
 non_adaptive_strategy_options = ["FedAvg", "FaultTolerantFedAvg", "FedFSV1"]
 metrics = ["server_loss", "server_accuracy_under_attack", "server_certified_loss"]
 dependent_variables = ["epochs", "communication_rounds", "client_learning_rate", "server_learning_rate", "adv_grad_norm", "adv_step_size"]
 nsl_variables = ["adversarial_neighbor_loss"]
 # the severity epsilon will be constant, as well as the norm type across adv. regularization techniques
 baseline_adv_reg_variables = ["severity", "noise_sigma"]
+# not a focus for paper 1, but rather paper 2
+certification_methods = ["distance_constraint", "min_max_perturbation_test", "admissibility_constraint", "target_behavior_constraint"]

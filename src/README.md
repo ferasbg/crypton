@@ -108,6 +108,9 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - Comm Rounds vs. Server-Side Accuracy-Under-Attack (Strategy + Adv. Reg. Technique)
 
 ## Notes
+- best way to process is to use flwr metrics instead of streaming it informally via the nested eval_fn function
+- write a reflection document regarding the research process in order to eliminate all mistakes on the next paper, and so on (in order to finish the patent system in time)
+- does it make sense to have to visualize the state of the system through print statements as well as visualizing the networks via TensorBoard, or no? Depends. It only matters when it comes to defining the algorithmic process of your system relative to the tests that you were making.
 - the batch size and epoch affect the partition size and the accuracy/loss values stored in the History object for both the fit and eval function since they depend on the partitioned dataset.
 - Label your outputs so that the plot creation process is smooth.
 - access history object for the client-side object and compare it against the history object within the eval and fit functions of the client object
