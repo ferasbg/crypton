@@ -40,6 +40,16 @@ from flwr.common import (
 
 warnings.filterwarnings("ignore")
 
+# Need to figure out how to add in the functions that work with flwr.server.app in order to return all the logs data relevant to the metrics specific to the client-side and the server-side.
+
+# the configuration dicts define both static and dynamic variables that affect the client-side and server-side training and evaluation process.
+# I am missing the EvaluateIns and FitIns parameter in my fit and evaluate functions respectively. What do they do and how does that contribute to my problem?
+# I need to use the Flower LogServer such that I can relay the logs that are collected, which extensively reflect the client-side and server-side data for the training/evaluation, with respect to the strategy process.
+# emulate https://github.com/adap/flower/blob/main/src/py/flwr_experimental/baseline/tf_cifar/server.py 
+# Necesito a reconnectar PropertiesIns en orden a construir un connexion con la informacion de EvaluateRes y FitRes.
+# FitRes object returned or stored relative to the Metrics given the preconditon of the connection with the Logger and the Callbacks will provide enough transparency in order to get the necessary data on both the client-side and the server-side.
+# Connect with the Logger specific to flwr, return the information specific to FitRes and then map out the information required on both the client-side and the server-side.
+
 def build_base_server_model(num_classes : int):
     input_layer = layers.Input(shape=(32,32,3), name="image")
     regularizer = tf.keras.regularizers.l2()
@@ -67,7 +77,7 @@ def main(args) -> None:
 
     # 1. server-side parameter initialization
     # 2. server-side parameter evaluation
-    # 3. since adv. reg. is a client-specific optimization, it's set to False for server-side param. evaluation
+    # 3. adversarially regularize client set, measure for change given aggregate_fit on global model parameters and epsilon-robustness.
 
     # create model
     model = build_base_server_model(num_classes=10)
@@ -82,7 +92,6 @@ def main(args) -> None:
             min_eval_clients=2,
             min_available_clients=10,
             eval_fn=get_eval_fn(model),
-            # strategy based on user-written wrapper functions
             on_fit_config_fn=fit_config,
             on_evaluate_config_fn=evaluate_config,
             initial_parameters=model.get_weights())
@@ -95,46 +104,34 @@ def main(args) -> None:
             tau=0.5,
             initial_parameters=weights_to_parameters(weights),
         )
+    
+    flwr.common.logger.configure("server", host=args.log_host)
+    client_manager = flwr.server.SimpleClientManager()
+    server = flwr.server.Server(client_manager=client_manager, strategy=strategy)
 
-    flwr.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": args.num_rounds})
+    flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": args.num_rounds}, strategy=strategy)
 
 def get_eval_fn(model):
     """Return an evaluation function for server-side evaluation."""
 
-    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-
     x_test, y_test = x_train[45000:50000], y_train[45000:50000]
     val_data = tf.data.Dataset.from_tensor_slices({'image': x_test, 'label': y_test}).batch(batch_size=32)
-    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity") 
+    params = HParams(num_classes=10, adv_multiplier=0.2, adv_step_size=0.05, adv_grad_norm="infinity")
     adv_model = build_adv_model(params=params)
 
     for batch in val_data:
         adv_model.perturb_on_batch(batch)
 
-    loss_eval_fn = []
-    accuracy_eval_fn = []
-
-    # The `evaluate` function will be called after every round
     def evaluate(
         weights: flwr.common.Parameters,
     ) -> Optional[Tuple[float, Dict[str, flwr.common.Scalar]]]:
 
-        model.set_weights(weights)  # Update model with the latest parameters
+        model.set_weights(weights)  
         loss, accuracy = model.evaluate(x_test, y_test)
-        # test data passing and data saving so that server-side eval data can be stored
-        loss_eval_fn.append(loss)
-        accuracy_eval_fn.append(accuracy)
-        
-        return loss, {"accuracy": accuracy}
+        metrics = {"accuracy": accuracy}
+        return loss, metrics
 
-    # append to the main set
-    server_level_accuracy.append(accuracy_eval_fn[0])
-    server_level_loss.append(loss_eval_fn[0])
-
-    accuracy_eval_fn.clear()
-    loss_eval_fn.clear()
-    
     return evaluate
 
 def fit_config(rnd: int):
@@ -144,9 +141,11 @@ def fit_config(rnd: int):
     local epoch, increase to two local epochs afterwards.
     """
     config = {
-        "batch_size": 32,
-        "local_epochs": 1 if rnd < 2 else 2,
+        "epoch_global": str(rnd),
+        "epochs": 1 if rnd < 2 else 2,
+        "batch_size": str(args.batch_size),
     }
+
     return config
 
 def evaluate_config(rnd: int):
@@ -161,11 +160,8 @@ def evaluate_config(rnd: int):
 
 def setup_server_parser():
     parser = argparse.ArgumentParser(description="Crypton Server")
-    # configurations
     parser.add_argument("--num_rounds", type=int, required=False, default=3)
-    # options = "fedavg", "fedadagrad", "fault_tolerant_fedavg"
     parser.add_argument("--strategy", type=str, required=False, default="fedavg")
-    # hardcode or configure with args? optional
     parser.add_argument("--fraction_fit", type=float,
                         required=False, default=0.05)
     parser.add_argument("--fraction_eval", type=float,
@@ -180,32 +176,12 @@ def setup_server_parser():
     parser.add_argument("--num_classes", type=int, required=False, default=10)
     parser.add_argument("--adv_multiplier", type=float, required=False, default=0.2)
     parser.add_argument("--adv_step_size", type=float, required=False, default=0.05)
+    parser.add_argument("--log_host", type=str, required=False, default="0.0.0.0.8000")
+    parser.add_argument("--batch_size", type=int, required=False, default=32)
+
     parser = parser.parse_args()
     return parser
 
 if __name__ == "__main__":
     args = setup_server_parser()
-    server_level_accuracy = []
-    server_level_loss = []
-    print("before running server-side parameter evaluation...")
-    print(server_level_accuracy)
-    print(server_level_loss)
     main(args)
-    print("after running server-side parameter evaluation...")
-    print(server_level_accuracy)
-    print(server_level_loss)
-
-    # Evaluation values depend on the total rounds. Each round has one server-side parameter-wise evaluation, thus your server-side values depend on the number of rounds.
-    server_metrics = {
-        "server_level_accuracy": server_level_accuracy,
-        "server_level_loss": server_level_loss
-    }
-
-    server_json_path = './metrics/server_metrics.json'
-    print(server_metrics["server_level_accuracy"])
-    print(server_metrics["server_level_loss"])
-
-    # this is an empty set for some reason. Figure out how to stream metrics with a flwr-native method with respect to the strategy  
-    with open(server_json_path, 'w') as server_file:
-        server_file.write("\n")
-        json.dump(server_metrics, server_file)

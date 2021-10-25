@@ -3,6 +3,7 @@
 
 import argparse
 import collections
+import json
 import logging
 import os
 import pickle
@@ -55,6 +56,7 @@ from PIL import Image
 from tensorflow import keras
 from tensorflow.python.keras.backend import update
 from tensorflow.python.keras.engine.sequential import Sequential
+
 
 def plot_client_model(model):
     file = keras.utils.plot_model(model, to_file='model.png')
@@ -299,4 +301,20 @@ class ExperimentConfig:
                             type=int, required=False, default=2)
         parser = parser.parse_args()
 
+class Metrics(object):
+    fit_path = './metrics/fit_results' + '.json'
+    eval_path = './metrics/eval_results' + '.json'
 
+    @staticmethod
+    def store_fit_dict(fit_path : str, fit_results_dict : dict):
+        with open(fit_path, 'w') as f:
+            f.write('\n')
+            json.dump(fit_results_dict, f)
+            f.write('\n')
+
+    @staticmethod
+    def store_eval_dict(eval_path : str , eval_results_dict : dict):
+        with open(eval_path, 'w') as f:
+            f.write('\n')
+            json.dump(eval_results_dict, f)
+            f.write('\n')

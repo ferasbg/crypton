@@ -107,6 +107,25 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 - Comm Rounds vs. Server-Side Loss-Under-Attack (measure for server-side strategy optimization against adaptive/non-adaptive strategies to aggregate client grads)
 - Comm Rounds vs. Server-Side Accuracy-Under-Attack (Strategy + Adv. Reg. Technique)
 
+## Bugs
+- Resolve by connecting server dot server dot app and tracking the state where the History object will be returned but not forwarded by the _fl function_ 
+- todo: return all plot data relative to each test in terms of 1000 rounds
+- todo: figure out how to stream the metrics outputs on the server-side as well as the formation of the plots relative to the specific metric relative to the target rounds, storage, mgmt
+- todo: stream data before packaging into metrics dict data
+- todo: tracking framework method stack helps, but streaming the data initially matters more before it is processed for the aggregate_fit function
+- todo: worst case is that we re-write the federated functions, do a complete re-write of the federated algorithms (and do it without the framework) such that we can stream the metrics relative to the callback data ourselves
+- todo: modify flwr.server.server.app such that the function invocation for customm callbacks/metrics can be processed on the server-side
+- we can modify this through thw flwr-specific config dictionaries passed to the client and server (global) model
+- There's two methods to this. I either work with the framework and resolve the log map to data to plots, or re-implement FedAdagrad, FedAvg, and write the federated processes myself (aggregation, etc). Either method requires ~3 hours.
+- setup Metric objects to support History, increase History's transparency.
+- setup Callbacks, Logger, and lr_scheduler
+- Add callbacks in order to record the client-level training and evaluation results independent of aggregation. Map that to each test run to receive the plot data at the plot-level, for each plot.
+- To return data specific to client-level metrics, I would need to pipe in via tf and also understand how the models within the clients are processed at each round
+- and so, the algorithm for each round
+- Change each fit parameter in terms of the config dictionary object. Flwr most likely relies on this information for the strategy process. We might have inconsistencies (epoch count, batch size, etc), which is independent of the issue related to the data not being completely transparent via the logs 
+
+Keeping in mind of how signals relay, e.g. clients relay their weights during fit and then the models are evaluated relative to the ratio defined between trained and evaluated clients. The global model considers each client model and its respective adaptation to the local dataset (but keeping perturbation constant rather than controlling perturbation sets given each shard/partition). What we care about are the metric values that relay back to the global model.
+
 ## Notes
 - best way to process is to use flwr metrics instead of streaming it informally via the nested eval_fn function
 - write a reflection document regarding the research process in order to eliminate all mistakes on the next paper, and so on (in order to finish the patent system in time)
