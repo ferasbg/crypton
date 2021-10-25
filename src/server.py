@@ -83,7 +83,15 @@ def main(args) -> None:
     model = build_base_server_model(num_classes=10)
 
     if (args.strategy == "fedavg"):
-        strategy = FedAvg()
+        strategy = FedAvg(fraction_fit=0.3,
+            fraction_eval=0.2,
+            min_fit_clients=3,
+            min_eval_clients=2,
+            min_available_clients=10,
+            eval_fn=get_eval_fn(model),
+            on_fit_config_fn=fit_config,
+            on_evaluate_config_fn=evaluate_config,
+            initial_parameters = flwr.common.weights_to_parameters(model.get_weights()))
 
     if (args.strategy == "ft_fedavg"):
         strategy = FaultTolerantFedAvg(fraction_fit=0.3,
@@ -105,10 +113,11 @@ def main(args) -> None:
             initial_parameters=weights_to_parameters(weights),
         )
     
-    flwr.common.logger.configure("server", host=args.log_host)
-    client_manager = flwr.server.SimpleClientManager()
-    server = flwr.server.Server(client_manager=client_manager, strategy=strategy)
-
+    #flwr.common.logger.configure("server", host=args.log_host)
+    #client_manager = flwr.server.SimpleClientManager()
+    #server = flwr.server.Server(client_manager=client_manager, strategy=strategy)
+    
+    # when running federated averaging given c rounds, make sure to store the history objects returned from the server.fit() function.
     flwr.server.start_server(server_address="[::]:8080", config={"num_rounds": args.num_rounds}, strategy=strategy)
 
 def get_eval_fn(model):

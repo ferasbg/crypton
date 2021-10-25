@@ -126,6 +126,8 @@ Note that the "defense" against the real-world nature of sparse & corrupted data
 
 Keeping in mind of how signals relay, e.g. clients relay their weights during fit and then the models are evaluated relative to the ratio defined between trained and evaluated clients. The global model considers each client model and its respective adaptation to the local dataset (but keeping perturbation constant rather than controlling perturbation sets given each shard/partition). What we care about are the metric values that relay back to the global model.
 
+How are we setting up our tests such that we can automate with the shell files with respect to the tests that store the plot information with respect to the target round iterations to make?
+
 ## Notes
 - best way to process is to use flwr metrics instead of streaming it informally via the nested eval_fn function
 - write a reflection document regarding the research process in order to eliminate all mistakes on the next paper, and so on (in order to finish the patent system in time)

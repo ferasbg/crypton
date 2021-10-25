@@ -350,6 +350,5 @@ if __name__ == '__main__':
         client = Client()
 
     # This line is untested, and may create errors.
-    flwr.common.logger.configure(f"client_{args.partition}", host=args.log_host)
-
+    # flwr.common.logger.configure(f"client_{args.client_partition_idx}", host=args.log_host)
     flwr.client.start_keras_client(server_address="[::]:8080", client=client)
